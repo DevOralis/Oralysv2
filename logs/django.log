@@ -1,0 +1,8 @@
+INFO 2025-08-15 16:09:40,309 autoreload 24268 3912 Watching for file changes with StatReloader
+INFO 2025-08-15 16:10:16,246 autoreload 24268 3912 C:\Users\USER\Desktop\oralys\apps\home\views.py changed, reloading.
+INFO 2025-08-15 16:10:18,570 autoreload 25300 15188 Watching for file changes with StatReloader
+INFO 2025-08-15 16:11:53,357 autoreload 25300 15188 C:\Users\USER\Desktop\oralys\apps\home\views.py changed, reloading.
+INFO 2025-08-15 16:11:55,183 autoreload 12576 19404 Watching for file changes with StatReloader
+INFO 2025-08-15 16:12:08,300 autoreload 12576 19404 C:\Users\USER\Desktop\oralys\apps\home\views.py changed, reloading.
+INFO 2025-08-15 16:12:11,183 autoreload 16184 25260 Watching for file changes with StatReloader
+INFO 2025-08-15 16:12:45,311 autoreload 16184 25260 C:\Users\USER\Desktop\oralys\config\settings\base.py changed, reloading.

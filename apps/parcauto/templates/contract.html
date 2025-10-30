@@ -1,0 +1,824 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Contrats{% endblock %}
+
+{% block menu %}
+{% include "menu_parcauto.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% else %}Information :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Table Header Component -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-file-signature me-2"></i>
+      Liste des Contrats
+    </div>
+    <div class="card-body">
+      <form method="get" id="search-form">
+        <div class="row g-2 mb-3">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" name="q" id="search-contract" class="form-control border-primary" 
+                     placeholder="Rechercher par véhicule, fournisseur..." value="{{ request.GET.q }}">
+            </div>
+          </div>
+          <!-- Filtre type -->
+          <div class="col-6 col-sm-6 col-md-3 col-lg-3 order-2">
+            <select name="type" id="search-type" class="form-select" title="Filtrer par type">
+              <option value="">Tous les types</option>
+              {% for type in contract_types %}
+              <option value="{{ type.id }}" {% if request.GET.type == type.id|stringformat:"s" %}selected{% endif %}>{{ type.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Filtre statut -->
+          <div class="col-6 col-sm-6 col-md-2 col-lg-2 order-3">
+            <select name="status" id="search-status" class="form-select" title="Filtrer par statut">
+              <option value="">Tous statuts</option>
+              <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Actif</option>
+              <option value="expired" {% if request.GET.status == 'expired' %}selected{% endif %}>Expiré</option>
+            </select>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-4">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn w-100 text-nowrap px-2 text-white" style="background-color: #1e90ff;" onclick="showAddContractForm()">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+
+
+      <!-- Table Component -->
+      <div class="table-container">
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Véhicule</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell">Type</th>
+              <th class="d-none d-md-table-cell">Fournisseur</th>
+              <th class="d-none d-md-table-cell">Référence</th>
+              <th class="d-none d-md-table-cell">Date Début</th>
+              <th class="d-none d-md-table-cell">Date Expiration</th>
+              <th class="d-none d-md-table-cell">Statut</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for contract in page_obj %}
+            <tr class="main-row" data-type-id="{{ contract.contract_type.id }}">
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td>{{ contract.vehicle.immatriculation }}</td>
+              <td class="d-none d-md-table-cell">{{ contract.contract_type.name }}</td>
+              <td class="d-none d-md-table-cell">{{ contract.provider.name }}</td>
+              <td class="d-none d-md-table-cell">{{ contract.reference_number|default:"-" }}</td>
+              <td class="d-none d-md-table-cell">{{ contract.start_date|date:"d/m/Y" }}</td>
+              <td class="d-none d-md-table-cell">{{ contract.expiration_date|date:"d/m/Y" }}</td>
+              <td class="d-none d-md-table-cell">
+                <span class="badge bg-{% if contract.is_expired %}danger{% elif contract.days_until_expiration <= 30 %}warning{% else %}success{% endif %}">
+                  {% if contract.is_expired %}
+                    Expiré
+                  {% elif contract.days_until_expiration <= 30 %}
+                    Expire bientôt ({{ contract.days_until_expiration }} j)
+                  {% else %}
+                    Actif
+                  {% endif %}
+                </span>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ contract.id }}">
+                  Voir détails
+                </button>
+                <div class="d-none d-md-flex gap-1 justify-content-end">
+                  {% if contract.contract_file %}
+                  <a href="{{ contract.contract_file.url }}" class="btn btn-sm btn-light border text-info" target="_blank" title="Voir le fichier">
+                    <i class="fas fa-file-pdf"></i>
+                  </a>
+                  {% endif %}
+                  <button class="btn btn-sm btn-light border text-dark" title="Modifier"
+                          data-contract-id="{{ contract.id }}"
+                          data-vehicle-id="{{ contract.vehicle.id }}"
+                          data-type-id="{{ contract.contract_type.id }}"
+                          data-provider-id="{{ contract.provider.id }}"
+                          data-reference="{{ contract.reference_number }}"
+                          data-start-date="{{ contract.start_date|date:'Y-m-d' }}"
+                          data-expiration-date="{{ contract.expiration_date|date:'Y-m-d' }}"
+                          data-notes="{{ contract.notes }}"
+                          data-is-active="{{ contract.is_active }}"
+                          onclick="showEditContractForm(this)">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" title="Supprimer"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalDeleteContract"
+                          data-contract-id="{{ contract.id }}"
+                          data-vehicle="{{ contract.vehicle.immatriculation }}"
+                          data-type="{{ contract.contract_type.name }}"
+                          data-provider="{{ contract.provider.name }}">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="collapse bg-light" id="details-{{ contract.id }}">
+              <td colspan="9" class="p-3">
+                <div class="row">
+                  <div class="col-6">
+                    <p class="mb-2"><strong>Type:</strong> {{ contract.contract_type.name }}</p>
+                    <p class="mb-2"><strong>Fournisseur:</strong> {{ contract.provider.name }}</p>
+                    <p class="mb-2"><strong>Référence:</strong> {{ contract.reference_number|default:"-" }}</p>
+                    <p class="mb-2"><strong>Date Début:</strong> {{ contract.start_date|date:"d/m/Y" }}</p>
+                  </div>
+                  <div class="col-6">
+                    <p class="mb-2"><strong>Date Expiration:</strong> {{ contract.expiration_date|date:"d/m/Y" }}</p>
+                    <p class="mb-2"><strong>Statut:</strong> 
+                      <span class="badge bg-{% if contract.is_expired %}danger{% elif contract.days_until_expiration <= 30 %}warning{% else %}success{% endif %}">
+                        {% if contract.is_expired %}
+                          Expiré
+                        {% elif contract.days_until_expiration <= 30 %}
+                          Expire bientôt ({{ contract.days_until_expiration }} j)
+                        {% else %}
+                          Actif
+                        {% endif %}
+                      </span>
+                    </p>
+                    <p class="mb-2"><strong>Jours restants:</strong> 
+                      {% if contract.is_expired %}
+                        <span class="text-danger">Expiré</span>
+                      {% else %}
+                        {{ contract.days_until_expiration }} jours
+                      {% endif %}
+                    </p>
+                  </div>
+                  <div class="col-12 mt-3">
+                    <div class="d-flex gap-2">
+                      {% if contract.contract_file %}
+                      <a href="{{ contract.contract_file.url }}" class="btn btn-sm btn-info text-white" target="_blank" title="Voir le fichier">
+                        <i class="fas fa-file-pdf me-1"></i> Voir PDF
+                      </a>
+                      {% endif %}
+                      <button class="btn btn-sm btn-dark" title="Modifier"
+                              data-contract-id="{{ contract.id }}"
+                              data-vehicle-id="{{ contract.vehicle.id }}"
+                              data-type-id="{{ contract.contract_type.id }}"
+                              data-provider-id="{{ contract.provider.id }}"
+                              data-reference="{{ contract.reference_number }}"
+                              data-start-date="{{ contract.start_date|date:'Y-m-d' }}"
+                              data-expiration-date="{{ contract.expiration_date|date:'Y-m-d' }}"
+                              data-notes="{{ contract.notes }}"
+                              data-is-active="{{ contract.is_active }}"
+                              onclick="showEditContractForm(this)">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                      </button>
+                      <button class="btn btn-sm btn-danger" title="Supprimer"
+                              data-bs-toggle="modal"
+                              data-bs-target="#modalDeleteContract"
+                              data-contract-id="{{ contract.id }}"
+                              data-vehicle="{{ contract.vehicle.immatriculation }}"
+                              data-type="{{ contract.contract_type.name }}"
+                              data-provider="{{ contract.provider.name }}">
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9" class="text-center py-4">
+                <i class="fas fa-file-signature fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Aucun contrat disponible</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Component -->
+      {% if page_obj.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.items_per_page %}&items_per_page={{ request.GET.items_per_page }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </span>
+            </li>
+          {% endif %}
+
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.items_per_page %}&items_per_page={{ request.GET.items_per_page }}{% endif %}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.items_per_page %}&items_per_page={{ request.GET.items_per_page }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout inline - Card séparée -->
+  <div class="card mt-4" id="addFormCard">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus-circle me-2"></i>
+      Ajouter un Contrat
+    </div>
+    <div class="card-body">
+      <form id="addContractForm" method="post" action="{% url 'contract' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Véhicule <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-car"></i></span>
+                <select class="form-select" name="vehicle_id" required>
+                  <option value="" selected disabled>-- Sélectionner un véhicule --</option>
+                  {% for v in vehicules %}
+                  <option value="{{ v.id }}">{{ v.immatriculation }} ({{ v.marque.nom }} {{ v.modele.nom }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Type de Contrat <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-file-contract"></i></span>
+                <select class="form-select" name="contract_type_id" required>
+                  <option value="" selected disabled>-- Sélectionner un type --</option>
+                  {% for type in contract_types %}
+                  <option value="{{ type.id }}">{{ type.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Fournisseur <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-building"></i></span>
+                <select class="form-select" name="provider_id" required>
+                  <option value="" selected disabled>-- Sélectionner un fournisseur --</option>
+                  {% for provider in providers %}
+                  <option value="{{ provider.id }}">{{ provider.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Référence</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                <input type="text" class="form-control" name="reference_number" placeholder="Numéro de référence...">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Date de Début <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="date" class="form-control" name="start_date" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Date d'Expiration <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar-check"></i></span>
+                <input type="date" class="form-control" name="expiration_date" required>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Fichier du Contrat <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-file-upload"></i></span>
+                <input type="file" class="form-control" name="contract_file" accept=".pdf,.doc,.docx" required>
+              </div>
+              <div class="form-text">Formats acceptés: PDF, DOC, DOCX. Taille maximale: 10MB.</div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Notes</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                <textarea class="form-control" name="notes" rows="3" placeholder="Notes sur le contrat..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12">
+            <div class="d-flex gap-2 justify-content-end">
+              <button type="button" class="btn btn-secondary" id="cancelFormBtn">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<!-- Formulaire de modification en bas de page -->
+<div class="card mt-4" id="editContractFormCard" style="display: none;">
+  <div class="card-header text-white" style="background-color: #1e90ff;">
+    <i class="fas fa-edit me-2"></i>
+    Modifier le Contrat
+  </div>
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" id="editContractForm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit">
+      <input type="hidden" name="contract_id" id="edit_contract_id">
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="edit_vehicle" class="form-label">Véhicule <span class="text-danger">*</span></label>
+            <select class="form-select" id="edit_vehicle" name="vehicle_id" required>
+              <option value="">Sélectionner un véhicule</option>
+              {% for vehicle in vehicules %}
+                <option value="{{ vehicle.id }}">{{ vehicle.immatriculation }} - {{ vehicle.marque.nom }} {{ vehicle.modele.nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="edit_contract_type" class="form-label">Type de contrat <span class="text-danger">*</span></label>
+            <select class="form-select" id="edit_contract_type" name="contract_type_id" required>
+              <option value="">Sélectionner un type</option>
+              {% for type in contract_types %}
+                <option value="{{ type.id }}">{{ type.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="edit_provider" class="form-label">Fournisseur <span class="text-danger">*</span></label>
+            <select class="form-select" id="edit_provider" name="provider_id" required>
+              <option value="">Sélectionner un fournisseur</option>
+              {% for provider in providers %}
+                <option value="{{ provider.id }}">{{ provider.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="edit_reference_number" class="form-label">Numéro de référence</label>
+            <input type="text" class="form-control" id="edit_reference_number" name="reference_number">
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="edit_start_date" class="form-label">Date de début <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="editStartDate" name="start_date" required>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="edit_expiration_date" class="form-label">Date d'expiration <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="editExpirationDate" name="expiration_date" required>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="edit_contract_file" class="form-label">Fichier du contrat</label>
+            <input type="file" class="form-control" id="edit_contract_file" name="contract_file" accept=".pdf,.doc,.docx">
+            <small class="form-text text-muted">Formats acceptés: PDF, DOC, DOCX</small>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <div class="form-check mt-4">
+              <input class="form-check-input" type="checkbox" id="edit_is_active" name="is_active">
+              <label class="form-check-label" for="edit_is_active">
+                Contrat actif
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mb-3">
+        <label for="edit_notes" class="form-label">Notes</label>
+        <textarea class="form-control" id="edit_notes" name="notes" rows="3"></textarea>
+      </div>
+      
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary" onclick="hideEditContractForm()">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-save me-1"></i> Modifier le contrat
+        </button>
+      </div>
+    </form>
+  </div>
+'</div>
+
+<!-- fin du container content -->
+</div>
+
+<!-- Delete Contract Modal -->
+<div class="modal fade" id="modalDeleteContract" tabindex="-1" aria-labelledby="modalDeleteContractLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'contract' %}" id="deleteContractForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="contract_id" id="deleteContractId">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="modalDeleteContractLabel">
+            <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+            <div>
+              <strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer le contrat <strong id="deleteContractType"></strong> avec <strong id="deleteContractProvider"></strong> pour le véhicule <strong id="deleteContractVehicle"></strong> ?
+            </div>
+          </div>
+          <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="fas fa-file-pdf me-2 fw-bold"></i>
+            <div>Le fichier PDF associé sera également supprimé.</div>
+          </div>
+          <p class="text-danger mb-0"><i class="fas fa-times-circle me-1"></i>Cette action est irréversible.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash-alt me-1"></i>Supprimer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Gestion du formulaire inline
+  const toggleFormBtn = document.getElementById('toggleFormBtn');
+  const addFormCard = document.getElementById('addFormCard');
+  const cancelFormBtn = document.getElementById('cancelFormBtn');
+  const addContractForm = document.getElementById('addContractForm');
+
+  if (toggleFormBtn && addFormCard) {
+    toggleFormBtn.addEventListener('click', function() {
+      if (addFormCard.style.display === 'none') {
+        addFormCard.style.display = 'block';
+        addFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        toggleFormBtn.innerHTML = '<i class="fas fa-times"></i><span class="d-none d-lg-inline ms-1">Annuler</span>';
+        toggleFormBtn.classList.remove('btn-secondary');
+        toggleFormBtn.classList.add('btn-secondary');
+      } else {
+        addFormCard.style.display = 'none';
+        toggleFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau</span>';
+        toggleFormBtn.classList.remove('btn-secondary');
+        toggleFormBtn.classList.add('btn-secondary');
+        toggleFormBtn.style.backgroundColor = '#1e90ff';
+        toggleFormBtn.style.color = 'white';
+        addContractForm.reset();
+      }
+    });
+  }
+
+  if (cancelFormBtn && addFormCard && toggleFormBtn) {
+    cancelFormBtn.addEventListener('click', function() {
+      addFormCard.style.display = 'none';
+      toggleFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau</span>';
+      toggleFormBtn.classList.remove('btn-secondary');
+      toggleFormBtn.classList.add('btn-secondary');
+      toggleFormBtn.style.backgroundColor = '#1e90ff';
+      toggleFormBtn.style.color = 'white';
+      addContractForm.reset();
+    });
+  }
+
+  // Function to validate dates
+  function validateDates(startDate, expirationDate) {
+    if (!startDate || !expirationDate) return true;
+    return new Date(expirationDate) >= new Date(startDate);
+  }
+
+  // Fonctions pour gérer les formulaires en bas de page (exposées globalement)
+  window.showAddContractForm = function() {
+    const addCard = document.getElementById('addFormCard');
+    const editCard = document.getElementById('editContractFormCard');
+    if (editCard) editCard.style.display = 'none';
+    if (addCard) {
+      addCard.style.display = 'block';
+      addCard.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  window.hideEditContractForm = function() {
+    const addCard = document.getElementById('addFormCard');
+    const editCard = document.getElementById('editContractFormCard');
+    if (editCard) editCard.style.display = 'none';
+    if (addCard) addCard.style.display = 'block';
+  }
+
+  window.showEditContractForm = function(btn) {
+    // Masquer le formulaire d'ajout
+    document.getElementById('addFormCard').style.display = 'none';
+    
+    // Extraire les données depuis data-*
+    const contractId = btn.getAttribute('data-contract-id');
+    const vehicleId = btn.getAttribute('data-vehicle-id');
+    const typeId = btn.getAttribute('data-type-id');
+    const providerId = btn.getAttribute('data-provider-id');
+    const reference = btn.getAttribute('data-reference') || '';
+    const startDate = btn.getAttribute('data-start-date');
+    const expirationDate = btn.getAttribute('data-expiration-date');
+    const notes = btn.getAttribute('data-notes') || '';
+    const isActive = btn.getAttribute('data-is-active');
+
+    // Remplir les champs du formulaire de modification
+    document.getElementById('edit_contract_id').value = contractId;
+    document.getElementById('edit_vehicle').value = vehicleId;
+    document.getElementById('edit_contract_type').value = typeId;
+    document.getElementById('edit_provider').value = providerId;
+    document.getElementById('edit_reference_number').value = reference;
+    document.getElementById('editStartDate').value = startDate;
+    document.getElementById('editExpirationDate').value = expirationDate;
+    document.getElementById('edit_notes').value = notes;
+    document.getElementById('edit_is_active').checked = isActive === 'True' || isActive === true;
+    
+    // Définir la date minimum pour l'expiration
+    document.getElementById('editExpirationDate').setAttribute('min', startDate);
+    
+    // Afficher le formulaire de modification
+    document.getElementById('editContractFormCard').style.display = 'block';
+    
+    // Faire défiler vers le formulaire
+    document.getElementById('editContractFormCard').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Delete Modal initialization
+  const modalDeleteContract = document.getElementById('modalDeleteContract');
+  if (modalDeleteContract) {
+    modalDeleteContract.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      
+      document.getElementById('deleteContractId').value = button.getAttribute('data-contract-id');
+      document.getElementById('deleteContractVehicle').textContent = button.getAttribute('data-vehicle');
+      document.getElementById('deleteContractType').textContent = button.getAttribute('data-type');
+      document.getElementById('deleteContractProvider').textContent = button.getAttribute('data-provider');
+    });
+  }
+
+  // Date validation handlers
+  function setupDateValidation(startSelector, expirationSelector) {
+    const startField = document.querySelector(startSelector);
+    const expirationField = document.querySelector(expirationSelector);
+    
+    if (startField && expirationField) {
+      startField.addEventListener('change', function() {
+        const startDate = this.value;
+        expirationField.setAttribute('min', startDate);
+        
+        if (expirationField.value && !validateDates(startDate, expirationField.value)) {
+          expirationField.classList.add('is-invalid');
+        } else {
+          expirationField.classList.remove('is-invalid');
+        }
+      });
+
+      expirationField.addEventListener('change', function() {
+        if (!validateDates(startField.value, this.value)) {
+          this.classList.add('is-invalid');
+        } else {
+          this.classList.remove('is-invalid');
+        }
+      });
+    }
+  }
+
+  // Setup validation for both forms
+  setupDateValidation('#addStartDate', '#addExpirationDate');
+  setupDateValidation('#editStartDate', '#editExpirationDate');
+
+  // Form submission validation
+  const contractForms = document.querySelectorAll('form[id$="ContractForm"]');
+  contractForms.forEach(form => {
+    form.addEventListener('submit', function(e) {
+      const action = form.querySelector('input[name="action"]').value;
+      
+      // Date validation
+      const startDate = form.querySelector('input[name="start_date"]').value;
+      const expirationDate = form.querySelector('input[name="expiration_date"]').value;
+      
+      if (!validateDates(startDate, expirationDate)) {
+        e.preventDefault();
+        alert('La date d\'expiration doit être postérieure ou égale à la date de début');
+        return false;
+      }
+      
+      // Validate contract ID for edit/delete
+      if (['edit', 'delete'].includes(action)) {
+        const contractId = form.querySelector('input[name="contract_id"]').value;
+        if (!contractId) {
+          e.preventDefault();
+          alert('Erreur: ID de contrat manquant');
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  });
+
+  // Table filtering
+  const searchInput = document.getElementById('search-contract');
+  const typeFilter = document.getElementById('search-type');
+  const statusFilter = document.getElementById('search-status');
+  const tableRows = document.querySelectorAll('#searchableTable tbody tr.main-row');
+
+  function filterTable() {
+    const searchText = searchInput.value.trim().toLowerCase();
+    const selectedType = typeFilter.value;
+    const selectedStatus = statusFilter.value;
+
+    tableRows.forEach(row => {
+      const vehicleText = row.cells[1]?.textContent.toLowerCase() || '';
+      const typeId = row.getAttribute('data-type-id');
+      const providerText = row.cells[3]?.textContent.toLowerCase() || '';
+      const referenceText = row.cells[4]?.textContent.toLowerCase() || '';
+      const statusBadge = row.querySelector('.badge');
+      
+      const matchesSearch = vehicleText.includes(searchText) || 
+                          providerText.includes(searchText) || 
+                          referenceText.includes(searchText);
+      
+      const matchesType = selectedType === '' || typeId === selectedType;
+      
+      const matchesStatus = selectedStatus === '' || 
+                          (selectedStatus === 'expired' && statusBadge && statusBadge.classList.contains('bg-danger')) || 
+                          (selectedStatus === 'active' && statusBadge && (statusBadge.classList.contains('bg-success') || statusBadge.classList.contains('bg-warning')));
+      
+      if (matchesSearch && matchesType && matchesStatus) {
+        row.style.display = '';
+        // Afficher aussi la ligne de détails si elle existe
+        const detailsRow = row.nextElementSibling;
+        if (detailsRow && detailsRow.classList.contains('collapse')) {
+          detailsRow.style.display = '';
+        }
+      } else {
+        row.style.display = 'none';
+        // Masquer aussi la ligne de détails si elle existe
+        const detailsRow = row.nextElementSibling;
+        if (detailsRow && detailsRow.classList.contains('collapse')) {
+          detailsRow.style.display = 'none';
+        }
+      }
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', filterTable);
+  }
+  if (typeFilter) {
+    typeFilter.addEventListener('change', filterTable);
+  }
+  if (statusFilter) {
+    statusFilter.addEventListener('change', filterTable);
+  }
+
+  // Gestion du select all
+  const selectAllCheckbox = document.getElementById('selectAll');
+  const rowCheckboxes = document.querySelectorAll('.row-check');
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      rowCheckboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+    });
+  }
+
+  // Mise à jour du select all quand les checkboxes individuelles changent
+  rowCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
+      const someChecked = Array.from(rowCheckboxes).some(cb => cb.checked);
+      
+      selectAllCheckbox.checked = allChecked;
+      selectAllCheckbox.indeterminate = someChecked && !allChecked;
+    });
+  });
+
+  // Gestion du changement du nombre d'éléments par page
+  const itemsPerPageSelect = document.getElementById('items-per-page');
+  if (itemsPerPageSelect) {
+    itemsPerPageSelect.addEventListener('change', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      urlParams.set('items_per_page', this.value);
+      urlParams.set('page', '1'); // Revenir à la première page
+      window.location.search = urlParams.toString();
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+<div class="card table-card mb-4">
+  <div class="card-body">
+    <div class="row align-items-center mb-3">
+      <div class="col-12 col-md-5">
+        <div class="input-group">
+          <span class="input-group-text input-group-text-primary">
+            <i class="fas fa-search"></i>
+          </span>
+          <input type="search" class="form-control search-input-primary" placeholder="Rechercher par libellé..." 
+                 oninput="performSearch('operation_type', this.value, 'operation-types-tbody')" />
+        </div>
+      </div>
+      <div class="col-md-3 d-none d-md-block"></div>
+      {% if request.session.user.permissions.inventory.write %}
+      <div class="col-12 col-md-4 d-flex justify-content-md-end mt-2 mt-md-0">
+        <button id="btn-add-operation-type" class="btn btn-primary w-100 w-md-auto text-nowrap px-3">
+          <i class="fas fa-plus"></i>
+          <span>Ajouter un type d'opération</span>
+        </button>
+      </div>
+      {% endif %}
+    </div>
+
+    <table class="table table-hover table-responsive table-striped" style="box-shadow: none;">
+      <thead class="table-light">
+        <tr class="main-row">
+          <th class="sortable" data-sort-field="label">Libellé</th>
+          {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+          <th class="text-center">Actions</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody id="operation-types-tbody" data-entity="operation-type">
+        {% for pt in operation_types %}
+        <tr data-id="{{ pt.pk }}" data-label="{{ pt.label }}">
+          <td data-label="Libellé">{{ pt.label }}</td>
+          {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+          <td data-label="Actions" class="text-center">
+            <button type="button" class="btn btn-sm btn-light btn-edit-config" data-entity="operation-type" title="Modifier"><i class="fas fa-edit"></i></button>
+            <button type="button" class="btn btn-sm btn-light text-danger btn-operation-type-delete" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="2" class="text-center text-muted">Aucun type d'opération</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    
+    {% if operation_types.has_other_pages %}
+    <nav aria-label="Navigation pages" id="operation-type-pagination" class="mt-3">
+      <ul class="pagination justify-content-center flex-wrap">
+        {% if operation_types.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?operation_type_page={{ operation_types.previous_page_number }}&tab=operation-type{% for key, value in request.GET.items %}{% if key != 'operation_type_page' and key != 'tab' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+            <i class="fas fa-chevron-left d-block d-sm-none"></i><span class="d-none d-sm-block">&laquo; Préc</span></a>
+        </li>
+        {% endif %}
+        {% for num in operation_types.paginator.page_range %}
+        <li class="page-item {% if operation_types.number == num %}active{% endif %}">
+          <a class="page-link" href="?operation_type_page={{ num }}&tab=operation-type{% for key, value in request.GET.items %}{% if key != 'operation_type_page' and key != 'tab' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if operation_types.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?operation_type_page={{ operation_types.next_page_number }}&tab=operation-type{% for key, value in request.GET.items %}{% if key != 'operation_type_page' and key != 'tab' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+            <i class="fas fa-chevron-right d-block d-sm-none"></i><span class="d-none d-sm-block">Suiv &raquo;</span></a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>

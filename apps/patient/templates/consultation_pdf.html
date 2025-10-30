@@ -1,0 +1,199 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Consultation - {{ consultation.patient.full_name }}</title>
+    <style>
+        /* Styles pour le PDF Consultation */
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+
+        .patient-info {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #555;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .info-item {
+            margin-bottom: 5px;
+        }
+
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 150px;
+            color: #555;
+        }
+
+        .value {
+            display: inline-block;
+        }
+
+        .treatment-details {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f0f8ff;
+            border: 1px solid #cce6ff;
+        }
+
+        .vital-signs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .vital-item {
+            text-align: center;
+            padding: 8px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+        }
+
+        .vital-label {
+            font-weight: bold;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .vital-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .medications {
+            margin: 15px 0;
+        }
+
+        .medication-item {
+            margin-bottom: 8px;
+            padding: 8px;
+            background-color: #fff8dc;
+            border: 1px solid #ffe4b5;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10px;
+            color: #777;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        .mb-10 {
+            margin-bottom: 10px;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        @media print {
+            body {
+                font-size: 10px;
+            }
+            
+            .header h1 {
+                font-size: 16px;
+            }
+            
+            .section-title {
+                font-size: 14px;
+            }
+            
+            .label {
+                width: 120px;
+            }
+            
+            .vital-signs {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <h2>Compte-rendu de consultation</h2>
+    <div class="section">
+        <span class="label">Date :</span><span class="value">{{ consultation.date|date:'d/m/Y H:i' }}</span><br>
+        <span class="label">Patient :</span><span class="value">{{ consultation.patient.last_name }} {{ consultation.patient.first_name }}</span><br>
+        <span class="label">Médecin :</span><span class="value">{{ consultation.medecin.full_name }}</span><br>
+    </div>
+    <div class="section">
+        <span class="label">Commentaires :</span>
+        <div class="value">{{ consultation.commentaires }}</div>
+    </div>
+    <div class="section">
+        <span class="label">Traitement / Médicaments :</span>
+        <div class="value">{{ consultation.traitement }}</div>
+    </div>
+    <div class="section">
+        <table class="table">
+            <tr>
+                <th>Température (°C)</th>
+                <th>Pression artérielle</th>
+                <th>Rythme cardiaque (bpm)</th>
+            </tr>
+            <tr>
+                <td>{{ consultation.temperature }}</td>
+                <td>{{ consultation.pression }}</td>
+                <td>{{ consultation.rythme_cardiaque }}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="section">
+        <span class="label">Hospitalisation :</span><span class="value">{% if consultation.hospitalisation %}Oui{% else %}Non{% endif %}</span>
+    </div>
+</body>
+</html>

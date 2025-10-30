@@ -1,0 +1,175 @@
+/* Styles pour la page de configuration HR */
+
+/* Styles pour les onglets */
+.nav-tabs .nav-link {
+    font-weight: 500;
+    color: #6c757d;
+    border: 1px solid transparent;
+    border-bottom: 3px solid transparent;
+}
+
+.nav-tabs .nav-link.active {
+    color: #007bff;
+    background-color: #f8f9fa;
+    border-color: #dee2e6 #dee2e6 #fff;
+    border-bottom: 3px solid #007bff;
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+    border-color: #e9ecef #e9ecef #dee2e6;
+    border-bottom: 3px solid #adb5bd;
+}
+
+/* Styles pour les champs de recherche */
+.form-control-sm {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.search-input {
+    max-width: 200px;
+}
+
+/* Styles pour les boutons d'action */
+.btn-add {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.btn-add i {
+    margin-right: 0.25rem;
+}
+
+/* Styles pour les tableaux */
+.table th {
+    font-weight: 600;
+    color: #495057;
+    background-color: #e9ecef;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.075);
+}
+
+/* Styles pour les boutons d'édition et de suppression */
+.edit-btn, .delete-btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.edit-btn:hover {
+    background-color: #007bff !important;
+    color: white !important;
+    border-color: #007bff !important;
+}
+
+.delete-btn:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+    border-color: #dc3545 !important;
+}
+
+/* Styles pour le formulaire d'édition */
+#editFormContainer {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    display: none;
+}
+
+#formTitle {
+    color: #495057;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+
+
+/* Styles pour les cases à cocher */
+.form-check-input:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.form-check-label {
+    font-weight: 400;
+    color: #495057;
+}
+
+/* Styles pour les modals */
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-title {
+    color: #495057;
+    font-weight: 500;
+}
+
+.modal-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Styles pour cacher/afficher les champs du formulaire */
+.d-none {
+    display: none !important;
+}
+
+.d-block {
+    display: block !important;
+}
+
+/* Styles spécifiques pour les champs du formulaire */
+.position-field, .department-field, .contract_type-field, .leave_type-field, 
+.prime-field, .social_contribution-field, .model_calcul-field, .speciality-field {
+    display: none;
+}
+
+/* Styles pour le champ commun */
+.common-label-field {
+    display: none;
+}
+
+/* Styles pour la pagination */
+.pagination {
+    margin-bottom: 0;
+}
+
+.page-link {
+    color: #007bff;
+}
+
+.page-link:hover {
+    color: #0056b3;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* Styles responsives */
+@media (max-width: 768px) {
+    .nav-tabs .nav-link {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-add {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .edit-btn, .delete-btn {
+        padding: 0.125rem 0.25rem;
+        font-size: 0.75rem;
+    }
+}

@@ -1,0 +1,667 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestion des Visiteurs - MiniERP{% endblock %}
+{% block menu %}
+{% include "menu_maintenance.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+        </div>
+    </div>
+
+    <!-- Messages et Alertes -->
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-{% if message.tags == 'success' %}check-circle text-success{% elif message.tags == 'warning' %}exclamation-triangle text-warning{% elif message.tags == 'error' %}times-circle text-danger{% else %}info-circle text-info{% endif %} me-3"></i>
+                <div>
+                    <strong class="text-capitalize">{{ message.tags|default:'Info' }}!</strong> {{ message }}
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-user-friends me-2"></i>
+            Liste des Visiteurs
+        </div>
+        <div class="card-body">
+            <form method="get" id="search-form" class="mb-4">
+                <div class="row g-2">
+                    <!-- Barre de recherche -->
+                    <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                        <div class="input-group">
+                            <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="search" name="q" id="searchInput" class="form-control" style="border-color: #1e90ff;" placeholder="Recherche visiteurs..." value="{{ request.GET.q|default:'' }}">
+                        </div>
+                    </div>
+                    <!-- Filtre statut -->
+                    <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+                        <select name="status" class="form-select" id="search-status" title="Filtrer par statut">
+                            <option value="">Tous les statuts</option>
+                            <option value="present" {% if request.GET.status == 'present' %}selected{% endif %}>Présents</option>
+                            <option value="sorti" {% if request.GET.status == 'sorti' %}selected{% endif %}>Sortis</option>
+                        </select>
+                    </div>
+                    <!-- Boutons d'action -->
+                    <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="window.location.href='{% url 'maintenance:visiteur_list' %}'">
+                                <i class="fas fa-undo"></i>
+                                <span class="d-none d-lg-inline ms-1">Réinitialiser</span>
+                            </button>
+                            <button type="submit" class="btn btn-primary w-100 text-nowrap px-2">
+                                <i class="fas fa-filter"></i>
+                                <span class="d-none d-lg-inline ms-1">Filtrer</span>
+                            </button>
+                            <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="toggleAddForm()">
+                                <i class="fas fa-plus"></i>
+                                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+
+    <!-- Main Table -->
+    <div class="table-container">
+            <table class="table table-striped table-hover"  id="searchableTable">
+                    <thead class="table-light borderless">
+                        <tr class="main-row">
+                             <th class="d-none d-md-table-cell">
+                            <input type="checkbox" id="selectAll">
+                            </th>
+
+                            <th class="d-none d-md-table-cell">#</th>
+                               <th>
+                    <div class="d-flex align-items-center">
+                        <span>Nom</span>
+                        <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                    </th>
+                            <th class="d-none d-md-table-cell">Prénom</th>
+                            <th class="d-none d-md-table-cell">Contact</th>
+                            <th class="d-none d-md-table-cell">Date Entrée</th>
+                            <th class="d-none d-md-table-cell">Date Sortie</th>
+                            <th class="d-none d-md-table-cell">Motif</th>
+                            <th class="d-none d-md-table-cell">Statut</th>
+                            <th class="d-none d-md-table-cell">QR Code</th>
+                            <th class="d-none d-md-table-cell">Durée</th>
+                            <th class="text-end text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="visiteurs-table">
+                        {% for visiteur in visiteurs %}
+                        <tr class="main-row">
+                             <td class="d-none d-md-table-cell">
+                            <input type="checkbox" class="row-check">
+                            </td>
+                            <td class="d-none d-md-table-cell text-primary">{{ forloop.counter }}</td>
+                            <td class="d-none d-md-table-cell">
+                                <div class="d-flex align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 fw-semibold">{{ visiteur.nom }}</h6>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="d-none d-md-table-cell">{{ visiteur.prenom }}</td>
+                            <td class="d-none d-md-table-cell">
+                                <small class="text-muted d-block">{{ visiteur.telephone|default:"-" }}</small>
+                                <small class="text-muted">{{ visiteur.email|default:"-" }}</small>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <small class="text-muted">{{ visiteur.date_entree|date:"d/m/Y H:i" }}</small>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                {% if visiteur.date_sortie %}
+                                    <small class="text-muted">{{ visiteur.date_sortie|date:"d/m/Y H:i" }}</small>
+                                {% else %}
+                                    <span class="badge bg-info">En cours</span>
+                                {% endif %}
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <small class="text-truncate d-block" style="max-width: 150px;" title="{{ visiteur.motif_visite|default:'' }}">
+                                    {{ visiteur.motif_visite|default:"-" }}
+                                </small>
+                            </td>
+                            <td class="d-none d-md-table-cell text-center">
+                                {% if visiteur.date_sortie %}
+                                    <span class="badge bg-dark">Sorti</span>
+                                {% else %}
+                                    <span class="badge bg-success">Présent</span>
+                                {% endif %}
+                            </td>
+                            <td class="d-none d-md-table-cell text-center">
+                                {% if visiteur.qr_code %}
+                                    <img src="{{ visiteur.qr_code.url }}" alt="QR Code {{ visiteur.nom }}" 
+                                         style="width: 50px; height: 50px; cursor: pointer; border: 2px solid #e9ecef; border-radius: 8px; transition: all 0.2s ease-in-out;"
+                                         title="Cliquez pour agrandir le QR code"
+                                         onclick="showQRCode('{{ visiteur.nom }} {{ visiteur.prenom }}', '{{ visiteur.qr_code.url }}')"
+                                         onmouseover="this.style.transform='scale(1.1)'; this.style.borderColor='#007bff'; this.style.boxShadow='0 4px 8px rgba(0,123,255,0.3)';"
+                                         onmouseout="this.style.transform='scale(1)'; this.style.borderColor='#e9ecef'; this.style.boxShadow='none';">
+                                {% else %}
+                                    <span class="text-muted small">Génération...</span>
+                                {% endif %}
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <small class="text-muted">{{ visiteur.duree_formatee|default:"-" }}</small>
+                            </td>
+                            <td class="d-none d-md-table-cell text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-sm btn-light border text-dark" onclick="toggleEditForm(this)" 
+                                        data-visiteur-id="{{ visiteur.id }}"
+                                        data-visiteur-nom="{{ visiteur.nom }}"
+                                        data-visiteur-prenom="{{ visiteur.prenom }}"
+                                        data-visiteur-email="{{ visiteur.email|default:'' }}"
+                                        data-visiteur-telephone="{{ visiteur.telephone|default:'' }}"
+                                        data-visiteur-motif="{{ visiteur.motif_visite|default:'' }}"
+                                        data-visiteur-date-sortie="{% if visiteur.date_sortie %}{{ visiteur.date_sortie|date:'Y-m-d\\TH:i' }}{% endif %}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteVisiteur" 
+                                        data-visiteur-id="{{ visiteur.id }}"
+                                        data-visiteur-nom="{{ visiteur.nom }} {{ visiteur.prenom }}">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-4">
+                                <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                                    <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">Aucun visiteur trouvé</h5>
+                                    <p class="text-muted small mb-0">Aucun visiteur ne correspond à vos critères de recherche</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <!-- Pagination Component - Centered and functional -->
+                {% if is_paginated %}
+                <nav class="mt-3">
+                  <ul class="pagination justify-content-center flex-wrap">
+                    {% if page_obj.has_previous %}
+                      <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" aria-label="Page précédente">
+                          <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Préc</span>
+                        </a>
+                      </li>
+                    {% else %}
+                      <li class="page-item disabled">
+                        <span class="page-link">
+                          <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Préc</span>
+                        </span>
+                      </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                      {% if page_obj.number == num %}
+                        <li class="page-item active">
+                          <span class="page-link">{{ num }}</span>
+                        </li>
+                      {% elif num > page_obj.number|add:'-2' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                          <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">{{ num }}</a>
+                        </li>
+                      {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                      <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" aria-label="Page suivante">
+                          <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Suiv</span>
+                        </a>
+                      </li>
+                    {% else %}
+                      <li class="page-item disabled">
+                        <span class="page-link">
+                          <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Suiv</span>
+                        </span>
+                      </li>
+                    {% endif %}
+                  </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire d'ajout de visiteur -->
+<div class="card mb-4" id="addFormSection">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+        <h6 class="mb-0">
+            <i class="fas fa-plus me-2"></i>Ajouter un nouveau visiteur
+        </h6>
+</div>
+    <div class="card-body">
+            <form method="post" action="{% url 'maintenance:visiteur_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_visiteur">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="id_nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" id="id_nom" name="nom" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_prenom" class="form-label">Prénom <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" id="id_prenom" name="prenom" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_email" class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" id="id_email" name="email" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_telephone" class="form-label">Téléphone</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="text" id="id_telephone" name="telephone" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="id_motif_visite" class="form-label">Motif de visite</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                                <textarea id="id_motif_visite" name="motif_visite" class="form-control" rows="3" placeholder="Décrivez le motif de la visite..."></textarea>
+                            </div>
+                        </div>
+            </div>
+            <div class="mt-4 text-end">
+                <button type="button" class="btn btn-secondary me-2" onclick="clearAddForm()">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Formulaire de modification de visiteur -->
+<div class="card mb-4" id="editFormSection" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+        <h6 class="mb-0">
+            <i class="fas fa-edit me-2"></i>Modifier le visiteur
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'maintenance:visiteur_list' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_visiteur">
+            <input type="hidden" name="visiteur_id" id="edit_visiteur_id">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="edit_nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        <input type="text" id="edit_nom" name="nom" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="edit_prenom" class="form-label">Prénom <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        <input type="text" id="edit_prenom" name="prenom" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="edit_email" class="form-label">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                        <input type="email" id="edit_email" name="email" class="form-control">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="edit_telephone" class="form-label">Téléphone</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                        <input type="text" id="edit_telephone" name="telephone" class="form-control">
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label for="edit_motif_visite" class="form-label">Motif de visite</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                        <textarea id="edit_motif_visite" name="motif_visite" class="form-control" rows="3" placeholder="Décrivez le motif de la visite..."></textarea>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="edit_date_sortie" class="form-label">Date de sortie</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                        <input type="datetime-local" id="edit_date_sortie" name="date_sortie" class="form-control">
+                    </div>
+                    <small class="text-muted">Laissez vide si le visiteur est toujours présent</small>
+                </div>
+            </div>
+            <div class="mt-4 text-end">
+                <button type="button" class="btn btn-secondary me-2" onclick="clearEditForm()">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Modifier
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- Modal Modifier Visiteur -->
+<div class="modal fade" id="modalEditVisiteur" tabindex="-1" aria-labelledby="modalEditVisiteurLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{% url 'maintenance:visiteur_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_visiteur">
+                <input type="hidden" name="visiteur_id" id="edit_visiteur_id">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="modalEditVisiteurLabel">
+                        <i class="fas fa-edit me-2"></i>Modifier Visiteur
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="edit_nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" id="edit_nom" name="nom" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_prenom" class="form-label">Prénom <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" id="edit_prenom" name="prenom" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_email" class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" id="edit_email" name="email" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_telephone" class="form-label">Téléphone</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="text" id="edit_telephone" name="telephone" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="edit_motif_visite" class="form-label">Motif de visite</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                                <textarea id="edit_motif_visite" name="motif_visite" class="form-control" rows="3" placeholder="Décrivez le motif de la visite..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_date_sortie" class="form-label">Date de sortie</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                <input type="datetime-local" id="edit_date_sortie" name="date_sortie" class="form-control">
+                            </div>
+                            <small class="text-muted">Laissez vide si le visiteur est toujours présent</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-2"></i>Modifier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Supprimer Visiteur -->
+<div class="modal fade" id="modalDeleteVisiteur" tabindex="-1" aria-labelledby="modalDeleteVisiteurLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'maintenance:visiteur_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_visiteur">
+                <input type="hidden" name="visiteur_id" id="delete_visiteur_id">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="modalDeleteVisiteurLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                    <h5 class="text-danger">Attention!</h5>
+                    <p>Êtes-vous sûr de vouloir supprimer le visiteur <strong id="delete_visiteur_nom" class="text-primary"></strong> ?</p>
+                    <p class="text-danger"><small>Cette action est irréversible et supprimera définitivement toutes les données associées.</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-2"></i>Supprimer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal QR Code -->
+<div class="modal fade" id="modalQRCode" tabindex="-1" aria-labelledby="modalQRCodeLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalQRCodeLabel">
+                    <i class="fas fa-qrcode me-2"></i>QR Code Visiteur
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <h6 id="qr-visiteur-nom" class="text-primary mb-3"></h6>
+                <div style="padding: 15px; background: #f8f9fa; border-radius: 10px; margin: 10px 0; display: flex; justify-content: center; align-items: center;">
+                    <img id="qr-code-image" src="" alt="QR Code" style="max-width: 250px; max-height: 250px; width: auto; height: auto; border-radius: 8px; object-fit: contain;">
+                </div>
+                <p class="text-muted small mt-3">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Scannez ce QR code pour voir les informations du visiteur
+                </p>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Fermer
+                </button>
+                <button type="button" class="btn btn-primary" onclick="downloadQRCode()">
+                    <i class="fas fa-download me-2"></i>Télécharger
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables de state pour gérer la visibilité des formulaires
+let isAddFormVisible = true; // Formulaire d'ajout visible par défaut
+let isEditFormVisible = false;
+
+// Fonction pour afficher/masquer le formulaire d'ajout
+function toggleAddForm() {
+    const addFormSection = document.getElementById('addFormSection');
+    const editFormSection = document.getElementById('editFormSection');
+    
+    if (isAddFormVisible) {
+        addFormSection.style.display = 'none';
+        isAddFormVisible = false;
+    } else {
+        hideAllForms();
+        addFormSection.style.display = 'block';
+        isAddFormVisible = true;
+        window.scrollTo({
+            top: addFormSection.offsetTop - 80,
+            behavior: 'smooth'
+        });
+    }
+}
+
+// Fonction pour afficher/masquer le formulaire de modification
+function toggleEditForm(button) {
+    const editFormSection = document.getElementById('editFormSection');
+    const addFormSection = document.getElementById('addFormSection');
+    
+    if (isEditFormVisible) {
+        editFormSection.style.display = 'none';
+        isEditFormVisible = false;
+    } else {
+        hideAllForms();
+        editFormSection.style.display = 'block';
+        isEditFormVisible = true;
+        fillEditForm(button);
+        window.scrollTo({
+            top: editFormSection.offsetTop - 80,
+            behavior: 'smooth'
+        });
+    }
+}
+
+// Fonction pour masquer tous les formulaires
+function hideAllForms() {
+    const addFormSection = document.getElementById('addFormSection');
+    const editFormSection = document.getElementById('editFormSection');
+    
+    if (addFormSection) addFormSection.style.display = 'none';
+    if (editFormSection) editFormSection.style.display = 'none';
+    
+    isAddFormVisible = false;
+    isEditFormVisible = false;
+}
+
+// Fonction pour vider le formulaire d'ajout
+function clearAddForm() {
+    document.getElementById('id_nom').value = '';
+    document.getElementById('id_prenom').value = '';
+    document.getElementById('id_email').value = '';
+    document.getElementById('id_telephone').value = '';
+    document.getElementById('id_motif_visite').value = '';
+    hideAllForms();
+}
+
+// Fonction pour vider le formulaire de modification
+function clearEditForm() {
+    document.getElementById('edit_nom').value = '';
+    document.getElementById('edit_prenom').value = '';
+    document.getElementById('edit_email').value = '';
+    document.getElementById('edit_telephone').value = '';
+    document.getElementById('edit_motif_visite').value = '';
+    document.getElementById('edit_date_sortie').value = '';
+    hideAllForms();
+}
+
+// Fonction pour remplir le formulaire de modification
+function fillEditForm(button) {
+    document.getElementById('edit_visiteur_id').value = button.getAttribute('data-visiteur-id');
+    document.getElementById('edit_nom').value = button.getAttribute('data-visiteur-nom');
+    document.getElementById('edit_prenom').value = button.getAttribute('data-visiteur-prenom');
+    document.getElementById('edit_email').value = button.getAttribute('data-visiteur-email');
+    document.getElementById('edit_telephone').value = button.getAttribute('data-visiteur-telephone');
+    document.getElementById('edit_motif_visite').value = button.getAttribute('data-visiteur-motif');
+    document.getElementById('edit_date_sortie').value = button.getAttribute('data-visiteur-date-sortie');
+}
+
+// Fonctions globales pour les QR codes
+function showQRCode(visiteurNom, qrCodeUrl) {
+    console.log('showQRCode appelée:', visiteurNom, qrCodeUrl);
+    document.getElementById('qr-visiteur-nom').textContent = visiteurNom;
+    document.getElementById('qr-code-image').src = qrCodeUrl;
+    
+    var modal = new bootstrap.Modal(document.getElementById('modalQRCode'));
+    modal.show();
+}
+
+function downloadQRCode() {
+    const qrImage = document.getElementById('qr-code-image');
+    const visiteurNom = document.getElementById('qr-visiteur-nom').textContent;
+    
+    const link = document.createElement('a');
+    link.href = qrImage.src;
+    link.download = `QR_Code_${visiteurNom.replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('Initialisation des visiteurs...');
+    
+    // Initialiser l'affichage par défaut
+    const addFormSection = document.getElementById('addFormSection');
+    const editFormSection = document.getElementById('editFormSection');
+    
+    // S'assurer que seul le formulaire d'ajout est visible par défaut
+    if (addFormSection) addFormSection.style.display = 'block';
+    if (editFormSection) editFormSection.style.display = 'none';
+
+    // Remplissage du modal Supprimer Visiteur
+    var modalDeleteVisiteur = document.getElementById('modalDeleteVisiteur');
+    modalDeleteVisiteur && modalDeleteVisiteur.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        document.getElementById('delete_visiteur_id').value = button.getAttribute('data-visiteur-id');
+        document.getElementById('delete_visiteur_nom').textContent = button.getAttribute('data-visiteur-nom');
+    });
+
+    // Test des fonctions QR code
+    console.log('Fonction showQRCode disponible:', typeof showQRCode);
+    console.log('Modal QR code disponible:', document.getElementById('modalQRCode'));
+    
+    // Test des boutons de reset
+    const resetBtn = document.getElementById('resetSearch');
+    const searchInput = document.getElementById('searchInput');
+    const form = document.getElementById('searchForm');
+
+    if (resetBtn && searchInput && form) {
+        resetBtn.addEventListener('click', function () {
+            searchInput.value = '';
+            form.submit();
+        });
+    }
+});
+</script>
+{% endblock %}

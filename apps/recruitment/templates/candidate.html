@@ -1,0 +1,2058 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Candidats{% endblock %}
+{% block menu %}
+{% include "menu_recruitment.html" %}
+{% endblock %}
+
+{% block content %}       
+<style>
+  /* Styles pour les composants spécifiques aux candidats */
+  .photo-icon-1 {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s ease;
+  }
+  
+  .photo-icon-1 img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+  }
+  
+  .photo-overlay-1 {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.3s ease;
+  }
+  
+  .photo-icon-1:hover .photo-overlay-1 {
+      opacity: 1;
+  }
+  
+  .photo-overlay-1 i {
+      color: white;
+      font-size: 14px;
+  }
+
+  .linkedin-badge-3 {
+    background: linear-gradient(135deg, #0077b5, #00a0dc);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 15px;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .linkedin-badge-3:hover {
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0, 119, 181, 0.3);
+  }
+
+  /* Styles pour les tableaux responsives */
+  .table-container {
+    margin: 0 -15px;
+  }
+
+  @media screen and (max-width: 768px) {
+    .table-container {
+      margin: 0;
+    }
+    
+    .table td {
+      vertical-align: middle;
+    }
+    
+    .collapse {
+      border-top: 1px solid #dee2e6;
+    }
+    
+    .table > :not(caption) > * > * {
+      padding: 0.75rem;
+    }
+  }
+
+  /* Styles pour les boutons d'action */
+  .btn-light.border {
+    border-color: #dee2e6 !important;
+  }
+
+  .btn-light.border:hover {
+    background-color: #f8f9fa;
+  }
+
+  /* Styles pour les badges de statut */
+  .badge.bg-success {
+    background-color: #198754 !important;
+  }
+
+  .badge.bg-danger {
+    background-color: #dc3545 !important;
+  }
+
+  .badge.bg-primary {
+    background-color: #0d6efd !important;
+  }
+
+  .badge.bg-info {
+    background-color: #0dcaf0 !important;
+  }
+
+  .badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+  }
+
+  .badge.bg-secondary {
+    background-color: #6c757d !important;
+  }
+
+  .badge.bg-dark {
+    background-color: #212529 !important;
+  }
+
+  /* Styles pour les modals avec couleurs */
+  .modal-header.bg-primary {
+    background-color: #0d6efd !important;
+  }
+
+  .modal-header.bg-warning {
+    background-color: #ffc107 !important;
+  }
+
+  .modal-header.bg-danger {
+    background-color: #dc3545 !important;
+  }
+
+  .modal-header.bg-info {
+    background-color: #0dcaf0 !important;
+  }
+
+  .modal-header.bg-secondary {
+    background-color: #6c757d !important;
+  }
+
+  /* Styles pour les boutons de fermeture des modals */
+  .btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+  }
+
+  /* Styles pour les formulaires dans les modals */
+  .modal .form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .modal .input-group-text {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+  }
+
+  .modal .form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  }
+
+  /* Styles pour les alertes dans les modals */
+  .modal .alert {
+    margin-bottom: 1rem;
+  }
+
+  /* Styles pour les boutons de pagination */
+  .pagination .page-link {
+    color: #0d6efd;
+    border-color: #dee2e6;
+  }
+
+  .pagination .page-link:hover {
+    color: #0a58ca;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+  }
+
+  .pagination .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+
+  /* Styles pour les spinners de chargement */
+  .fa-spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Styles pour les détails mobiles */
+  @media (max-width: 768px) {
+    .collapse.bg-light {
+      background-color: #f8f9fa !important;
+    }
+    
+    .collapse .btn {
+      margin-bottom: 0.25rem;
+    }
+    
+    .collapse .row {
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  /* Styles pour les checkboxes de sélection */
+  .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+
+  .form-check-input:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  }
+
+  /* Styles pour les tooltips */
+  .tooltip {
+    font-size: 0.875rem;
+  }
+
+  /* Styles pour les transitions */
+  .fade {
+    transition: opacity 0.15s linear;
+  }
+
+  .collapse {
+    transition: height 0.35s ease;
+  }
+
+  /* Styles pour les icônes dans les boutons */
+  .btn i {
+    margin-right: 0.25rem;
+  }
+
+  /* Styles pour les liens dans les détails */
+  .collapse a {
+    color: #0d6efd;
+    text-decoration: none;
+  }
+
+  .collapse a:hover {
+    color: #0a58ca;
+    text-decoration: underline;
+  }
+</style>
+
+<div class="content">
+
+  <!-- Alerts Section - Utilisation des composants standards -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Main Content Card -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-users me-2"></i>
+      Liste des Candidats
+    </div>
+    <div class="card-body">
+      <!-- Table Header Component -->
+      <form method="get" id="search-form">
+        <div class="row g-2 mb-3">
+          <!-- Barre de recherche -->
+          <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+            </span>
+            <input type="search" 
+                   name="q" 
+                   id="search-candidate" 
+                     class="form-control border-primary" 
+                   placeholder="Rechercher par nom, prénom..." 
+                   value="{{ query|default:'' }}">
+          </div>
+          </div>
+          <!-- Filtre statut -->
+          <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+            <select name="status" class="form-select" title="Filtrer par statut">
+              <option value="">Tous les statuts</option>
+              <option value="actif">Actif</option>
+              <option value="archivé">Archivé</option>
+            </select>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="show-archived-candidates-btn" onclick="toggleArchivedCandidates()" title="Candidats archivés">
+            <i class="fas fa-archive"></i>
+                <span class="d-none d-lg-inline ms-1">Archivés</span>
+          </button>
+              <a href="{% url 'export_candidates_excel' %}" class="btn btn-light border w-100 text-nowrap px-2">
+                <i class="fas fa-file-export"></i>
+                <span class="d-none d-lg-inline ms-1">Excel</span>
+          </a>
+              <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddCandidateForm()">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+              </button>
+          
+              <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="showCVImportForm()">
+                  <i class="fas fa-file-upload me-2 text-info"></i>
+                  Ajouter par CV
+              </button>
+        </div>
+      </div>
+        </div>
+      </form>
+
+      <!-- Tableau d'affichage de la liste des candidats -->
+      <div class="table-responsive">
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Nom</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell">Prénom</th>
+              <th class="d-none d-md-table-cell">Email</th>
+              <th class="d-none d-md-table-cell">Téléphone</th>
+              <th class="d-none d-md-table-cell">Date de naissance</th>
+              <th class="d-none d-md-table-cell">Adresse</th>
+              <th class="d-none d-md-table-cell">Genre</th>
+              <th class="d-none d-md-table-cell">Photo</th>
+              <th class="d-none d-md-table-cell">Profil LinkedIn</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="candidates-table">
+            {% for candidate in page_obj %}
+            <tr class="main-row">
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td>{{ candidate.last_name }}</td>
+              <td class="d-none d-md-table-cell">{{ candidate.first_name }}</td>
+              <td class="d-none d-md-table-cell">{{ candidate.email }}</td>
+              <td class="d-none d-md-table-cell">{{ candidate.phone|default:"-" }}</td>
+              <td class="d-none d-md-table-cell">{% if candidate.birth_date %}{{ candidate.birth_date|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+              <td class="d-none d-md-table-cell">{{ candidate.address|default:"-" }}</td>
+              <td class="d-none d-md-table-cell">{{ candidate.gender|default:"-" }}</td>
+              <td class="d-none d-md-table-cell">
+                {% if candidate.photo %}
+                  <a href="{{ candidate.photo.url }}" target="_blank">
+                    <div class="photo-icon-1">
+                      <img src="{{ candidate.photo.url }}" alt="Photo">
+                      <div class="photo-overlay-1">
+                        <i class="fas fa-eye"></i>
+                      </div>
+                    </div>
+                  </a>
+                {% else %}-{% endif %}
+              </td>
+              <td class="d-none d-md-table-cell">
+                {% if candidate.linkedin_profile %}
+                <a href="{{ candidate.linkedin_profile }}" class="linkedin-badge-3" target="_blank">
+                  <i class="fab fa-linkedin-in"></i>
+                  LinkedIn
+                </a>
+              {% else %}-{% endif %}
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ candidate.id }}">
+                  Voir détails
+                  </button>
+                <div class="d-none d-md-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-info" 
+                          onclick="showCandidateDetails('{{ candidate.id }}')"
+                          title="Voir les détails">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-dark" 
+                          onclick="showEditCandidateForm(this)"
+                          data-candidate-id="{{ candidate.id }}"
+                          data-candidate-last-name="{{ candidate.last_name|default:'' }}"
+                          data-candidate-first-name="{{ candidate.first_name|default:'' }}"
+                          data-candidate-email="{{ candidate.email|default:'' }}"
+                          data-candidate-phone="{{ candidate.phone|default:'' }}"
+                          data-candidate-birth-date="{% if candidate.birth_date %}{{ candidate.birth_date|date:'Y-m-d' }}{% endif %}"
+                          data-candidate-address="{{ candidate.address|default:'' }}"
+                          data-candidate-gender="{{ candidate.gender|default:'' }}"
+                          data-candidate-photo="{% if candidate.photo %}{{ candidate.photo.url }}{% endif %}"
+                          data-candidate-linkedin-profile="{{ candidate.linkedin_profile|default:'' }}"
+                          title="Modifier ce candidat">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#modalDeleteCandidate"
+                          data-candidate-id="{{ candidate.id }}"
+                          data-candidate-last-name="{{ candidate.last_name|default:'' }}"
+                          data-candidate-first-name="{{ candidate.first_name|default:'' }}"
+                          title="Supprimer ce candidat">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="collapse bg-light" id="details-{{ candidate.id }}">
+              <td colspan="11" class="p-3">
+                <div class="row">
+                  <div class="col-6">
+                    <p class="mb-2"><strong>Prénom:</strong> {{ candidate.first_name }}</p>
+                    <p class="mb-2"><strong>Email:</strong> {{ candidate.email }}</p>
+                    <p class="mb-2"><strong>Téléphone:</strong> {{ candidate.phone|default:"-" }}</p>
+                    <p class="mb-2"><strong>Date de naissance:</strong> {% if candidate.birth_date %}{{ candidate.birth_date|date:"d/m/Y" }}{% else %}-{% endif %}</p>
+                  </div>
+                  <div class="col-6">
+                    <p class="mb-2"><strong>Adresse:</strong> {{ candidate.address|default:"-" }}</p>
+                    <p class="mb-2"><strong>Genre:</strong> {{ candidate.gender|default:"-" }}</p>
+                    <p class="mb-2"><strong>Photo:</strong> {% if candidate.photo %}<a href="{{ candidate.photo.url }}" target="_blank">Voir photo</a>{% else %}-{% endif %}</p>
+                    <p class="mb-2"><strong>LinkedIn:</strong> {% if candidate.linkedin_profile %}<a href="{{ candidate.linkedin_profile }}" target="_blank">Profil LinkedIn</a>{% else %}-{% endif %}</p>
+                  </div>
+                  <div class="col-12 mt-3">
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-info text-white" 
+                              onclick="showCandidateDetails('{{ candidate.id }}')"
+                              title="Voir les détails">
+                        <i class="fas fa-eye me-1"></i> Voir
+                      </button>
+                      <button class="btn btn-sm btn-dark" 
+                              onclick="showEditCandidateForm(this)"
+                              data-candidate-id="{{ candidate.id }}"
+                              data-candidate-last-name="{{ candidate.last_name|default:'' }}"
+                              data-candidate-first-name="{{ candidate.first_name|default:'' }}"
+                              data-candidate-email="{{ candidate.email|default:'' }}"
+                              data-candidate-phone="{{ candidate.phone|default:'' }}"
+                              data-candidate-birth-date="{% if candidate.birth_date %}{{ candidate.birth_date|date:'Y-m-d' }}{% endif %}"
+                              data-candidate-address="{{ candidate.address|default:'' }}"
+                              data-candidate-gender="{{ candidate.gender|default:'' }}"
+                              data-candidate-photo="{% if candidate.photo %}{{ candidate.photo.url }}{% endif %}"
+                              data-candidate-linkedin-profile="{{ candidate.linkedin_profile|default:'' }}"
+                              title="Modifier ce candidat">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                      </button>
+                      <button class="btn btn-sm btn-danger" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#modalDeleteCandidate"
+                              data-candidate-id="{{ candidate.id }}"
+                              data-candidate-last-name="{{ candidate.last_name|default:'' }}"
+                              data-candidate-first-name="{{ candidate.first_name|default:'' }}"
+                              title="Supprimer ce candidat">
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="11" class="text-center text-muted">Aucun candidat disponible</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Component - Utilisation du composant standard -->
+      {% if page_obj.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+          {% endif %}
+          
+            {% for num in page_obj.paginator.page_range %}
+              {% if page_obj.number == num %}
+              <li class="page-item active">
+                <a class="page-link" href="#">{{ num }}</a>
+              </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}">{{ num }}</a>
+              </li>
+              {% endif %}
+            {% endfor %}
+          
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout de candidat -->
+  <div class="card mb-4" id="add-candidate-form" style="display: block;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-user-plus me-2"></i>
+      Nouveau Candidat
+    </div>
+    <div class="card-body">
+      <form id="candidateFormBottom" method="post" enctype="multipart/form-data" action="{% url 'recruitment_candidates' %}">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Nom <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="id_last_name_bottom" name="last_name" required>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Prénom <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="id_first_name_bottom" name="first_name" required>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Email <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+              <input type="email" class="form-control" id="id_email_bottom" name="email" required>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Téléphone</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-phone"></i></span>
+              <input type="text" class="form-control" id="id_phone_bottom" name="phone">
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Date de naissance</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="date" class="form-control" id="id_birth_date_bottom" name="birth_date">
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Adresse</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+              <input type="text" class="form-control" id="id_address_bottom" name="address">
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Genre</label><br>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="gender" id="id_gender_homme_bottom" value="Homme">
+              <label class="form-check-label" for="id_gender_homme_bottom">Homme</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="gender" id="id_gender_femme_bottom" value="Femme">
+              <label class="form-check-label" for="id_gender_femme_bottom">Femme</label>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Photo</label>
+            <input type="file" class="form-control" id="id_photo_bottom" name="photo" accept="image/*">
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Profil LinkedIn</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fab fa-linkedin"></i></span>
+              <input type="url" class="form-control" id="id_linkedin_profile_bottom" name="linkedin_profile" placeholder="https://linkedin.com/in/...">
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Enregistrer
+          </button>
+          <button type="button" class="btn btn-secondary ms-2" onclick="hideAddCandidateForm()">
+            <i class="fas fa-times me-1"></i> Annuler
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de candidat -->
+  <div class="card mb-4" id="edit-candidate-form" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier le Candidat
+    </div>
+    <div class="card-body">
+      <form id="editCandidateFormBottom" method="post" enctype="multipart/form-data" action="{% url 'recruitment_candidates' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="candidate_id" id="edit_candidate_id_bottom">
+        <div class="row g-3">
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Nom <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="edit_last_name_bottom" name="last_name" required>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Prénom <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="edit_first_name_bottom" name="first_name" required>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Email <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+              <input type="email" class="form-control" id="edit_email_bottom" name="email" required>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Téléphone</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-phone"></i></span>
+              <input type="text" class="form-control" id="edit_phone_bottom" name="phone">
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Date de naissance</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="date" class="form-control" id="edit_birth_date_bottom" name="birth_date">
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Adresse</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+              <input type="text" class="form-control" id="edit_address_bottom" name="address">
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Genre</label><br>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="gender" id="edit_gender_homme_bottom" value="Homme">
+              <label class="form-check-label" for="edit_gender_homme_bottom">Homme</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="gender" id="edit_gender_femme_bottom" value="Femme">
+              <label class="form-check-label" for="edit_gender_femme_bottom">Femme</label>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Photo</label>
+            <input type="file" class="form-control" id="edit_photo_bottom" name="photo" accept="image/*">
+            <div id="edit_photo_current_bottom" class="mt-1"></div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Profil LinkedIn</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fab fa-linkedin"></i></span>
+              <input type="url" class="form-control" id="edit_linkedin_profile_bottom" name="linkedin_profile" placeholder="https://linkedin.com/in/...">
+            </div>
+            <div id="edit_linkedin_current_bottom" class="mt-1"></div>
+          </div>
+        </div>
+        <div class="mt-3 text-end">
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i> Modifier
+          </button>
+          <button type="button" class="btn btn-secondary ms-2" onclick="hideEditCandidateForm()">
+            <i class="fas fa-times me-1"></i> Annuler
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tableau des candidats archivés -->
+  <div class="card mb-4" id="archived-candidates-section" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-archive me-2"></i>
+      Candidats archivés
+    </div>
+    <div class="card-body">
+      <!-- Barre de recherche pour les candidats archivés -->
+      <div class="mb-3">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" 
+                    class="form-control border-primary" 
+                    name="archived_candidate_q" 
+                    id="archived-candidate-search" 
+                    placeholder="Rechercher par nom ou prénom..." 
+                    value="{{ archived_candidate_query|default:'' }}">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="toggleArchivedCandidates()">
+              <i class="fas fa-times"></i>
+              <span class="d-none d-lg-inline ms-1">Fermer</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead class="table-light borderless">
+            <tr>
+              <th>Nom</th>
+              <th>Prénom</th>
+              <th>Email</th>
+              <th>Téléphone</th>
+              <th>Date de naissance</th>
+              <th>Adresse</th>
+              <th>Genre</th>
+            </tr>
+          </thead>
+          <tbody id="archived-candidates-table">
+            {% for candidate in archived_candidates %}
+            <tr>
+              <td>{{ candidate.last_name }}</td>
+              <td>{{ candidate.first_name }}</td>
+              <td>{{ candidate.email }}</td>
+              <td>{{ candidate.phone }}</td>
+              <td>{{ candidate.birth_date|date:"d/m/Y" }}</td>
+              <td>{{ candidate.address }}</td>
+              <td>{{ candidate.gender }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted">Aucun candidat archivé.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Détails du candidat -->
+  <div class="card mb-4" id="candidate-details-section" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-user me-2"></i>
+      Détails du candidat
+    </div>
+    <div class="card-body" id="candidate-details-content">
+      <!-- Le contenu sera chargé dynamiquement -->
+    </div>
+    <div class="card-footer">
+      <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="hideCandidateDetails()">
+        <i class="fas fa-times"></i>
+        <span class="d-none d-lg-inline ms-1">Fermer</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Section Import de CV -->
+  <div class="card mb-4" id="cv-import-section" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-file-upload me-2"></i>
+      Ajouter des candidats par CV
+    </div>
+    <div class="card-body">
+      <!-- Styles pour la zone de dépôt -->
+      <style>
+        .cv-dropzone {
+          border: 2px dashed #0d6efd;
+          border-radius: 8px;
+          background: #f8fbff;
+          min-height: 160px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 16px;
+          cursor: pointer;
+          transition: background 0.2s ease, border-color 0.2s ease;
+        }
+        .cv-dropzone.dragover {
+          background: #e7f1ff;
+          border-color: #0b5ed7;
+        }
+        .cv-dropzone i { font-size: 28px; color: #0d6efd; }
+        .cv-dropzone .hint { color: #6c757d; font-size: 0.9rem; }
+        .selected-files-list { font-size: 0.9rem; }
+      </style>
+
+      <!-- Carte unique d'import -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="fas fa-file-pdf me-2"></i>Importer des CVs</h6>
+        </div>
+        <div class="card-body">
+          <form id="cvUploadForm" enctype="multipart/form-data">
+            <div class="mb-3">
+              <label class="form-label">Glisser-déposer un ou plusieurs fichiers PDF, ou cliquez pour sélectionner</label>
+              <div id="cvDropzone" class="cv-dropzone">
+                <div>
+                  <i class="fas fa-cloud-upload-alt mb-2"></i>
+                  <div class="fw-semibold">Déposez vos fichiers ici</div>
+                  <div class="hint">PDF uniquement • 10MB par fichier • 50MB total</div>
+                </div>
+                <input type="file" id="cv-files" name="cv_files" accept=".pdf" multiple hidden>
+              </div>
+              <div id="selectedFiles" class="selected-files-list mt-2"></div>
+            </div>
+            <button type="submit" class="btn btn-success w-100">
+              <i class="fas fa-upload me-2"></i>Analyser les CVs
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div id="uploadProgress" class="progress mb-3" style="display: none;">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+      </div>
+
+      <!-- Results Preview -->
+      <div id="resultsPreview" style="display: none;">
+        <div class="card">
+          <div class="card-header bg-info text-white">
+            <h6 class="mb-0">
+              <i class="fas fa-eye me-2"></i>
+              Aperçu des candidats extraits
+              <span id="candidateCount" class="badge bg-light text-dark ms-2">0</span>
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered" id="previewTable">
+                <thead class="table-light">
+                  <tr>
+                    <th>Nom</th>
+                    <th>Prénom</th>
+                    <th>Email</th>
+                    <th>Téléphone</th>
+                    <th>Date de naissance</th>
+                    <th>Adresse</th>
+                    <th>Genre</th>
+                    <th>Photo</th>
+                    <th>LinkedIn</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="previewTableBody">
+                  <!-- Preview rows will be inserted here -->
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-between mt-3">
+              <button type="button" class="btn btn-secondary" id="editAllBtn">
+                <i class="fas fa-edit me-2"></i>Modifier tous
+              </button>
+              <div>
+                <button type="button" class="btn btn-outline-secondary me-2" id="resetPreviewBtn">
+                  <i class="fas fa-undo me-2"></i>Recommencer
+                </button>
+                <button type="button" class="btn btn-success" id="saveAllBtn">
+                  <i class="fas fa-save me-2"></i>Enregistrer tous
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error Messages -->
+      <div id="errorMessages" class="alert alert-danger mt-3" style="display: none;">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <span id="errorText"></span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="hideCVImportForm()">
+        <i class="fas fa-times"></i>
+        <span class="d-none d-lg-inline ms-1">Fermer</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal d'ajout de candidat -->
+  <div class="modal fade" id="modalCandidate" tabindex="-1" aria-labelledby="modalCandidateLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="modalCandidateLabel">
+            <i class="fas fa-user-plus me-2"></i>
+            Nouveau Candidat
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="candidateForm" method="post" enctype="multipart/form-data" action="{% url 'recruitment_candidates' %}">
+            {% csrf_token %}
+            <div class="row g-3">
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="id_last_name" name="last_name" required>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Prénom <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="id_first_name" name="first_name" required>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Email <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                <input type="email" class="form-control" id="id_email" name="email" required>
+              </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Téléphone</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                <input type="text" class="form-control" id="id_phone" name="phone">
+              </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Date de naissance</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="date" class="form-control" id="id_birth_date" name="birth_date">
+              </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Adresse</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                <input type="text" class="form-control" id="id_address" name="address">
+              </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Genre</label><br>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="gender" id="id_gender_homme" value="Homme">
+                  <label class="form-check-label" for="id_gender_homme">Homme</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="gender" id="id_gender_femme" value="Femme">
+                  <label class="form-check-label" for="id_gender_femme">Femme</label>
+                </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Photo</label>
+                <input type="file" class="form-control" id="id_photo" name="photo" accept="image/*">
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Profil LinkedIn</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fab fa-linkedin"></i></span>
+                <input type="url" class="form-control" id="id_linkedin_profile" name="linkedin_profile" placeholder="https://linkedin.com/in/...">
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+          <button type="submit" form="candidateForm" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'édition de candidat -->
+  <div class="modal fade" id="modalEditCandidate" tabindex="-1" aria-labelledby="modalEditCandidateLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title" id="modalEditCandidateLabel">
+            <i class="fas fa-edit me-2"></i>
+            Modifier le Candidat
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editCandidateForm" method="post" enctype="multipart/form-data" action="{% url 'recruitment_candidates' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="candidate_id" id="edit_candidate_id">
+            <div class="row g-3">
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="edit_last_name" name="last_name" required>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Prénom <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="edit_first_name" name="first_name" required>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Email <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                <input type="email" class="form-control" id="edit_email" name="email" required>
+              </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Téléphone</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                <input type="text" class="form-control" id="edit_phone" name="phone">
+              </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Date de naissance</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="date" class="form-control" id="edit_birth_date" name="birth_date">
+              </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Adresse</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                <input type="text" class="form-control" id="edit_address" name="address">
+              </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Genre</label><br>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="gender" id="edit_gender_homme" value="Homme">
+                  <label class="form-check-label" for="edit_gender_homme">Homme</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="gender" id="edit_gender_femme" value="Femme">
+                  <label class="form-check-label" for="edit_gender_femme">Femme</label>
+                </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Photo</label>
+                <input type="file" class="form-control" id="edit_photo" name="photo" accept="image/*">
+                <div id="edit_photo_current" class="mt-1"></div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label">Profil LinkedIn</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fab fa-linkedin"></i></span>
+                <input type="url" class="form-control" id="edit_linkedin_profile" name="linkedin_profile" placeholder="https://linkedin.com/in/...">
+                </div>
+                <div id="edit_linkedin_current" class="mt-1"></div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+          <button type="submit" form="editCandidateForm" class="btn btn-warning">
+            <i class="fas fa-save me-1"></i>Modifier
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de suppression de candidat -->
+  <div class="modal fade" id="modalDeleteCandidate" tabindex="-1" aria-labelledby="modalDeleteCandidateLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="modalDeleteCandidateLabel">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Confirmer la suppression
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+            <div>
+              <strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer le candidat : <strong id="delete_candidate_name"></strong> ?
+              <br><small class="text-muted">Cette action est irréversible.</small>
+            </div>
+          </div>
+          <form id="deleteCandidateForm" method="post" action="{% url 'recruitment_candidates' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="candidate_id" id="delete_candidate_id">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+          <button type="submit" form="deleteCandidateForm" class="btn btn-danger">
+            <i class="fas fa-trash-alt me-1"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+  <!-- jsPDF & autoTable pour export PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.7.0/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Scripts spécifiques aux candidats -->
+  <script>
+  // Fonctions pour gérer l'affichage des formulaires
+  function showAddCandidateForm() {
+    // Masquer les autres sections si elles sont ouvertes
+    document.getElementById('edit-candidate-form').style.display = 'none';
+    document.getElementById('archived-candidates-section').style.display = 'none';
+    document.getElementById('candidate-details-section').style.display = 'none';
+    document.getElementById('cv-import-section').style.display = 'none';
+    // Afficher le formulaire d'ajout
+    document.getElementById('add-candidate-form').style.display = 'block';
+    // Faire défiler vers le formulaire
+    window.scrollTo({ top: document.getElementById('add-candidate-form').offsetTop - 80, behavior: 'smooth' });
+  }
+
+  function hideAddCandidateForm() {
+    document.getElementById('add-candidate-form').style.display = 'none';
+    // Réinitialiser le formulaire
+    document.getElementById('candidateFormBottom').reset();
+  }
+
+  function showEditCandidateForm(button) {
+    // Masquer les autres sections si elles sont ouvertes
+    document.getElementById('add-candidate-form').style.display = 'none';
+    document.getElementById('archived-candidates-section').style.display = 'none';
+    document.getElementById('candidate-details-section').style.display = 'none';
+    document.getElementById('cv-import-section').style.display = 'none';
+    
+    // Récupérer les données depuis les data attributes
+    const candidateId = button.getAttribute('data-candidate-id');
+    const lastName = button.getAttribute('data-candidate-last-name');
+    const firstName = button.getAttribute('data-candidate-first-name');
+    const email = button.getAttribute('data-candidate-email');
+    const phone = button.getAttribute('data-candidate-phone');
+    const birthDate = button.getAttribute('data-candidate-birth-date');
+    const address = button.getAttribute('data-candidate-address');
+    const gender = button.getAttribute('data-candidate-gender');
+    const photo = button.getAttribute('data-candidate-photo');
+    const linkedinProfile = button.getAttribute('data-candidate-linkedin-profile');
+    
+    // Remplir le formulaire d'édition avec les données
+    document.getElementById('edit_candidate_id_bottom').value = candidateId;
+    document.getElementById('edit_last_name_bottom').value = lastName;
+    document.getElementById('edit_first_name_bottom').value = firstName;
+    document.getElementById('edit_email_bottom').value = email;
+    document.getElementById('edit_phone_bottom').value = phone;
+    document.getElementById('edit_birth_date_bottom').value = birthDate;
+    document.getElementById('edit_address_bottom').value = address;
+    document.getElementById('edit_linkedin_profile_bottom').value = linkedinProfile;
+    
+    // Gérer les boutons radio pour le genre
+    if (gender === 'Homme') {
+      document.getElementById('edit_gender_homme_bottom').checked = true;
+    } else if (gender === 'Femme') {
+      document.getElementById('edit_gender_femme_bottom').checked = true;
+    }
+    
+    // Affichage du lien vers la photo actuelle
+    var photoDiv = document.getElementById('edit_photo_current_bottom');
+    if (photoDiv) {
+      if (photo) {
+        photoDiv.innerHTML = `<div class="mt-1"><a href="${photo}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-image me-1"></i>Photo actuelle</a></div>`;
+      } else {
+        photoDiv.innerHTML = '';
+      }
+    }
+    
+    // Affichage du lien LinkedIn actuel
+    var linkedinDiv = document.getElementById('edit_linkedin_current_bottom');
+    if (linkedinDiv) {
+      if (linkedinProfile) {
+        linkedinDiv.innerHTML = `<div class="mt-1"><a href="${linkedinProfile}" target="_blank" class="btn btn-sm btn-outline-info"><i class="fab fa-linkedin me-1"></i>Profil actuel</a></div>`;
+      } else {
+        linkedinDiv.innerHTML = '';
+      }
+    }
+    
+    // Afficher le formulaire d'édition
+    document.getElementById('edit-candidate-form').style.display = 'block';
+    // Faire défiler vers le formulaire
+    window.scrollTo({ top: document.getElementById('edit-candidate-form').offsetTop - 80, behavior: 'smooth' });
+  }
+
+  function hideEditCandidateForm() {
+    document.getElementById('edit-candidate-form').style.display = 'none';
+    // Réinitialiser le formulaire
+    document.getElementById('editCandidateFormBottom').reset();
+  }
+
+  // Fonctions pour gérer l'affichage de la section d'import de CV
+  function showCVImportForm() {
+    // Masquer les autres sections si elles sont ouvertes
+    document.getElementById('add-candidate-form').style.display = 'none';
+    document.getElementById('edit-candidate-form').style.display = 'none';
+    document.getElementById('archived-candidates-section').style.display = 'none';
+    document.getElementById('candidate-details-section').style.display = 'none';
+    
+    // Afficher la section d'import de CV
+    document.getElementById('cv-import-section').style.display = 'block';
+    // Faire défiler vers la section
+    window.scrollTo({ top: document.getElementById('cv-import-section').offsetTop - 80, behavior: 'smooth' });
+  }
+
+  function hideCVImportForm() {
+    document.getElementById('cv-import-section').style.display = 'none';
+    // Réinitialiser le formulaire d'import
+    const cvUploadForm = document.getElementById('cvUploadForm');
+    if (cvUploadForm) {
+      cvUploadForm.reset();
+    }
+    // Masquer les résultats et erreurs
+    const resultsPreview = document.getElementById('resultsPreview');
+    const errorMessages = document.getElementById('errorMessages');
+    if (resultsPreview) resultsPreview.style.display = 'none';
+    if (errorMessages) errorMessages.style.display = 'none';
+  }
+
+  // Fonctions pour gérer l'affichage de la section de détails
+  function showCandidateDetails(candidateId) {
+    // Masquer les autres sections si elles sont ouvertes
+    document.getElementById('add-candidate-form').style.display = 'none';
+    document.getElementById('edit-candidate-form').style.display = 'none';
+    document.getElementById('cv-import-section').style.display = 'none';
+    document.getElementById('archived-candidates-section').style.display = 'none';
+    
+    // Afficher la section de détails
+    const detailsSection = document.getElementById('candidate-details-section');
+    detailsSection.style.display = 'block';
+    
+    // Trouver la ligne du candidat dans le tableau
+    const candidateRow = document.querySelector(`tr[data-candidate-id="${candidateId}"]`) || 
+                        document.querySelector(`button[onclick="showCandidateDetails('${candidateId}')"]`)?.closest('tr');
+    
+    if (candidateRow) {
+      // Extraire les données de la ligne
+      const cells = candidateRow.querySelectorAll('td');
+      const lastName = cells[1]?.textContent?.trim() || '';
+      const firstName = cells[2]?.textContent?.trim() || '';
+      const email = cells[3]?.textContent?.trim() || '';
+      const phone = cells[4]?.textContent?.trim() || '';
+      const birthDate = cells[5]?.textContent?.trim() || '';
+      const address = cells[6]?.textContent?.trim() || '';
+      const gender = cells[7]?.textContent?.trim() || '';
+      
+      // Récupérer la photo et LinkedIn
+      const photoLink = candidateRow.querySelector('a[target="_blank"]');
+      const photo = photoLink ? photoLink.href : null;
+      const linkedinLink = candidateRow.querySelector('a[href*="linkedin"]');
+      const linkedin = linkedinLink ? linkedinLink.href : null;
+      
+      // Construire le contenu HTML
+      const detailsContent = `
+        <div class="card shadow-lg p-4 mb-4 w-100" style="margin:auto;border:none;">
+          <div class="row g-0 align-items-center">
+            <div class="col-md-3 text-center">
+              ${photo ? 
+                `<img src="${photo}" class="img-fluid rounded-circle mb-2" style="width:110px;height:110px;object-fit:cover;">` :
+                `<div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width:110px;height:110px;font-size:2.5em;color:#198754;">${firstName[0] || ''}${lastName[0] || ''}</div>`
+              }
+            </div>
+            <div class="col-md-9">
+              <h3 class="mb-1">${firstName} ${lastName}</h3>
+              <div class="mb-2 text-muted" style="font-size:1.1em;">${email}</div>
+              <div class="mb-2">
+                <i class="fas fa-phone"></i> ${phone}<br>
+                <i class="fas fa-map-marker-alt"></i> ${address}
+              </div>
+              <div class="mb-2">
+                <i class="fab fa-linkedin"></i> 
+                ${linkedin ? `<a href="${linkedin}" target="_blank">Profil LinkedIn</a>` : '-'}
+              </div>
+              <div class="mb-2"><strong>Date de naissance :</strong> ${birthDate}</div>
+              <div class="mb-2"><strong>Genre :</strong> ${gender}</div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('candidate-details-content').innerHTML = detailsContent;
+    }
+    
+    // Faire défiler vers la section
+    window.scrollTo({ top: detailsSection.offsetTop - 80, behavior: 'smooth' });
+  }
+
+  function hideCandidateDetails() {
+    document.getElementById('candidate-details-section').style.display = 'none';
+  }
+  </script>
+  <script>
+  // JavaScript pour gérer les modals des candidats
+  document.addEventListener('DOMContentLoaded', function() {
+    // Modal d'édition
+    const modalEditCandidate = document.getElementById('modalEditCandidate');
+    if (modalEditCandidate) {
+      modalEditCandidate.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        // Remplir le formulaire avec les données existantes
+        document.getElementById('edit_candidate_id').value = button.getAttribute('data-candidate-id');
+        document.getElementById('edit_last_name').value = button.getAttribute('data-candidate-last-name');
+        document.getElementById('edit_first_name').value = button.getAttribute('data-candidate-first-name');
+        document.getElementById('edit_email').value = button.getAttribute('data-candidate-email');
+        document.getElementById('edit_phone').value = button.getAttribute('data-candidate-phone');
+        document.getElementById('edit_birth_date').value = button.getAttribute('data-candidate-birth-date');
+        document.getElementById('edit_address').value = button.getAttribute('data-candidate-address');
+        document.getElementById('edit_gender_homme').checked = button.getAttribute('data-candidate-gender') === 'Homme';
+        document.getElementById('edit_gender_femme').checked = button.getAttribute('data-candidate-gender') === 'Femme';
+        document.getElementById('edit_linkedin_profile').value = button.getAttribute('data-candidate-linkedin-profile') || '';
+        // Affichage du lien vers la photo actuelle
+        var photoUrl = button.getAttribute('data-candidate-photo');
+        var photoDiv = document.getElementById('edit_photo_current');
+        if (photoDiv) {
+          if (photoUrl) {
+            photoDiv.innerHTML = `<div class="mt-1"><a href="${photoUrl}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-image me-1"></i>Photo actuelle</a></div>`;
+          } else {
+            photoDiv.innerHTML = '';
+          }
+        }
+        // Affichage du lien LinkedIn actuel
+        var linkedinUrl = button.getAttribute('data-candidate-linkedin-profile');
+        var linkedinDiv = document.getElementById('edit_linkedin_current');
+        if (linkedinDiv) {
+          if (linkedinUrl) {
+            linkedinDiv.innerHTML = `<div class="mt-1"><a href="${linkedinUrl}" target="_blank" class="btn btn-sm btn-outline-info"><i class="fab fa-linkedin me-1"></i>Profil actuel</a></div>`;
+          } else {
+            linkedinDiv.innerHTML = '';
+          }
+        }
+      });
+    }
+    
+    // Modal de suppression
+    const modalDeleteCandidate = document.getElementById('modalDeleteCandidate');
+    if (modalDeleteCandidate) {
+      modalDeleteCandidate.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const firstName = button.getAttribute('data-candidate-first-name');
+        const lastName = button.getAttribute('data-candidate-last-name');
+        
+        document.getElementById('delete_candidate_id').value = button.getAttribute('data-candidate-id');
+        document.getElementById('delete_candidate_name').textContent = `${firstName} ${lastName}`.trim() || 'Ce candidat';
+      });
+    }
+
+    // Gestion de la sélection multiple
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-check');
+    
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', function() {
+        rowCheckboxes.forEach(checkbox => {
+          checkbox.checked = this.checked;
+        });
+      });
+    }
+
+    // Mise à jour de "Sélectionner tout" quand les cases individuelles changent
+    rowCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
+        const anyChecked = Array.from(rowCheckboxes).some(cb => cb.checked);
+        
+        if (selectAllCheckbox) {
+          selectAllCheckbox.checked = allChecked;
+          selectAllCheckbox.indeterminate = anyChecked && !allChecked;
+        }
+      });
+    });
+  });
+
+  // Recherche instantanée AJAX pour le nom/prénom du candidat
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search-candidate');
+    const candidatesTable = document.getElementById('candidates-table');
+    let searchTimeout = null;
+    let lastQuery = searchInput ? searchInput.value : '';
+    let controller = null;
+
+    if (searchInput && candidatesTable) {
+      function performSearch(query) {
+        if (controller) controller.abort();
+        controller = new AbortController();
+        candidatesTable.innerHTML = '<tr><td colspan="11" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</td></tr>';
+        const searchUrl = '/rc/candidates/?q=' + encodeURIComponent(query);
+        fetch(searchUrl, {
+          headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cache-Control': 'no-cache'
+          },
+          signal: controller.signal
+        })
+        .then(response => {
+          if (!response.ok) throw new Error('Erreur réseau: ' + response.status);
+          return response.text();
+        })
+        .then(html => {
+          candidatesTable.innerHTML = html;
+        })
+        .catch(error => {
+          if (error.name !== 'AbortError') {
+            candidatesTable.innerHTML = '<tr><td colspan="11" class="text-center text-danger">Erreur lors de la recherche: ' + error.message + '</td></tr>';
+          }
+        });
+      }
+
+      searchInput.addEventListener('input', function() {
+        const query = searchInput.value.trim();
+        if (searchTimeout) clearTimeout(searchTimeout);
+        if (query === lastQuery) return;
+        lastQuery = query;
+        searchTimeout = setTimeout(() => { performSearch(query); }, 300);
+      });
+
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (searchTimeout) clearTimeout(searchTimeout);
+          performSearch(searchInput.value.trim());
+        }
+      });
+    }
+  });
+
+
+  // Recherche pour les candidats archivés
+  document.addEventListener('DOMContentLoaded', function() {
+    const archivedCandidateSearchInput = document.getElementById('archived-candidate-search');
+    const archivedCandidatesTable = document.getElementById('archived-candidates-table');
+    let archivedSearchTimeout = null;
+    let lastArchivedQuery = archivedCandidateSearchInput ? archivedCandidateSearchInput.value : '';
+    let archivedController = null;
+
+    if (archivedCandidatesTable) {
+      function performArchivedCandidateSearch(query) {
+        if (archivedController) {
+          archivedController.abort();
+        }
+        archivedController = new AbortController();
+        archivedCandidatesTable.innerHTML = '<tr><td colspan="7" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</td></tr>';
+        
+        // Utiliser l'URL courante
+        const searchUrl = window.location.pathname + '?archived_candidate_q=' + encodeURIComponent(query);
+        
+        fetch(searchUrl, {
+          headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cache-Control': 'no-cache'
+          },
+          signal: archivedController.signal
+        })
+        .then(response => {
+          if (!response.ok) throw new Error('Erreur réseau: ' + response.status);
+          return response.text();
+        })
+        .then(html => {
+          // On reçoit directement le contenu du tbody
+          archivedCandidatesTable.innerHTML = html;
+        })
+        .catch(error => {
+          if (error.name !== 'AbortError') {
+            archivedCandidatesTable.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erreur lors de la recherche: ' + error.message + '</td></tr>';
+          }
+        });
+      }
+
+      if (archivedCandidateSearchInput) {
+        archivedCandidateSearchInput.addEventListener('input', function() {
+          const query = this.value.trim();
+          if (archivedSearchTimeout) {
+            clearTimeout(archivedSearchTimeout);
+          }
+          if (query === lastArchivedQuery) return;
+          lastArchivedQuery = query;
+          archivedSearchTimeout = setTimeout(() => {
+            performArchivedCandidateSearch(query);
+          }, 300);
+        });
+
+        archivedCandidateSearchInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (archivedSearchTimeout) {
+              clearTimeout(archivedSearchTimeout);
+            }
+            performArchivedCandidateSearch(this.value.trim());
+          }
+        });
+      }
+    }
+  });
+
+  // Export PDF des candidats avec le même style que le calendrier des entretiens
+  document.addEventListener('DOMContentLoaded', function() {
+    const exportPdfBtn = document.getElementById('export-candidates-pdf');
+    
+    if (exportPdfBtn) {
+      exportPdfBtn.addEventListener('click', function() {
+        // Afficher un indicateur de chargement
+        exportPdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        exportPdfBtn.disabled = true;
+        
+        // Récupérer les données depuis le serveur
+        fetch('/rc/candidates/export-pdf/')
+          .then(response => response.json())
+          .then(data => {
+            // Générer le PDF avec jsPDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Titre avec le même style que le calendrier
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(20);
+            doc.setTextColor(46, 204, 113); // Couleur verte du thème
+            doc.text(data.title, 105, 18, { align: 'center' });
+            
+            // Ligne décorative
+            doc.setDrawColor(46, 204, 113);
+            doc.setLineWidth(1.2);
+            doc.line(20, 22, 190, 22);
+            
+            // Date de génération
+            doc.setFontSize(10);
+            doc.setTextColor(120, 120, 120);
+            const now = new Date();
+            doc.text(`Généré le : ${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
+              190, 12, { align: 'right' });
+            
+            // Tableau avec autoTable
+            doc.autoTable({
+              head: [data.headers],
+              body: data.data,
+              startY: 28,
+              styles: {
+                font: 'helvetica',
+                fontSize: 10,
+                cellPadding: 3,
+                valign: 'middle',
+                textColor: [34, 34, 34],
+                lineColor: [220, 220, 220],
+                lineWidth: 0.2,
+              },
+              headStyles: {
+                fillColor: [46, 204, 113], // Couleur verte du thème
+                textColor: 255,
+                fontStyle: 'bold',
+                halign: 'center',
+                fontSize: 11,
+                cellPadding: 4,
+              },
+              alternateRowStyles: {
+                fillColor: [245, 255, 250], // Légère teinte verte pour les lignes alternées
+              },
+              margin: { left: 8, right: 8 },
+              columnStyles: {
+                0: { cellWidth: 25 }, // Nom
+                1: { cellWidth: 25 }, // Prénom
+                2: { cellWidth: 35 }, // Email
+                3: { cellWidth: 20 }, // Téléphone
+                4: { cellWidth: 20 }, // Date de naissance
+                5: { cellWidth: 30 }, // Adresse
+                6: { cellWidth: 15 }, // Genre
+                7: { cellWidth: 30 }, // LinkedIn
+              }
+            });
+            
+            // Sauvegarder le PDF
+            doc.save(data.filename);
+            
+            // Restaurer le bouton
+            exportPdfBtn.innerHTML = '<i class="fa-solid fa-file-pdf"></i>';
+            exportPdfBtn.disabled = false;
+          })
+          .catch(error => {
+            console.error('Erreur lors de l\'export PDF:', error);
+            alert('Erreur lors de la génération du PDF');
+            
+            // Restaurer le bouton
+            exportPdfBtn.innerHTML = '<i class="fa-solid fa-file-pdf"></i>';
+            exportPdfBtn.disabled = false;
+          });
+      });
+    }
+  });
+  </script>
+  <!-- CV Upload and Parsing JavaScript -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // CV Upload functionality (carte unique)
+      const cvUploadForm = document.getElementById('cvUploadForm');
+      const cvFilesInput = document.getElementById('cv-files');
+      const dropzone = document.getElementById('cvDropzone');
+      const selectedFilesList = document.getElementById('selectedFiles');
+      const uploadProgress = document.getElementById('uploadProgress');
+      const progressBar = uploadProgress.querySelector('.progress-bar');
+      const resultsPreview = document.getElementById('resultsPreview');
+      const previewTableBody = document.getElementById('previewTableBody');
+      const candidateCount = document.getElementById('candidateCount');
+      const errorMessages = document.getElementById('errorMessages');
+      const errorText = document.getElementById('errorText');
+      
+      window.parsedCandidates = [];
+      
+      // Drag-and-drop events
+      if (dropzone) {
+        dropzone.addEventListener('click', () => cvFilesInput && cvFilesInput.click());
+        dropzone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropzone.classList.add('dragover');
+        });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('dragover');
+          const dt = new DataTransfer();
+          Array.from(e.dataTransfer.files || []).forEach(f => {
+            if ((f.type && f.type.includes('pdf')) || (f.name || '').toLowerCase().endsWith('.pdf')) {
+              dt.items.add(f);
+            }
+          });
+          if (cvFilesInput) {
+            cvFilesInput.files = dt.files;
+            renderSelectedFiles(cvFilesInput.files);
+          }
+        });
+      }
+
+      // Manual selection update
+      if (cvFilesInput) {
+        cvFilesInput.addEventListener('change', () => renderSelectedFiles(cvFilesInput.files));
+      }
+
+      function renderSelectedFiles(fileList) {
+        if (!selectedFilesList) return;
+        const files = Array.from(fileList || []);
+        if (files.length === 0) {
+          selectedFilesList.innerHTML = '';
+          return;
+        }
+        const items = files.slice(0, 5).map(f => `<li>${f.name}</li>`).join('');
+        const extra = files.length > 5 ? `<li>... et ${files.length - 5} autre(s) fichier(s)</li>` : '';
+        selectedFilesList.innerHTML = `<div class="alert alert-success py-2 mb-0"><strong>${files.length} fichier(s) sélectionné(s):</strong><ul class="mb-0 mt-1">${items}${extra}</ul></div>`;
+      }
+      
+      // Submit unique form
+      if (cvUploadForm) {
+        cvUploadForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          handleUnifiedUpload();
+        });
+      }
+
+      function handleUnifiedUpload() {
+        const submitBtn = cvUploadForm.querySelector('button[type="submit"]');
+        const files = cvFilesInput ? Array.from(cvFilesInput.files || []) : [];
+        if (files.length === 0) {
+          showError('Veuillez sélectionner au moins un fichier PDF.');
+          return;
+        }
+
+        // Validate files: PDF, size per file (10MB) and total (50MB)
+        let totalSize = 0;
+        for (const f of files) {
+          const isPdf = (f.type && f.type.includes('pdf')) || (f.name || '').toLowerCase().endsWith('.pdf');
+          if (!isPdf) {
+            showError(`Le fichier "${f.name}" n'est pas un PDF.`);
+            return;
+          }
+          if (f.size > 10 * 1024 * 1024) {
+            showError(`Le fichier "${f.name}" dépasse 10MB.`);
+            return;
+          }
+          totalSize += f.size;
+          if (totalSize > 50 * 1024 * 1024) {
+            showError('La taille totale dépasse 50MB.');
+            return;
+          }
+        }
+
+        const formData = new FormData();
+        files.forEach(f => formData.append('cv_files', f));
+        const originalText = submitBtn.innerHTML;
+        
+        // Show progress
+        uploadProgress.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Traitement...';
+        
+        // Hide previous results and errors
+        resultsPreview.style.display = 'none';
+        errorMessages.style.display = 'none';
+        
+        // Simulate progress
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+          progress += Math.random() * 20;
+          if (progress > 90) progress = 90;
+          progressBar.style.width = progress + '%';
+          progressBar.textContent = Math.round(progress) + '%';
+        }, 200);
+        
+        // Send request
+        fetch('{% url "cv_upload_parse" %}', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          clearInterval(progressInterval);
+          progressBar.style.width = '100%';
+          progressBar.textContent = '100%';
+          
+                if (data.success) {
+            window.parsedCandidates = data.candidates;
+            displayPreview(window.parsedCandidates);
+            showSuccessMessage(`Analyse terminée ! ${data.total_parsed} CV(s) traité(s), ${data.valid_count} candidat(s) valide(s).`);
+          } else {
+            showError(data.error || 'Erreur lors de l\'analyse des CVs');
+          }
+        })
+        .catch(error => {
+          clearInterval(progressInterval);
+          showError('Erreur réseau: ' + error.message);
+        })
+        .finally(() => {
+          // Hide progress and restore button
+          setTimeout(() => {
+            uploadProgress.style.display = 'none';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+          }, 1000);
+        });
+      }
+      
+      function displayPreview(candidates) {
+        if (!candidates || candidates.length === 0) {
+          showError('Aucun candidat extrait des CVs');
+          return;
+        }
+        
+        // Update candidate count
+        candidateCount.textContent = candidates.length;
+        
+        // Clear previous preview
+        previewTableBody.innerHTML = '';
+        
+        // Add preview rows
+        candidates.forEach((candidate, index) => {
+          const row = document.createElement('tr');
+          row.className = candidate.errors ? 'table-warning' : '';
+          
+          const birthDate = candidate.birth_date ? new Date(candidate.birth_date).toLocaleDateString('fr-FR') : '';
+          const readOnlyAttr = (window.previewEditMode ? '' : 'readonly');
+          const disabledAttr = (window.previewEditMode ? '' : 'disabled');
+          
+          row.innerHTML = `
+            <td>
+              <input type="text" class="form-control form-control-sm" ${readOnlyAttr} value="${candidate.last_name || ''}" 
+                    data-field="last_name" data-index="${index}">
+            </td>
+            <td>
+              <input type="text" class="form-control form-control-sm" ${readOnlyAttr} value="${candidate.first_name || ''}" 
+                    data-field="first_name" data-index="${index}">
+            </td>
+            <td>
+              <input type="email" class="form-control form-control-sm" ${readOnlyAttr} value="${candidate.email || ''}" 
+                    data-field="email" data-index="${index}">
+            </td>
+            <td>
+              <input type="text" class="form-control form-control-sm" ${readOnlyAttr} value="${candidate.phone || ''}" 
+                    data-field="phone" data-index="${index}">
+            </td>
+            <td>
+              <input type="date" class="form-control form-control-sm" ${readOnlyAttr} value="${candidate.birth_date || ''}" 
+                    data-field="birth_date" data-index="${index}">
+            </td>
+            <td>
+              <input type="text" class="form-control form-control-sm" ${readOnlyAttr} value="${candidate.address || ''}" 
+                    data-field="address" data-index="${index}">
+            </td>
+            <td>
+              <select class="form-control form-control-sm" ${disabledAttr} data-field="gender" data-index="${index}">
+                <option value="">-- Sélectionner --</option>
+                <option value="Homme" ${candidate.gender === 'Homme' ? 'selected' : ''}>Homme</option>
+                <option value="Femme" ${candidate.gender === 'Femme' ? 'selected' : ''}>Femme</option>
+              </select>
+            </td>
+            <td>
+              <input type="url" class="form-control form-control-sm" ${readOnlyAttr} value="${candidate.linkedin_profile || ''}" 
+                    data-field="linkedin_profile" data-index="${index}">
+            </td>
+            <td>
+              <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCandidate(${index})">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          `;
+          
+          // Insert photo preview column at the start to be coherent with main table style
+          const photoCell = document.createElement('td');
+          photoCell.style.verticalAlign = 'middle';
+          const imgWrap = document.createElement('div');
+          imgWrap.className = 'd-flex justify-content-center align-items-center';
+          imgWrap.style.height = '40px';
+          imgWrap.style.width = '40px';
+          imgWrap.style.borderRadius = '10px';
+          imgWrap.style.overflow = 'hidden';
+          const hasPhoto = candidate.photo && typeof candidate.photo === 'string';
+          if (hasPhoto) {
+            const img = document.createElement('img');
+            img.src = candidate.photo;
+            img.alt = 'Photo';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            imgWrap.appendChild(img);
+          } else {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'bg-light d-flex align-items-center justify-content-center';
+            placeholder.style.width = '100%';
+            placeholder.style.height = '100%';
+            placeholder.innerHTML = '<i class="fas fa-user text-secondary"></i>';
+            imgWrap.appendChild(placeholder);
+          }
+          photoCell.appendChild(imgWrap);
+          // Insert photo column at the correct position (after Genre, before LinkedIn)
+          // Current order in row: Nom(0), Prénom(1), Email(2), Téléphone(3), Date(4), Adresse(5), Genre(6), LinkedIn(7), Actions(8)
+          // We place Photo at index 7 (before LinkedIn)
+          const insertBeforeEl = (row.children && row.children[7]) ? row.children[7] : (row.lastChild || null);
+          if (insertBeforeEl) {
+            row.insertBefore(photoCell, insertBeforeEl);
+          } else {
+            row.appendChild(photoCell);
+          }
+
+          // Add error indicators if any
+          if (candidate.errors) {
+            row.title = 'Erreurs: ' + candidate.errors.join(', ');
+          }
+          
+          previewTableBody.appendChild(row);
+        });
+        
+        // Show preview
+        resultsPreview.style.display = 'block';
+      }
+      // expose to global to allow re-render after deletion/toggle
+      window.displayPreview = displayPreview;
+      
+      // Handle input changes to update parsedCandidates array
+      previewTableBody.addEventListener('input', function(e) {
+        if (e.target.hasAttribute('data-field') && e.target.hasAttribute('data-index')) {
+          const field = e.target.getAttribute('data-field');
+          const index = parseInt(e.target.getAttribute('data-index'));
+          const value = e.target.value;
+          
+          if (parsedCandidates[index]) {
+            parsedCandidates[index][field] = value;
+          }
+        }
+      });
+      
+      // Save all candidates
+      document.getElementById('saveAllBtn').addEventListener('click', function() {
+            if (window.parsedCandidates.length === 0) {
+          showError('Aucun candidat à sauvegarder');
+          return;
+        }
+        
+        const submitBtn = this;
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sauvegarde...';
+        
+        fetch('{% url "save_parsed_candidates" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+          },
+          body: JSON.stringify({
+            candidates: parsedCandidates
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showSuccessMessage(`${data.saved_count} candidat(s) sauvegardé(s) avec succès !`);
+            
+            // Refresh the main candidates table
+            refreshCandidatesTable();
+            
+            // Hide the CV import section after delay
+            setTimeout(() => {
+              hideCVImportForm();
+            }, 2000);
+          } else {
+            showError(data.error || 'Erreur lors de la sauvegarde');
+          }
+        })
+        .catch(error => {
+          showError('Erreur réseau: ' + error.message);
+        })
+        .finally(() => {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        });
+      });
+      
+          // Reset preview
+        document.getElementById('resetPreviewBtn').addEventListener('click', function() {
+          window.parsedCandidates = [];
+          resultsPreview.style.display = 'none';
+          errorMessages.style.display = 'none';
+        
+        // Reset form
+        if (cvUploadForm) cvUploadForm.reset();
+        if (selectedFilesList) selectedFilesList.innerHTML = '';
+      });
+      
+      // Edit all button
+      document.getElementById('editAllBtn').addEventListener('click', function() {
+        window.previewEditMode = !window.previewEditMode;
+        // update button label
+        this.innerHTML = window.previewEditMode
+          ? '<i class="fas fa-lock-open me-2"></i>Édition activée'
+          : '<i class="fas fa-edit me-2"></i>Modifier tous';
+        window.displayPreview(window.parsedCandidates);
+      });
+      
+      function showError(message) {
+        errorText.textContent = message;
+        errorMessages.style.display = 'block';
+        resultsPreview.style.display = 'none';
+      }
+      
+      function showSuccessMessage(message) {
+        // Create a temporary success message
+        const successAlert = document.createElement('div');
+        successAlert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        successAlert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        successAlert.innerHTML = `
+          <i class="fas fa-check-circle me-2"></i>
+          ${message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insert at the top of the body
+        document.body.appendChild(successAlert);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+          if (successAlert.parentNode) {
+            successAlert.remove();
+          }
+        }, 5000);
+      }
+      
+      function refreshCandidatesTable() {
+        // Refresh the main candidates table using AJAX
+        const searchInput = document.getElementById('search-candidate');
+        const query = searchInput ? searchInput.value.trim() : '';
+        const candidatesTable = document.getElementById('candidates-table');
+        
+        if (candidatesTable) {
+          const searchUrl = '/rc/candidates/?q=' + encodeURIComponent(query);
+          fetch(searchUrl, {
+            headers: { 
+              'X-Requested-With': 'XMLHttpRequest',
+              'Cache-Control': 'no-cache'
+            }
+          })
+          .then(response => response.text())
+          .then(html => {
+            candidatesTable.innerHTML = html;
+          })
+          .catch(error => {
+            console.error('Error refreshing table:', error);
+          });
+        }
+      }
+    });
+
+    // Global function to remove candidate from preview
+    function removeCandidate(index) {
+      if (window.parsedCandidates && window.parsedCandidates[index]) {
+        window.parsedCandidates.splice(index, 1);
+        window.displayPreview(window.parsedCandidates);
+      }
+    }
+
+// Fonction pour afficher/masquer le tableau des candidats archivés
+function toggleArchivedCandidates() {
+  const archivedSection = document.getElementById('archived-candidates-section');
+  const addFormSection = document.getElementById('add-candidate-form');
+  const editFormSection = document.getElementById('edit-candidate-form');
+  const detailsSection = document.getElementById('candidate-details-section');
+  const cvImportSection = document.getElementById('cv-import-section');
+  const button = document.getElementById('show-archived-candidates-btn');
+  
+  if (archivedSection.style.display === 'none') {
+    // Masquer toutes les autres sections
+    addFormSection.style.display = 'none';
+    editFormSection.style.display = 'none';
+    detailsSection.style.display = 'none';
+    cvImportSection.style.display = 'none';
+    // Afficher le tableau des archives
+    archivedSection.style.display = 'block';
+    button.innerHTML = '<i class="fas fa-times"></i><span class="d-none d-lg-inline ms-1">Fermer</span>';
+    button.title = 'Fermer les archives';
+    // Scroll vers le tableau d'archives
+    window.scrollTo({ top: archivedSection.offsetTop - 80, behavior: 'smooth' });
+  } else {
+    // Masquer le tableau des archives
+    archivedSection.style.display = 'none';
+    // Réafficher le formulaire d'ajout par défaut
+    addFormSection.style.display = 'block';
+    button.innerHTML = '<i class="fas fa-archive"></i><span class="d-none d-lg-inline ms-1">Archivés</span>';
+    button.title = 'Candidats archivés';
+  }
+}
+
+  </script>
+
+</div>
+
+{% endblock %}
+

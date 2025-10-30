@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}" />
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}" />
+  <link rel="stylesheet" href="{% static 'vendor/fullcalendar-5.11.3/lib/main.min.css' %}" />
+  <!-- Load local vendor JS files to work offline -->
+  <script src="{% static 'vendor/js/jquery-3.6.0.min.js' %}"></script>
+  <script src="{% static 'vendor/js/chart.js' %}"></script>
+  <script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>   
+</head>
+<body >
+  {% block menu %}
+    {% include 'includes/menu.html' %}
+  {% endblock %}
+  <div class="main">
+    {% include 'includes/header.html' %}
+      
+    {% block content %}
+    {% endblock %}
+
+    {% include 'includes/footer.html' %}
+  </div>
+  
+  <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'vendor/fullcalendar-5.11.3/lib/main.min.js' %}"></script>
+  <script src="{% static 'js/header.js' %}"></script>
+  <script src="{% static 'js/scripts.js' %}"></script>
+  <script src="{% static 'js/charts-init.js' %}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

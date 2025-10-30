@@ -1,0 +1,856 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block menu %}
+  {% include 'therapeutic_activities_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-brain text-primary me-2"></i>
+    Évaluations Ergothérapiques
+  </h3>
+  <div class="card">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <div>
+        <i class="fas fa-clipboard-check me-2"></i>
+        Liste des évaluations MoCA/Rosenberg
+      </div>
+    </div>
+  
+    <div class="card-body">
+      <!-- Search and Filter Form -->
+      <form id="search-form">
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+            <div class="input-group">
+              <span class="input-group-text input-group-text-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" class="form-control search-input-primary"
+                     placeholder="Rechercher par patient, activité, objectifs..."
+                     id="searchInput">
+            </div>
+          </div>
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-2">
+            <select class="form-select" title="Filtrer par patient" id="filterPatient">
+              <option value="">Tous les patients</option>
+              {% for patient in patients %}
+                <option value="{{ patient.id }}">
+                  {{ patient.get_full_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% if request.session.user.permissions.therapeutic_activities.write %}
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-3">
+            <button type="button" class="btn btn-primary w-100 text-nowrap px-2" 
+                    id="showCreateFormBtn" title="Nouvelle évaluation">
+              <i class="fas fa-plus"></i>
+              <span class="d-lg-inline ms-1">Nouvelle évaluation</span>
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </form>
+
+      <!-- Table des évaluations -->
+        <table class="table table-striped table-hover table-responsive" id="evaluations-table">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="sortable" data-sort="patient" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Patient</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="activity" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Activité</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="date" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Date d'évaluation</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center sortable" data-sort="moca" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Score MoCA</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center sortable" data-sort="rosenberg" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Score Rosenberg</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="goals" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Objectifs</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center action-column no-sort">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="evaluations-tbody">
+            {% for evaluation in evaluations %}
+            <tr>
+              <td data-label="Patient">
+                <div class="d-flex align-items-center">
+                  <div>
+                    {{ evaluation.participation.patient.get_full_name }}
+                  </div>
+                </div>
+              </td>
+              <td data-label="Session">
+                <div>
+                  <strong>{{ evaluation.participation.session.activity.title }}</strong>
+                  <br><small class="text-muted">{{ evaluation.participation.session.location.name }}</small>
+                </div>
+              </td>
+              <td data-label="Date.Evaluation">{{ evaluation.evaluation_date|date:"d/m/Y" }}</td>
+              <td data-label="Score MoCA" class="text-center">
+                {% if evaluation.moca_score %}
+                  <span class="badge {% if evaluation.moca_score >= 26 %}bg-success{% elif evaluation.moca_score >= 20 %}bg-warning{% else %}bg-danger{% endif %}">
+                    {{ evaluation.moca_score }}/30
+                  </span>
+                {% else %}
+                  <span class="text-muted">N/A</span>
+                {% endif %}
+              </td>
+              <td data-label="Score Rosenberg" class="text-center">
+                {% if evaluation.rosenberg_score %}
+                  <span class="badge {% if evaluation.rosenberg_score >= 70 %}bg-success{% elif evaluation.rosenberg_score >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                    {{ evaluation.rosenberg_score }}/100
+                  </span>
+                {% else %}
+                  <span class="text-muted">N/A</span>
+                {% endif %}
+              </td>
+              <td data-label="Objectifs">
+                {% if evaluation.goals %}
+                  {{ evaluation.goals|truncatechars:50 }}
+                {% else %}
+                  <span class="text-muted">Aucun objectif défini</span>
+                {% endif %}
+              </td>
+              <td data-label="Actions" class="text-center">
+                <div class="d-flex gap-1 justify-content-end">
+                  <button type="button" class="btn btn-sm btn-light border text-info view-evaluation-details" 
+                          title="Voir détails" 
+                          data-evaluation-id="{{ evaluation.id }}"
+                          data-patient-name="{{ evaluation.participation.patient.get_full_name }}"
+                          data-activity="{{ evaluation.participation.session.activity.title }}"
+                          data-session-date="{{ evaluation.participation.session.date|date:'d/m/Y' }}"
+                          data-location="{{ evaluation.participation.session.location.name }}"
+                          data-evaluation-date="{{ evaluation.evaluation_date|date:'d/m/Y' }}"
+                          data-moca-score="{{ evaluation.moca_score|default:'N/A' }}"
+                          data-rosenberg-score="{{ evaluation.rosenberg_score|default:'N/A' }}"
+                          data-osa-result="{{ evaluation.osa_result|default:'Non renseigné' }}"
+                          data-goals="{{ evaluation.goals|default:'Aucun objectif défini' }}"
+                          data-bs-toggle="modal" 
+                          data-bs-target="#evaluationDetailsModal">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  {% if request.session.user.permissions.therapeutic_activities.update %}
+                  <button type="button" class="btn btn-sm btn-light border text-dark edit-btn" title="Modifier"
+                          data-id="{{ evaluation.id }}"
+                          data-patient-id="{{ evaluation.participation.patient.id }}"
+                          data-moca-score="{{ evaluation.moca_score|default:'' }}"
+                          data-rosenberg-score="{{ evaluation.rosenberg_score|default:'' }}"
+                          data-osa-result="{{ evaluation.osa_result|default:'' }}"
+                          data-goals="{{ evaluation.goals|default:'' }}"
+                          data-osa-result="{{ evaluation.osa_result|default:'' }}">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4">
+                <i class="fas fa-clipboard-check fa-3x mb-3"></i>
+                <br>Aucune évaluation ergothérapique trouvée.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+      <!-- Pagination dynamique -->
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center mb-0" id="evaluation-pagination-controls">
+          <!-- Pagination générée dynamiquement -->
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% if request.session.user.permissions.therapeutic_activities.write %}
+<!-- Formulaire de création d'évaluation ergothérapique (collapsible) -->
+<div class="collapse" id="evaluationCreateFormCollapse">
+  <div class="content">
+    <div class="card shadow-sm">
+      <div class="card-header text-white d-flex align-items-center" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+        Ajouter une nouvelle évaluation
+      </div>
+    <div class="card-body">
+      <form id="evaluationCreateForm" method="post" action="{% url 'therapeutic_activities:ergotherapy_evaluation_create_standalone' %}">
+        {% csrf_token %}
+        
+        <!-- Sélection du patient -->
+        <div class="mb-4">
+          <label class="form-label">
+            Patient : <span class="text-danger">*</span>
+          </label>
+          <select name="patient" class="form-select" id="create_patient" required>
+            <option value="">Sélectionner un patient</option>
+            {% for patient in patients %}
+              <option value="{{ patient.id }}">
+                {{ patient.get_full_name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Scores standardisés -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="card border-primary">
+              <div class="card-header bg-light">
+               <i class="fas fa-brain me-2"></i>Score MoCA : 
+                <small class="text-muted d-block">Montreal Cognitive Assessment (0-30)</small>
+              </div>
+              <div class="card-body">
+                <div class="input-group">
+                  <input type="number" name="moca_score" id="create_moca_score" class="form-control" 
+                         min="0" max="30" step="0.1" placeholder="Ex: 25.5">
+                  <span class="input-group-text">/30</span>
+                </div>
+                <div class="mt-2">
+                  <small class="text-success">≥26: Normal</small> |
+                  <small class="text-warning">20-25: Léger</small> |
+                  <small class="text-danger">&lt;20: Déficit</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="card border-info">
+              <div class="card-header bg-light">
+               <i class="fas fa-heart me-2"></i>Score Rosenberg : 
+                <small class="text-muted d-block">Échelle d'estime de soi (0-100)</small>
+              </div>
+              <div class="card-body">
+                <div class="input-group">
+                  <input type="number" name="rosenberg_score" id="create_rosenberg_score" class="form-control" 
+                         min="0" max="100" step="0.1" placeholder="Ex: 75.0">
+                  <span class="input-group-text">/100</span>
+                </div>
+                <div class="mt-2">
+                  <small class="text-success">≥70: Bonne</small> |
+                  <small class="text-warning">50-69: Modérée</small> |
+                  <small class="text-danger">&lt;50: Faible</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Résultats OSA -->
+        <div class="mb-4">
+          <label class="form-label">
+            Résultats OSA (Occupational Self Assessment) : 
+          </label>
+          <textarea name="osa_result" id="create_osa_result" class="form-control" rows="4" 
+                    placeholder="Décrire les résultats de l'auto-évaluation occupationnelle du patient..."></textarea>
+        </div>
+        <!-- Objectifs thérapeutiques -->
+        <div class="mb-4">
+          <label class="form-label">
+            Objectifs Thérapeutiques : 
+          </label>
+          <textarea name="goals" id="create_goals" class="form-control" rows="5" 
+                    placeholder="Définir les objectifs spécifiques pour ce patient..."></textarea>
+        </div>
+        <!-- Actions -->
+        <div class="d-flex justify-content-end gap-2">
+          <div>
+            <button type="button" class="btn btn-sm btn-secondary" id="cancelCreateBtn">
+              <i class="fas fa-times"></i><span class="d-none d-sm-inline ms-1">Annuler</span>
+            </button>
+          </div>
+          <div>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  </div>
+</div>
+{% endif %}
+{% if request.session.user.permissions.therapeutic_activities.update %}
+<!-- Formulaire d'édition d'évaluation ergothérapique (collapsible) -->
+<div class="collapse" id="evaluationEditFormCollapse">
+  <div class="content">
+    <div class="card shadow-sm">
+      <div class="card-header text-white d-flex align-items-center" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+         Modifier l'évaluation
+      </div>
+    <div class="card-body">
+      <form id="evaluationEditForm" method="post" action="{% url 'therapeutic_activities:ergotherapy_evaluation_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="evaluation_id" id="edit_evaluation_id">
+        
+        <!-- Sélection du patient -->
+        <div class="mb-4">
+          <label class="form-label">
+            Patient : <span class="text-danger">*</span>
+          </label>
+          <select name="patient" class="form-select" id="edit_patient" required>
+            <option value="">Sélectionner un patient</option>
+            {% for patient in patients %}
+              <option value="{{ patient.id }}">
+                {{ patient.get_full_name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Scores standardisés -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="card border-primary">
+              <div class="card-header bg-light">
+                <i class="fas fa-brain me-2"></i>Score MoCA : 
+                <small class="text-muted d-block">Montreal Cognitive Assessment (0-30)</small>
+              </div>
+              <div class="card-body">
+                <div class="input-group">
+                  <input type="number" name="moca_score" id="edit_moca_score" class="form-control" 
+                         min="0" max="30" step="0.1" placeholder="Ex: 25.5">
+                  <span class="input-group-text">/30</span>
+                </div>
+                <div class="mt-2">
+                  <small class="text-success">≥26: Normal</small> |
+                  <small class="text-warning">20-25: Léger</small> |
+                  <small class="text-danger">&lt;20: Déficit</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="card border-info">
+              <div class="card-header bg-light">
+                <i class="fas fa-heart me-2"></i>Score Rosenberg :
+                <small class="text-muted d-block">Échelle d'estime de soi (0-100)</small>
+              </div>
+              <div class="card-body">
+                <div class="input-group">
+                  <input type="number" name="rosenberg_score" id="edit_rosenberg_score" class="form-control" 
+                         min="0" max="100" step="0.1" placeholder="Ex: 75.0">
+                  <span class="input-group-text">/100</span>
+                </div>
+                <div class="mt-2">
+                  <small class="text-success">≥70: Bonne</small> |
+                  <small class="text-warning">50-69: Modérée</small> |
+                  <small class="text-danger">&lt;50: Faible</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Résultats OSA -->
+        <div class="mb-4">
+          <label class="form-label">
+            Résultats OSA (Occupational Self Assessment) : 
+          </label>
+          <textarea name="osa_result" id="edit_osa_result" class="form-control" rows="4" 
+                    placeholder="Décrire les résultats de l'auto-évaluation occupationnelle du patient..."></textarea>
+        </div>
+        <!-- Objectifs thérapeutiques -->
+        <div class="mb-4">
+          <label class="form-label">
+            Objectifs Thérapeutiques : 
+          </label>
+          <textarea name="goals" id="edit_goals" class="form-control" rows="5" 
+                    placeholder="Définir les objectifs spécifiques pour ce patient..."></textarea>
+        </div>
+        <!-- Actions -->
+        <div class="d-flex justify-content-end gap-2">
+          <div>
+            <button type="button" class="btn btn-sm btn-secondary" id="cancelEditBtn">
+              <i class="fas fa-times me-1"></i>Annuler
+            </button>
+          </div>
+          <div>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-save me-1"></i>Sauvegarder
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal Détails Évaluation Ergothérapie -->
+<div class="modal fade" id="evaluationDetailsModal" tabindex="-1" aria-labelledby="evaluationDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: #1e90ff; color: white;">
+        <h5 class="modal-title" id="evaluationDetailsModalLabel">
+          <i class="fas fa-eye me-2"></i>
+          Détails de l'évaluation
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <strong>Patient:</strong>
+            <p id="modal-patient-name" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Activité:</strong>
+            <p id="modal-activity" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Date session:</strong>
+            <p id="modal-session-date" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Lieu:</strong>
+            <p id="modal-location" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Date évaluation:</strong>
+            <p id="modal-evaluation-date" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Score MoCA:</strong>
+            <p id="modal-moca-score" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Score Rosenberg:</strong>
+            <p id="modal-rosenberg-score" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Objectifs:</strong>
+            <p id="modal-goals" class="mb-2"></p>
+          </div>
+          <div class="col-12">
+            <strong>Résultats OSA:</strong>
+            <p id="modal-osa-result" class="mb-2"></p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+</style>
+
+<script>
+// Variables globales pour la pagination
+let allEvaluations = [];
+let filteredEvaluations = [];
+let currentEvaluationPage = 1;
+let evaluationsPerPage = 5;
+let totalEvaluationPages = 0;
+
+// Charger les données des évaluations
+function loadAllEvaluations() {
+    const evaluationRows = document.querySelectorAll('#evaluations-tbody tr');
+    
+    allEvaluations = Array.from(evaluationRows).map(row => {
+        if (row.cells.length > 1 && !row.textContent.includes('Aucune évaluation ergothérapique trouvée')) {
+            return {
+                element: row,
+                patient: row.cells[0].textContent.toLowerCase().trim(),
+                activity: row.cells[1].textContent.toLowerCase().trim(),
+                date: row.cells[2].textContent.toLowerCase().trim(),
+                moca: row.cells[3].textContent.toLowerCase().trim(),
+                rosenberg: row.cells[4].textContent.toLowerCase().trim(),
+                goals: row.cells[5].textContent.toLowerCase().trim(),
+                patientId: row.querySelector('.edit-btn') ? row.querySelector('.edit-btn').dataset.patientId : ''
+            };
+        }
+        return null;
+    }).filter(item => item !== null);
+    
+    return allEvaluations;
+}
+
+// Fonction de tri pour les évaluations
+function setupEvaluationSorting() {
+    const sortableHeaders = document.querySelectorAll('#evaluations-table .sortable');
+    
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const sortField = this.dataset.sort;
+            const currentDirection = this.dataset.direction || 'asc';
+            const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            
+            // Mettre à jour l'icône de tri
+            updateEvaluationSortIcons(this, newDirection);
+            
+            // Trier le tableau
+            sortEvaluationTable(sortField, newDirection);
+            
+            // Réappliquer la pagination
+            showEvaluationPage(1);
+            currentEvaluationPage = 1;
+            
+            // Sauvegarder la direction
+            this.dataset.direction = newDirection;
+        });
+    });
+}
+
+function sortEvaluationTable(sortField, direction) {
+    allEvaluations.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch(sortField) {
+            case 'patient':
+                aValue = a.patient;
+                bValue = b.patient;
+                break;
+            case 'activity':
+                aValue = a.activity;
+                bValue = b.activity;
+                break;
+            case 'date':
+                // Convertir dd/mm/yyyy en yyyy-mm-dd pour tri correct
+                aValue = a.date;
+                bValue = b.date;
+                if (aValue.includes('/')) {
+                    const [day, month, year] = aValue.trim().split('/');
+                    aValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+                if (bValue.includes('/')) {
+                    const [day, month, year] = bValue.trim().split('/');
+                    bValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+                break;
+            case 'moca':
+                // Extraire le score numérique pour tri
+                aValue = a.moca.replace(/[^0-9.]/g, '');
+                bValue = b.moca.replace(/[^0-9.]/g, '');
+                aValue = aValue ? parseFloat(aValue) : 0;
+                bValue = bValue ? parseFloat(bValue) : 0;
+                return direction === 'asc' ? aValue - bValue : bValue - aValue;
+            case 'rosenberg':
+                // Extraire le score numérique pour tri
+                aValue = a.rosenberg.replace(/[^0-9.]/g, '');
+                bValue = b.rosenberg.replace(/[^0-9.]/g, '');
+                aValue = aValue ? parseFloat(aValue) : 0;
+                bValue = bValue ? parseFloat(bValue) : 0;
+                return direction === 'asc' ? aValue - bValue : bValue - aValue;
+            case 'goals':
+                aValue = a.goals;
+                bValue = b.goals;
+                break;
+            default:
+                return 0;
+        }
+        
+        const comparison = aValue.localeCompare(bValue, 'fr', { numeric: true });
+        return direction === 'asc' ? comparison : -comparison;
+    });
+    
+    // Recharger la liste filtrée avec le nouvel ordre
+    filterEvaluations();
+}
+
+function updateEvaluationSortIcons(activeHeader, direction) {
+    // Réinitialiser toutes les icônes
+    document.querySelectorAll('#evaluations-table .sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon text-muted';
+    });
+    
+    // Mettre à jour l'icône active
+    const activeIcon = activeHeader.querySelector('.sort-icon');
+    if (activeIcon) {
+        if (direction === 'asc') {
+            activeIcon.className = 'fas fa-sort-up sort-icon text-primary';
+        } else {
+            activeIcon.className = 'fas fa-sort-down sort-icon text-primary';
+        }
+    }
+}
+
+// Fonction de filtrage des évaluations
+function filterEvaluations() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+    const patientFilter = document.getElementById('filterPatient').value;
+    
+    filteredEvaluations = allEvaluations.filter(evaluation => {
+        const matchesSearch = !searchTerm || 
+            evaluation.patient.includes(searchTerm) ||
+            evaluation.activity.includes(searchTerm) ||
+            evaluation.goals.includes(searchTerm) ||
+            evaluation.date.includes(searchTerm);
+        
+        const matchesPatient = !patientFilter || evaluation.patientId === patientFilter;
+        
+        return matchesSearch && matchesPatient;
+    });
+    
+    totalEvaluationPages = Math.ceil(filteredEvaluations.length / evaluationsPerPage);
+    if (totalEvaluationPages === 0) totalEvaluationPages = 1;
+    
+    if (currentEvaluationPage > totalEvaluationPages) {
+        currentEvaluationPage = 1;
+    }
+    
+    showEvaluationPage(currentEvaluationPage);
+}
+
+// Fonction d'affichage d'une page d'évaluations
+function showEvaluationPage(page) {
+    const startIndex = (page - 1) * evaluationsPerPage;
+    const endIndex = startIndex + evaluationsPerPage;
+    
+    // Cacher toutes les lignes d'évaluations
+    allEvaluations.forEach(evaluation => {
+        evaluation.element.style.display = 'none';
+    });
+    
+    // Afficher les lignes filtrées pour la page courante
+    const pageEvaluations = filteredEvaluations.slice(startIndex, endIndex);
+    pageEvaluations.forEach(evaluation => {
+        evaluation.element.style.display = '';
+    });
+    
+    // Gérer le message "Aucune évaluation trouvée"
+    const tbody = document.getElementById('evaluations-tbody');
+    const noDataRow = tbody.querySelector('tr td[colspan="7"]');
+    if (noDataRow) {
+        noDataRow.parentElement.style.display = filteredEvaluations.length === 0 ? '' : 'none';
+    }
+    
+    // Mettre à jour les contrôles de pagination
+    updateEvaluationPaginationControls();
+}
+
+// Mettre à jour les contrôles de pagination
+function updateEvaluationPaginationControls() {
+    const paginationControls = document.getElementById('evaluation-pagination-controls');
+    paginationControls.innerHTML = '';
+    
+    if (totalEvaluationPages <= 1) return;
+    
+    // Bouton Précédent
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentEvaluationPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<button class="page-link" ${currentEvaluationPage === 1 ? 'disabled' : ''}>Préc</button>`;
+    if (currentEvaluationPage > 1) {
+        prevLi.querySelector('button').onclick = () => {
+            currentEvaluationPage--;
+            showEvaluationPage(currentEvaluationPage);
+        };
+    }
+    paginationControls.appendChild(prevLi);
+    
+    // Boutons de page
+    for (let i = 1; i <= totalEvaluationPages; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === currentEvaluationPage ? 'active' : ''}`;
+        pageLi.innerHTML = `<button class="page-link">${i}</button>`;
+        pageLi.querySelector('button').onclick = () => {
+            currentEvaluationPage = i;
+            showEvaluationPage(currentEvaluationPage);
+        };
+        paginationControls.appendChild(pageLi);
+    }
+    
+    // Bouton Suivant
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentEvaluationPage === totalEvaluationPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<button class="page-link" ${currentEvaluationPage === totalEvaluationPages ? 'disabled' : ''}>Suiv</button>`;
+    if (currentEvaluationPage < totalEvaluationPages) {
+        nextLi.querySelector('button').onclick = () => {
+            currentEvaluationPage++;
+            showEvaluationPage(currentEvaluationPage);
+        };
+    }
+    paginationControls.appendChild(nextLi);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Charger les évaluations et initialiser la pagination
+  loadAllEvaluations();
+  
+  // Event listeners pour les filtres
+  document.getElementById('searchInput').addEventListener('input', function() {
+      currentEvaluationPage = 1;
+      filterEvaluations();
+  });
+  
+  document.getElementById('filterPatient').addEventListener('change', function() {
+      currentEvaluationPage = 1;
+      filterEvaluations();
+  });
+  
+  // Initialiser le tri
+  setupEvaluationSorting();
+  
+  // Initialiser l'affichage
+  filterEvaluations();
+  // Fonction pour masquer tous les formulaires
+  function hideAllForms() {
+    const createForm = document.getElementById('evaluationCreateFormCollapse');
+    const editForm = document.getElementById('evaluationEditFormCollapse');
+    
+    if (createForm) {
+      const createCollapse = bootstrap.Collapse.getInstance(createForm);
+      if (createCollapse) createCollapse.hide();
+    }
+    
+    if (editForm) {
+      const editCollapse = bootstrap.Collapse.getInstance(editForm);
+      if (editCollapse) editCollapse.hide();
+    }
+  }
+  
+  // Fonction pour afficher le formulaire de création
+  function showCreateForm() {
+    hideAllForms();
+    const createForm = document.getElementById('evaluationCreateFormCollapse');
+    const createCollapse = bootstrap.Collapse.getInstance(createForm) || new bootstrap.Collapse(createForm);
+    createCollapse.show();
+    createForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  
+  // Fonction pour afficher le formulaire de modification
+  function showEditForm() {
+    hideAllForms();
+    const editForm = document.getElementById('evaluationEditFormCollapse');
+    const editCollapse = bootstrap.Collapse.getInstance(editForm) || new bootstrap.Collapse(editForm);
+    editCollapse.show();
+    editForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  
+  // Gestionnaire pour le bouton "Nouvelle évaluation"
+  const showCreateBtn = document.getElementById('showCreateFormBtn');
+  if (showCreateBtn) {
+    showCreateBtn.addEventListener('click', showCreateForm);
+  }
+  
+  // Gestionnaire pour le bouton "Annuler" du formulaire de création
+  const cancelCreateBtn = document.getElementById('cancelCreateBtn');
+  if (cancelCreateBtn) {
+    cancelCreateBtn.addEventListener('click', hideAllForms);
+  }
+  
+  // Gestionnaire pour le bouton "Annuler" du formulaire de modification
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', hideAllForms);
+  }
+  // Gestionnaire pour les boutons "Voir détails"
+  document.querySelectorAll('.view-evaluation-details').forEach(button => {
+    button.addEventListener('click', function() {
+      // Récupérer les données depuis les attributs data-*
+      const patientName = this.getAttribute('data-patient-name');
+      const activity = this.getAttribute('data-activity');
+      const sessionDate = this.getAttribute('data-session-date');
+      const location = this.getAttribute('data-location');
+      const evaluationDate = this.getAttribute('data-evaluation-date');
+      const rosenbergScore = this.getAttribute('data-rosenberg-score');
+      const goals = this.getAttribute('data-goals');
+      
+      // Remplir les éléments de la modal
+      document.getElementById('modal-patient-name').textContent = patientName;
+      document.getElementById('modal-activity').textContent = activity;
+      document.getElementById('modal-session-date').textContent = sessionDate;
+      document.getElementById('modal-location').textContent = location;
+      document.getElementById('modal-evaluation-date').textContent = evaluationDate;
+      const mocaScore = this.getAttribute('data-moca-score');
+      const osaResult = this.getAttribute('data-osa-result');
+      
+      document.getElementById('modal-moca-score').textContent = mocaScore || 'N/A';
+      document.getElementById('modal-rosenberg-score').textContent = rosenbergScore || 'N/A';
+      document.getElementById('modal-osa-result').textContent = osaResult || 'Non renseigné';
+      document.getElementById('modal-goals').textContent = goals || 'Aucun objectif défini';
+    });
+  });
+
+  // Fonction d'édition d'évaluation
+  function editEvaluation(id, participationId, mocaScore, rosenbergScore, osaResult, goals) {
+    document.getElementById('edit_evaluation_id').value = id;
+    document.getElementById('edit_moca_score').value = mocaScore || '';
+    document.getElementById('edit_rosenberg_score').value = rosenbergScore || '';
+    document.getElementById('edit_osa_result').value = osaResult || '';
+    document.getElementById('edit_goals').value = goals || '';
+
+    document.getElementById('evaluationEditForm').action = `/therapeutic_activities/evaluations/${id}/edit/`;
+
+    // Faire défiler vers le formulaire
+    const editForm = document.getElementById('evaluationEditFormCollapse');
+    const editCollapse = bootstrap.Collapse.getInstance(editForm) || new bootstrap.Collapse(editForm);
+    editCollapse.show();
+    
+    editForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Gestionnaires d'événements pour les boutons d'édition
+  const editButtons = document.querySelectorAll('.edit-btn');
+  editButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const id = this.dataset.id;
+      const patientId = this.dataset.patientId;
+      const mocaScore = this.dataset.mocaScore;
+      const rosenbergScore = this.dataset.rosenbergScore;
+      const osaResult = this.dataset.osaResult;
+      const goals = this.dataset.goals;
+
+      // Remplir le formulaire
+      document.getElementById('edit_evaluation_id').value = id;
+      document.getElementById('edit_patient').value = patientId;
+      document.getElementById('edit_moca_score').value = mocaScore || '';
+      document.getElementById('edit_rosenberg_score').value = rosenbergScore || '';
+      document.getElementById('edit_osa_result').value = osaResult || '';
+      document.getElementById('edit_goals').value = goals || '';
+
+      // Le formulaire se soumet déjà à la bonne URL (même page)
+
+      // Afficher le formulaire de modification
+      showEditForm();
+    });
+  });
+});
+</script>
+{% endblock %}

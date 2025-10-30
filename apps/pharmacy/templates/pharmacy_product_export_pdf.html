@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Export Produits Pharmaceutiques</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #333;
+        }
+        .filters {
+            margin-bottom: 20px;
+            font-size: 11px;
+        }
+        .filters strong {
+            color: #666;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 10px;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        .no-data {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Liste des Produits Pharmaceutiques</h1>
+        <p>Export généré le {{ export_date|date:"d/m/Y à H:i" }}</p>
+    </div>
+
+    {% if query or pharmaceutical_form_filter %}
+    <div class="filters">
+        <strong>Filtres appliqués :</strong><br>
+        {% if query %}
+        • Recherche : "{{ query }}"<br>
+        {% endif %}
+        {% if pharmaceutical_form_filter %}
+        • Forme pharmaceutique : {{ pharmaceutical_form_filter }}<br>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if products %}
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Libellé court</th>
+                <th>Marque</th>
+                <th>DCI</th>
+                <th>Forme</th>
+                <th>Dosage</th>
+                <th>Prix unitaire</th>
+                <th>Quantité Totale</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>{{ product.code|default:"-" }}</td>
+                <td>{{ product.short_label|default:"-" }}</td>
+                <td>{{ product.brand|default:"-" }}</td>
+                <td>{{ product.dci.label|default:"-" }}</td>
+                <td>{{ product.pharmaceutical_form.name|default:"-" }}</td>
+                <td>{{ product.dosage|default:"-" }}</td>
+                <td>{{ product.unit_price|default:"0.00"|floatformat:2 }} MAD</td>
+                <td>{{ product.total_quantity_cached|default:"0.00"|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Total : {{ products.count }} produit{{ products.count|pluralize }}</p>
+    </div>
+    {% else %}
+    <div class="no-data">
+        <p>Aucun produit trouvé avec les critères de recherche spécifiés.</p>
+    </div>
+    {% endif %}
+</body>
+</html> 

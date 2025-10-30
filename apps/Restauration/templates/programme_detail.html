@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Détail du Programme - {{ programme.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .programme-header-card {
+        position: relative !important;
+        z-index: 1000 !important;
+        margin-bottom: 2rem !important;
+    }
+    
+    .programme-header-card .card-header {
+        position: relative !important;
+        z-index: 1001 !important;
+        background: #1e90ff !important;
+        border: none !important;
+        padding: 0.75rem 1.25rem !important;
+    }
+    
+    .programme-header-card .card-body {
+        background-color: #f8f9fa !important;
+        border-top: 1px solid #dee2e6 !important;
+        padding: 1.5rem !important;
+    }
+    
+    .programme-header-card h6 {
+        color: white !important;
+        margin: 0 !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+    }
+    
+    .programme-header-card .btn {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        border: none !important;
+        font-weight: 500 !important;
+    }
+    
+    .programme-header-card .btn-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+    }
+    
+    .programme-header-card .btn-danger {
+        background-color: #dc3545 !important;
+        color: white !important;
+    }
+</style>
+<style>
+    /* Override Bootstrap primary tones locally for this page */
+    .bg-gradient-primary { background-color: #1e90ff !important; background-image: none !important; }
+    .btn-primary { background-color: #1e90ff !important; border-color: #1e90ff !important; }
+    .text-primary { color: #1e90ff !important; }
+</style>
+{% endblock %}
+
+{% block menu %}
+{% include "menu_restauration.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+   
+
+    <div class="container-fluid">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow programme-header-card">
+                    <div class="card-header text-white d-flex flex-row align-items-center justify-content-between" style="background-color: #1e90ff;">
+                        <h6 class="m-0">
+                            <i class="fas fa-calendar-alt me-2"></i> {{ programme.nom }}
+                        </h6>
+                        <div>
+                            <a href="{% url 'programme_update' programme.pk %}" class="btn btn-warning btn-sm me-2" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'programme_delete' programme.pk %}" class="btn btn-danger btn-sm" title="Supprimer">
+                                <i class="fas fa-trash-alt"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p class="text-muted mb-2">
+                                    <i class="fas fa-map-marker-alt text-primary"></i> 
+                                    <strong>Lieu :</strong> {{ programme.lieu }}
+                                </p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="text-muted mb-2">
+                                    <i class="fas fa-calendar-day text-info"></i> 
+                                    <strong>Période :</strong> {{ programme.date_debut|date:"d/m/Y" }} - {{ programme.date_fin|date:"d/m/Y" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% if messages %}
+        {% for message in messages %}
+          {% if message.tags == 'success' %}
+            <div class="alert alert-success d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-check-circle me-2 fw-bold"></i>
+              <div><strong>Succès :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'error' %}
+            <div class="alert alert-danger d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-times-circle me-2 fw-bold"></i>
+              <div><strong>Erreur :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'warning' %}
+            <div class="alert alert-warning d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+              <div><strong>Attention :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'info' %}
+            <div class="alert alert-info d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-info-circle me-2 fw-bold"></i>
+              <div><strong>Information :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% else %}
+            <div class="alert alert-{{ message.tags }} d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-bell me-2 fw-bold"></i>
+              <div><strong>Info :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header text-white d-flex flex-row align-items-center justify-content-between" style="background-color: #1e90ff;">
+                    <h6 class="m-0"><i class="fas fa-list me-2"></i>Jours du Programme</h6>
+                    <div>
+                        <a href="{% url 'programme_configure_menus_sequential' programme.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-magic me-2"></i>Configuration Séquentielle
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if jours %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" width="100%" cellspacing="0">
+                                <thead class="table-light borderless">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Menu Assigné</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for semaine, jours_semaine in semaines.items %}
+                                        <tr class="table-secondary">
+                                            <td colspan="3">
+                                                <strong>Semaine {{ semaine }}</strong>
+                                            </td>
+                                        </tr>
+                                        {% for jour in jours_semaine %}
+                                        <tr>
+                                            <td>{{ jour.date|date:"d/m/Y" }}</td>
+                                            <td>
+                                                {% if jour.menu_personnalise %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-utensils"></i> Menu personnalisé
+                                                    </span>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                    {{ jour.menu_personnalise.plats.all|join:", " }}
+                                                    </small>
+                                                    
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        {{ jour.menu_personnalise.description }}
+                                                    </small>
+                                                    {% if jour.menu_personnalise.heure_service %}
+                                                        <br>
+                                                        <small class="text-info">
+                                                            <i class="fas fa-clock"></i> {{ jour.menu_personnalise.heure_service|time:"H:i" }}
+                                                        </small>
+                                                    {% endif %}
+                                                {% elif jour.menu %}
+                                                    <span class="badge bg-info">{{ jour.menu }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Aucun menu</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if jour.menu_personnalise %}
+                                                    <a href="{% url 'programme_configure_menus_sequential_with_jour' programme.pk jour.pk %}" class="btn btn-sm btn-light border text-dark">
+                                                        <i class="fas fa-edit"></i> Modifier
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{% url 'programme_configure_menus_sequential_with_jour' programme.pk jour.pk %}" class="btn btn-sm btn-light border text-success">
+                                                        <i class="fas fa-plus"></i> Configurer
+                                                    </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-times fa-3x text-gray-300 mb-3"></i>
+                            <p class="text-gray-500">Aucun jour n'est encore associé à ce programme.</p>
+                            <form method="post" action="{% url 'programme_generate_weeks' programme.pk %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-info btn-sm">
+                                    <i class="fas fa-magic"></i> Générer tous les jours
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Titre Statistiques du Programme -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                    <h6 class="m-0">
+                        <i class="fas fa-chart-bar me-2"></i> Statistiques du Programme
+                    </h6>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards (fond clair) -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center p-3">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-calendar-day fa-xl text-primary"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-primary mb-0">{{ total_jours }}</h3>
+                        <p class="text-muted mb-0">Total Jours</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center p-3">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-utensils fa-xl text-success"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-success mb-0">{{ jours_avec_menu }}</h3>
+                        <p class="text-muted mb-0">Jours avec Menu</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center p-3">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-calendar-times fa-xl text-warning"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-warning mb-0">{{ jours_sans_menu }}</h3>
+                        <p class="text-muted mb-0">Jours sans Menu</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center p-3">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-user-edit fa-xl text-info"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-info mb-0">{{ jours_avec_menu_personnalise }}</h3>
+                        <p class="text-muted mb-0">Menus Personnalisés</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bouton Retour -->
+    <div class="row mt-4 mb-4">
+        <div class="col-12">
+            <a href="{% url 'programme_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Retour
+            </a>
+        </div>
+    </div>
+    </div>
+</div>
+
+{% endblock %}

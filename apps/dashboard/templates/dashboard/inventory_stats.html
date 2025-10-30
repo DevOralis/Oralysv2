@@ -1,0 +1,423 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block menu %}
+{% include 'dashboard/dashboard_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-4">
+            <div class="kpi-card bg-primary text-white h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-boxes fa-xl"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="mb-0">{{ total_products }}</h3>
+                        <p class="mb-0">Total Produits</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="kpi-card bg-success text-white h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-exchange-alt fa-xl"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="mb-0">{{ total_stock_moves }}</h3>
+                        <p class="mb-0">Mouvements Stock</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="kpi-card bg-info text-white h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-tags fa-xl"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="mb-0">{{ total_categories }}</h3>
+                        <p class="mb-0">Catégories</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="kpi-card bg-warning text-white h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-exclamation-triangle fa-xl"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="mb-0">{{ low_stock_products }}</h3>
+                        <p class="mb-0">Stock Faible</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-4">
+            <div class="kpi-card bg-danger text-white h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-times-circle fa-xl"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="mb-0">{{ out_of_stock }}</h3>
+                        <p class="mb-0">Rupture Stock</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="kpi-card bg-secondary text-white h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-coins fa-xl"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="mb-0">{{ total_stock_value|floatformat:2 }} DH</h3>
+                        <p class="mb-0">Valeur Totale Stock</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Charts Row -->
+<div class="row">
+    <!-- Évolution des Mouvements -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Évolution Mouvements Stock</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="movesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statut des Mouvements -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Statut Mouvements</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-pie pt-4 pb-2">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Second Charts Row -->
+<div class="row">
+    <!-- Produits par Catégorie -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Produits Par Catégorie</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-pie pt-4 pb-2">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- État du Stock -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">État Stock</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-pie pt-4 pb-2">
+                    <canvas id="stockStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Produits par Type -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Produits Par Type</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-pie pt-4 pb-2">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Row -->
+<div class="row">
+    <!-- Produits Récents -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Produits Récents</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Code</th>
+                                <th>Prix</th>
+                                <th>Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in recent_products %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.default_code|default:"-" }}</td>
+                                <td>{{ product.standard_price|floatformat:2 }} DH</td>
+                                <td>{{ product.total_quantity_cached }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center">Aucun Produit Trouvé</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mouvements Récents -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Mouvements Récents</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Référence</th>
+                                <th>Type</th>
+                                <th>Statut</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for move in recent_moves %}
+                            <tr>
+                                <td>{{ move.reference }}</td>
+                                <td>{{ move.operation_type.label|default:"-" }}</td>
+                                <td>
+                                    <span class="badge badge-{% if move.state == 'done' %}success{% elif move.state == 'confirmed' %}warning{% elif move.state == 'canceled' %}danger{% else %}secondary{% endif %}">
+                                        {{ move.get_state_display }}
+                                    </span>
+                                </td>
+                                <td>{{ move.date_created|date:"d/m/Y" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center">Aucun Mouvement Trouvé</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-danger {
+    border-left: 0.25rem solid #e74a3b !important;
+}
+.border-left-secondary {
+    border-left: 0.25rem solid #858796 !important;
+}
+.text-primary {
+    color: #4e73df !important;
+}
+.text-success {
+    color: #1cc88a !important;
+}
+.text-info {
+    color: #36b9cc !important;
+}
+.text-warning {
+    color: #f6c23e !important;
+}
+.text-danger {
+    color: #e74a3b !important;
+}
+.text-secondary {
+    color: #858796 !important;
+}
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Données des graphiques
+const movesData = {{ moves_month_json|safe }};
+const statusData = {{ moves_status_json|safe }};
+const categoryData = {{ products_category_json|safe }};
+const typeData = {{ products_type_json|safe }};
+const stockStatusData = {{ stock_status_json|safe }};
+
+// Graphique d'évolution des mouvements
+const movesCtx = document.getElementById('movesChart').getContext('2d');
+new Chart(movesCtx, {
+    type: 'line',
+    data: {
+        labels: movesData.map(item => item.month_name),
+        datasets: [{
+            label: 'Mouvements',
+            data: movesData.map(item => item.count),
+            borderColor: '#4e73df',
+            backgroundColor: 'rgba(78, 115, 223, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Graphique statut des mouvements
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: statusData.map(item => item.status),
+        datasets: [{
+            data: statusData.map(item => item.count),
+            backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Graphique produits par catégorie
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+    type: 'pie',
+    data: {
+        labels: categoryData.map(item => item.category),
+        datasets: [{
+            data: categoryData.map(item => item.count),
+            backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Graphique état du stock
+const stockStatusCtx = document.getElementById('stockStatusChart').getContext('2d');
+new Chart(stockStatusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: stockStatusData.map(item => item.status),
+        datasets: [{
+            data: stockStatusData.map(item => item.count),
+            backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Graphique produits par type
+const typeCtx = document.getElementById('typeChart').getContext('2d');
+new Chart(typeCtx, {
+    type: 'pie',
+    data: {
+        labels: typeData.map(item => item.type),
+        datasets: [{
+            data: typeData.map(item => item.count),
+            backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

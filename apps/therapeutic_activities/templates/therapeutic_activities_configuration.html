@@ -1,0 +1,737 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block menu %}
+  {% include 'therapeutic_activities_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-cog text-primary me-2"></i>
+    Configuration
+  </h3>
+
+  <!-- Tabs Navigation -->
+  <ul class="nav nav-tabs flex-column flex-sm-row mb-3" id="configTabs">
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'activity_types' %}active{% endif %} border-bottom-0" data-bs-toggle="tab" href="#activity-types-tab">
+        Types d'activités
+      </a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'locations' %}active{% endif %} border-bottom-0" data-bs-toggle="tab" href="#locations-tab">
+        Salles
+      </a>
+    </li>
+  </ul>
+
+  <div class="tab-content border border-top-0 p-3">
+    <!-- Activity Types Tab -->
+    <div class="tab-pane fade {% if tab == 'activity_types' %}show active{% endif %}" id="activity-types-tab">
+      <div class="card">
+        <div class="card-body">
+          <!-- Search and Add Form -->
+          <form method="get" class="mb-3">
+            <input type="hidden" name="tab" value="activity_types">
+            <div class="row g-2">
+              <div class="col-md-8">
+                <div class="input-group">
+                  <span class="input-group-text input-group-text-primary">
+                    <i class="fas fa-search"></i>
+                  </span>
+                  <input type="search" name="q" class="form-control search-input-primary" placeholder="Rechercher un type d'activité..." id="searchActivityType">
+                </div>
+              </div>
+              {% if request.session.user.permissions.therapeutic_activities.update or request.session.user.permissions.therapeutic_activities.delete %}
+              <div class="col-md-4">
+                <button type="button" class="btn btn-primary w-100" id="btn-add-activity-type">
+                  <i class="fas fa-plus me-1"></i>
+                  Nouveau type
+                </button>
+              </div>
+              {% endif %}
+            </div>
+          </form>
+          <!-- Activity Types Table -->
+            <table class="table table-hover table-responsive" id="activity-types-table">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="sortable" data-sort="name" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>Nom</span>
+                      <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="sortable" data-sort="description" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>Description</span>
+                      <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="sortable" data-sort="status" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>Statut</span>
+                      <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="sortable" data-sort="activities" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>Activités</span>
+                      <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                  </th>
+                  {% if request.session.user.permissions.therapeutic_activities.update or request.session.user.permissions.therapeutic_activities.delete %}
+                  <th class="text-center action-column no-sort">Actions</th>
+                  {% endif %}
+                </tr>
+              </thead>
+              <tbody id="activity-types-tbody">
+                {% for activity_type in activity_types %}
+                <tr>
+                  <td>{{ activity_type.name }}</td>
+                  <td>{{ activity_type.description|truncatechars:50 }}</td>
+                  <td>
+                    {% if activity_type.is_active %}
+                      <span class="badge bg-success">Actif</span>
+                    {% else %}
+                      <span class="badge bg-danger">Inactif</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ activity_type.activity_set.count }}</td>
+                  <td class="text-center">
+                    <div class="d-flex gap-1 justify-content-center">
+                      {% if request.session.user.permissions.therapeutic_activities.update %}
+                      <button class="btn btn-sm btn-light border text-dark edit-activity-type-btn" 
+                              data-id="{{ activity_type.id }}"
+                              data-name="{{ activity_type.name }}"
+                              data-description="{{ activity_type.description }}"
+                              data-is-active="{{ activity_type.is_active|yesno:'true,false' }}"
+                              title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      {% endif %}
+                      {% if request.session.user.permissions.therapeutic_activities.delete %}
+                      <button class="btn btn-sm btn-light border text-danger" 
+                              onclick="deleteActivityType({{ activity_type.id }}, '{{ activity_type.name|escapejs }}')"
+                              title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center text-muted">Aucun type d'activité trouvé</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+          <!-- Pagination for Activity Types -->
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap" id="activityTypePagination">
+              <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="Précédent" id="prevPageActivityType">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </a>
+              </li>
+              <!-- Les numéros de page seront générés dynamiquement -->
+              <li class="page-item">
+                <a class="page-link" href="#" aria-label="Suivant" id="nextPageActivityType">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </a>
+              </li>
+            </ul>
+          </nav>
+
+          <!-- Activity Type Form Card -->
+          <div class="card form-card mb-4 mt-4 p-0 d-none" id="activity-type-form-card" style="scroll-margin-top:120px;">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+              <i class="fas fa-pen-to-square me-2"></i>
+              <span id="activity-type-form-title">Ajouter un type d'activité</span>
+            </div>
+            <div class="card-body">
+              <form id="activity-type-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="">
+                <div class="row g-3">
+                  <div class="col-md-6 form-label">
+                    <label class="form-label">Nom du type d'activité :  <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="name" required>
+                  </div>
+                  <div class="col-md-6 d-flex align-items-end">
+                    <div class="form-check">
+                      <label class="form-label" for="activity-type-active-card">Actif : </label>
+                      <input class="form-check-input" type="checkbox" name="is_active" id="activity-type-active-card" checked>
+                    </div>
+                  </div>
+                  <div class="col-md-12 form-label">
+                    <label class="form-label">Description : </label>
+                    <textarea class="form-control" name="description" rows="3"></textarea>
+                  </div>
+                </div>
+                <div class="mt-3 text-end">
+                  <button type="button" class="btn btn-secondary btn-sm btn-cancel-form"><i class="fas fa-times"></i><span class="d-none d-sm-inline ms-1"> Annuler</span></button>
+                  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1"> Sauvegarder</span></button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Locations Tab -->
+    <div class="tab-pane fade {% if tab == 'locations' %}show active{% endif %}" id="locations-tab">
+      <div class="card">
+        <div class="card-body">
+          <!-- Search and Add Form -->
+          <form method="get" class="mb-3">
+            <input type="hidden" name="tab" value="locations">
+            <div class="row g-2">
+              <div class="col-md-8">
+                <div class="input-group">
+                  <span class="input-group-text input-group-text-primary">
+                    <i class="fas fa-search"></i>
+                  </span>
+                  <input type="search" name="q" class="form-control search-input-primary" placeholder="Rechercher une salle..." id="searchLocation">
+                </div>
+              </div>
+              {% if request.session.user.permissions.therapeutic_activities.update or request.session.user.permissions.therapeutic_activities.delete %}
+              <div class="col-md-4">
+                <button type="button" class="btn btn-primary w-100" id="btn-add-location">
+                  <i class="fas fa-plus me-1"></i>
+                  Nouvelle salle
+                </button>
+              </div>
+              {% endif %}
+            </div>
+          </form>
+
+          <!-- Locations Table -->
+            <table class="table table-hover table-responsive" id="locations-table">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="sortable" data-sort="name" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>Nom</span>
+                      <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="sortable" data-sort="address" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>Adresse</span>
+                      <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="sortable" data-sort="capacity" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>Capacité</span>
+                      <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="sortable" data-sort="status" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>Statut</span>
+                      <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="sortable" data-sort="sessions" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <span>Sessions</span>
+                      <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                  </th>
+                  {% if request.session.user.permissions.therapeutic_activities.update or request.session.user.permissions.therapeutic_activities.delete %}
+                  <th class="text-center action-column no-sort">Actions</th>
+                  {% endif %}
+                </tr>
+              </thead>
+              <tbody id="locations-tbody">
+                {% for location in activity_locations %}
+                <tr>
+                  <td>{{ location.name }}</td>
+                  <td>{{ location.address|default:"Non spécifiée" }}</td>
+                  <td>{{ location.capacity|default:"Non définie" }}</td>
+                  <td>
+                    {% if location.is_active %}
+                      <span class="badge bg-success">Actif</span>
+                    {% else %}
+                      <span class="badge bg-danger">Inactif</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ location.session_set.count }}</td>
+                  <td class="text-center">
+                    <div class="d-flex gap-1 justify-content-center">
+                      {% if request.session.user.permissions.therapeutic_activities.update %}
+                      <button class="btn btn-sm btn-light border text-dark edit-location-btn" 
+                              data-id="{{ location.id }}"
+                              data-name="{{ location.name }}"
+                              data-address="{{ location.address }}"
+                              data-capacity="{{ location.capacity }}"
+                              data-is-active="{{ location.is_active|yesno:'true,false' }}"
+                              title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      {% endif %}
+                      {% if request.session.user.permissions.therapeutic_activities.delete %}
+                      <button class="btn btn-sm btn-light border text-danger" 
+                              onclick="deleteActivityLocation({{ location.id }}, '{{ location.name|escapejs }}')"
+                              title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted">Aucune salle trouvée</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+          <!-- Pagination for Locations -->
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap" id="locationPagination">
+              <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="Précédent" id="prevPageLocation">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </a>
+              </li>
+              <!-- Les numéros de page seront générés dynamiquement -->
+              <li class="page-item">
+                <a class="page-link" href="#" aria-label="Suivant" id="nextPageLocation">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </a>
+              </li>
+            </ul>
+          </nav>
+
+          <!-- Location Form Card -->
+          <div class="card form-card mb-4 mt-4 p-0 d-none" id="location-form-card" style="scroll-margin-top:120px;">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+              <i class="fas fa-pen-to-square me-2"></i>
+              <span id="location-form-title">Ajouter une salle</span>
+            </div>
+            <div class="card-body">
+              <form id="location-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="">
+                <div class="row g-3">
+                  <div class="col-md-6 form-label">
+                    <label class="form-label">Nom de la salle : <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="name" required>
+                  </div>
+                  <div class="col-md-6 form-label">
+                    <label class="form-label">Capacité maximale : </label>
+                    <input type="number" class="form-control" name="capacity" min="0">
+                  </div>
+                  <div class="col-md-8 form-label">
+                    <label class="form-label">Adresse : </label>
+                    <input type="text" class="form-control" name="address">
+                  </div>
+                  <div class="col-md-4 d-flex align-items-end">
+                    <div class="form-check">
+                      <label class="form-label" for="location-active-card">Actif : </label>
+                      <input class="form-check-input" type="checkbox" name="is_active" id="location-active-card" checked>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-3 text-end">
+                  <button type="button" class="btn btn-secondary btn-sm btn-cancel-form"><i class="fas fa-times"></i><span class="d-none d-sm-inline ms-1"> Annuler</span></button>
+                  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1"> Sauvegarder</span></button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+<script src="{% static 'js/ta_configuration.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration pour les types d'activités
+    const activityTypeTable = document.getElementById('activity-types-table');
+    const activityTypeRows = Array.from(activityTypeTable.querySelector('tbody').querySelectorAll('tr'));
+    const activityTypeSearch = document.getElementById('searchActivityType');
+    let filteredActivityTypeRows = [...activityTypeRows];
+    
+    // Configuration pour les salles
+    const locationTable = document.getElementById('locations-table');
+    const locationRows = Array.from(locationTable.querySelector('tbody').querySelectorAll('tr'));
+    const locationSearch = document.getElementById('searchLocation');
+    let filteredLocationRows = [...locationRows];
+    
+    // Pagination côté client - 5 éléments par page
+    const itemsPerPage = 5;
+    
+    // Variables de pagination pour les types d'activités
+    let currentActivityTypePage = 1;
+    let totalActivityTypePages = Math.ceil(filteredActivityTypeRows.length / itemsPerPage);
+    
+    // Variables de pagination pour les salles
+    let currentLocationPage = 1;
+    let totalLocationPages = Math.ceil(filteredLocationRows.length / itemsPerPage);
+    
+    // Fonction de recherche pour les types d'activités
+    function searchActivityTypes() {
+        const query = activityTypeSearch.value.toLowerCase().trim();
+        
+        filteredActivityTypeRows = activityTypeRows.filter(row => {
+            if (row.querySelector('td:nth-child(5)')?.textContent.includes('Aucun type')) return false;
+            
+            const name = row.querySelector('td:nth-child(1)')?.textContent.toLowerCase() || '';
+            const description = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+            const status = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+            
+            return name.includes(query) || description.includes(query) || status.includes(query);
+        });
+        
+        totalActivityTypePages = Math.ceil(filteredActivityTypeRows.length / itemsPerPage);
+        currentActivityTypePage = 1;
+        showActivityTypePage(1);
+    }
+    
+    // Fonction de recherche pour les salles
+    function searchLocations() {
+        const query = locationSearch.value.toLowerCase().trim();
+        
+        filteredLocationRows = locationRows.filter(row => {
+            if (row.querySelector('td:nth-child(6)')?.textContent.includes('Aucune salle')) return false;
+            
+            const name = row.querySelector('td:nth-child(1)')?.textContent.toLowerCase() || '';
+            const address = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+            const capacity = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+            const status = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+            
+            return name.includes(query) || address.includes(query) || capacity.includes(query) || status.includes(query);
+        });
+        
+        totalLocationPages = Math.ceil(filteredLocationRows.length / itemsPerPage);
+        currentLocationPage = 1;
+        showLocationPage(1);
+    }
+    
+    // Affichage des pages pour les types d'activités
+    function showActivityTypePage(page) {
+        const start = (page - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        
+        // Masquer toutes les lignes
+        activityTypeRows.forEach(row => row.style.display = 'none');
+        
+        // Afficher les lignes filtrées pour la page actuelle
+        for (let i = start; i < end && i < filteredActivityTypeRows.length; i++) {
+            filteredActivityTypeRows[i].style.display = '';
+        }
+        
+        updateActivityTypePagination(page);
+    }
+    
+    // Affichage des pages pour les salles
+    function showLocationPage(page) {
+        const start = (page - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        
+        // Masquer toutes les lignes
+        locationRows.forEach(row => row.style.display = 'none');
+        
+        // Afficher les lignes filtrées pour la page actuelle
+        for (let i = start; i < end && i < filteredLocationRows.length; i++) {
+            filteredLocationRows[i].style.display = '';
+        }
+        
+        updateLocationPagination(page);
+    }
+    
+    // Mise à jour de la pagination pour les types d'activités
+    function updateActivityTypePagination(page) {
+        const pagination = document.getElementById('activityTypePagination');
+        const prevBtn = document.getElementById('prevPageActivityType');
+        const nextBtn = document.getElementById('nextPageActivityType');
+        
+        prevBtn.parentElement.classList.toggle('disabled', page === 1);
+        nextBtn.parentElement.classList.toggle('disabled', page === totalActivityTypePages);
+        
+        // Nettoyer les anciens numéros de page
+        const pageNumbers = pagination.querySelectorAll('.page-number');
+        pageNumbers.forEach(num => num.remove());
+        
+        // Ajouter les numéros de page
+        for (let i = 1; i <= totalActivityTypePages; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.className = 'page-item page-number';
+            if (i === page) pageItem.classList.add('active');
+            
+            const pageLink = document.createElement('a');
+            pageLink.className = 'page-link';
+            pageLink.href = '#';
+            pageLink.textContent = i;
+            pageLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentActivityTypePage = i;
+                showActivityTypePage(i);
+            });
+            
+            pageItem.appendChild(pageLink);
+            pagination.insertBefore(pageItem, nextBtn.parentElement);
+        }
+        
+        // Masquer la pagination si pas assez d'éléments
+        pagination.style.display = totalActivityTypePages <= 1 ? 'none' : 'flex';
+    }
+    
+    // Mise à jour de la pagination pour les salles
+    function updateLocationPagination(page) {
+        const pagination = document.getElementById('locationPagination');
+        const prevBtn = document.getElementById('prevPageLocation');
+        const nextBtn = document.getElementById('nextPageLocation');
+        
+        prevBtn.parentElement.classList.toggle('disabled', page === 1);
+        nextBtn.parentElement.classList.toggle('disabled', page === totalLocationPages);
+        
+        // Nettoyer les anciens numéros de page
+        const pageNumbers = pagination.querySelectorAll('.page-number');
+        pageNumbers.forEach(num => num.remove());
+        
+        // Ajouter les numéros de page
+        for (let i = 1; i <= totalLocationPages; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.className = 'page-item page-number';
+            if (i === page) pageItem.classList.add('active');
+            
+            const pageLink = document.createElement('a');
+            pageLink.className = 'page-link';
+            pageLink.href = '#';
+            pageLink.textContent = i;
+            pageLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentLocationPage = i;
+                showLocationPage(i);
+            });
+            
+            pageItem.appendChild(pageLink);
+            pagination.insertBefore(pageItem, nextBtn.parentElement);
+        }
+        
+        // Masquer la pagination si pas assez d'éléments
+        pagination.style.display = totalLocationPages <= 1 ? 'none' : 'flex';
+    }
+    
+    // Fonctions de tri pour les types d'activités
+    function setupActivityTypeSorting() {
+        const sortableHeaders = document.querySelectorAll('#activity-types-table .sortable');
+        
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const sortField = this.dataset.sort;
+                const currentDirection = this.dataset.direction || 'asc';
+                const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+                
+                // Mettre à jour l'icône de tri
+                updateActivityTypeSortIcons(this, newDirection);
+                
+                // Trier le tableau
+                sortActivityTypeTable(sortField, newDirection);
+                
+                // Sauvegarder la direction
+                this.dataset.direction = newDirection;
+            });
+        });
+    }
+
+    function sortActivityTypeTable(sortField, direction) {
+        filteredActivityTypeRows.sort((a, b) => {
+            let aValue, bValue;
+            
+            switch(sortField) {
+                case 'name':
+                    aValue = a.cells[0].textContent.trim();
+                    bValue = b.cells[0].textContent.trim();
+                    break;
+                case 'description':
+                    aValue = a.cells[1].textContent.trim();
+                    bValue = b.cells[1].textContent.trim();
+                    break;
+                case 'status':
+                    aValue = a.cells[2].textContent.trim();
+                    bValue = b.cells[2].textContent.trim();
+                    break;
+                case 'activities':
+                    aValue = parseInt(a.cells[3].textContent.trim()) || 0;
+                    bValue = parseInt(b.cells[3].textContent.trim()) || 0;
+                    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+                default:
+                    return 0;
+            }
+            
+            const comparison = aValue.localeCompare(bValue, 'fr', { numeric: true });
+            return direction === 'asc' ? comparison : -comparison;
+        });
+        
+        showActivityTypePage(currentActivityTypePage);
+    }
+
+    function updateActivityTypeSortIcons(activeHeader, direction) {
+        // Réinitialiser toutes les icônes
+        document.querySelectorAll('#activity-types-table .sort-icon').forEach(icon => {
+            icon.className = 'fas fa-sort sort-icon text-muted';
+        });
+        
+        // Mettre à jour l'icône active
+        const activeIcon = activeHeader.querySelector('.sort-icon');
+        if (activeIcon) {
+            if (direction === 'asc') {
+                activeIcon.className = 'fas fa-sort-up sort-icon text-primary';
+            } else {
+                activeIcon.className = 'fas fa-sort-down sort-icon text-primary';
+            }
+        }
+    }
+
+    // Fonctions de tri pour les salles
+    function setupLocationSorting() {
+        const sortableHeaders = document.querySelectorAll('#locations-table .sortable');
+        
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const sortField = this.dataset.sort;
+                const currentDirection = this.dataset.direction || 'asc';
+                const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+                
+                // Mettre à jour l'icône de tri
+                updateLocationSortIcons(this, newDirection);
+                
+                // Trier le tableau
+                sortLocationTable(sortField, newDirection);
+                
+                // Sauvegarder la direction
+                this.dataset.direction = newDirection;
+            });
+        });
+    }
+
+    function sortLocationTable(sortField, direction) {
+        filteredLocationRows.sort((a, b) => {
+            let aValue, bValue;
+            
+            switch(sortField) {
+                case 'name':
+                    aValue = a.cells[0].textContent.trim();
+                    bValue = b.cells[0].textContent.trim();
+                    break;
+                case 'address':
+                    aValue = a.cells[1].textContent.trim();
+                    bValue = b.cells[1].textContent.trim();
+                    break;
+                case 'capacity':
+                    aValue = a.cells[2].textContent.trim();
+                    bValue = b.cells[2].textContent.trim();
+                    // Traiter les valeurs numériques et "Non définie"
+                    if (aValue === 'Non définie') aValue = 0;
+                    if (bValue === 'Non définie') bValue = 0;
+                    aValue = parseInt(aValue) || 0;
+                    bValue = parseInt(bValue) || 0;
+                    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+                case 'status':
+                    aValue = a.cells[3].textContent.trim();
+                    bValue = b.cells[3].textContent.trim();
+                    break;
+                case 'sessions':
+                    aValue = parseInt(a.cells[4].textContent.trim()) || 0;
+                    bValue = parseInt(b.cells[4].textContent.trim()) || 0;
+                    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+                default:
+                    return 0;
+            }
+            
+            const comparison = aValue.localeCompare(bValue, 'fr', { numeric: true });
+            return direction === 'asc' ? comparison : -comparison;
+        });
+        
+        showLocationPage(currentLocationPage);
+    }
+
+    function updateLocationSortIcons(activeHeader, direction) {
+        // Réinitialiser toutes les icônes
+        document.querySelectorAll('#locations-table .sort-icon').forEach(icon => {
+            icon.className = 'fas fa-sort sort-icon text-muted';
+        });
+        
+        // Mettre à jour l'icône active
+        const activeIcon = activeHeader.querySelector('.sort-icon');
+        if (activeIcon) {
+            if (direction === 'asc') {
+                activeIcon.className = 'fas fa-sort-up sort-icon text-primary';
+            } else {
+                activeIcon.className = 'fas fa-sort-down sort-icon text-primary';
+            }
+        }
+    }
+
+    // Event listeners pour la recherche
+    activityTypeSearch.addEventListener('input', searchActivityTypes);
+    locationSearch.addEventListener('input', searchLocations);
+    
+    // Event listeners pour la pagination des types d'activités
+    document.getElementById('prevPageActivityType').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentActivityTypePage > 1) {
+            currentActivityTypePage--;
+            showActivityTypePage(currentActivityTypePage);
+        }
+    });
+    
+    document.getElementById('nextPageActivityType').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentActivityTypePage < totalActivityTypePages) {
+            currentActivityTypePage++;
+            showActivityTypePage(currentActivityTypePage);
+        }
+    });
+    
+    // Event listeners pour la pagination des salles
+    document.getElementById('prevPageLocation').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentLocationPage > 1) {
+            currentLocationPage--;
+            showLocationPage(currentLocationPage);
+        }
+    });
+    
+    document.getElementById('nextPageLocation').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentLocationPage < totalLocationPages) {
+            currentLocationPage++;
+            showLocationPage(currentLocationPage);
+        }
+    });
+    
+    // Initialiser le tri
+    setupActivityTypeSorting();
+    setupLocationSorting();
+    
+    // Initialiser l'affichage
+    showActivityTypePage(1);
+    showLocationPage(1);
+});
+</script>
+{% endblock %}

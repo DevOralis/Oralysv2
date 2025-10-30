@@ -1,0 +1,150 @@
+
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}" />
+{% endblock %}
+
+{% block content %}
+<header class="header d-flex justify-content-end align-items-center">
+  <div class="header-actions d-flex align-items-center gap-3">
+    <!-- Notifications -->
+    <div class="dropdown notification-dropdown me-2">
+      <button class="btn notif-btn position-relative" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-bell"></i>
+        <span class="notif-badge position-absolute top-0 start-100 translate-middle badge rounded-pill">12</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="min-width: 250px;">
+        <li class="dropdown-header">Notifications</li>
+        <li><a class="dropdown-item" href="#" data-toast="Nouvelle prise de rendez-vous">Nouvelle prise de rendez-vous</a></li>
+        <li><a class="dropdown-item" href="#" data-toast="Commande validée">Commande validée</a></li>
+        <li><a class="dropdown-item" href="#" data-toast="Message du support">Message du support</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item text-center text-primary" href="#">Voir toutes les notifications</a></li>
+      </ul>
+    </div>
+    <!-- Sélecteur de langue -->
+    <div class="dropdown language-selector">
+      <button class="btn btn-light dropdown-toggle d-flex align-items-center gap-2" type="button" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-globe text-primary"></i>
+        <span id="currentLanguage" class="d-none d-sm-inline">Français</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+        <li><a class="dropdown-item" href="#" data-lang="fr" data-display="Français"><i class="fas fa-flag"></i> Français</a></li>
+        <li><a class="dropdown-item" href="#" data-lang="en" data-display="English"><i class="fas fa-flag"></i> English</a></li>
+        <li><a class="dropdown-item" href="#" data-lang="es" data-display="Español"><i class="fas fa-flag"></i> Español</a></li>
+      </ul>
+    </div>
+    <!-- Menu utilisateur -->
+    <div class="dropdown user-dropdown">
+      <button class="btn user-dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <div class="user-avatar me-2">
+          <span class="avatar-initials">{{ user.nom|first }}{{ user.prenom|first }}</span>
+        </div>
+        <span class="user-name me-1 d-none d-sm-inline">{{ user.nom }} {{ user.prenom }}</span>
+        <i class="fas fa-chevron-up"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown" style="min-width: 200px;">
+        <li class="dropdown-header">
+          <div class="d-flex align-items-center">
+            <div class="user-avatar me-2">
+              <span class="avatar-initials">{{ user.nom|first }}{{ user.prenom|first }}</span>
+            </div>
+            <div>
+              <div class="fw-semibold">{{ user.nom }} {{ user.prenom }}</div>
+            </div>
+          </div>
+        </li>
+        <li><hr class="dropdown-divider my-1"></li>
+        <li>
+          <a class="dropdown-item d-flex align-items-center text-danger" href="{% url 'login' %}">
+            <i class="fas fa-sign-out-alt me-2"></i>
+            <span>Déconnexion</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055;">
+  <!-- Toasts will be dynamically added here via JavaScript -->
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+<script>
+// Initialize toasts and force close dropdowns on navigation
+document.addEventListener('DOMContentLoaded', function() {
+  // Force close all dropdowns immediately on page load
+  function forceCloseAllDropdowns() {
+    const allDropdowns = document.querySelectorAll('.dropdown-menu.show');
+    const allDropdownToggles = document.querySelectorAll('[data-bs-toggle="dropdown"][aria-expanded="true"]');
+    const allDropdownContainers = document.querySelectorAll('.dropdown.show');
+    
+    allDropdowns.forEach(menu => {
+      menu.classList.remove('show');
+    });
+    
+    allDropdownToggles.forEach(toggle => {
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+    
+    allDropdownContainers.forEach(container => {
+      container.classList.remove('show');
+    });
+  }
+  
+  // Force close dropdowns immediately
+  forceCloseAllDropdowns();
+  
+  // Also close dropdowns after a short delay to catch any late initializations
+  setTimeout(forceCloseAllDropdowns, 100);
+  setTimeout(forceCloseAllDropdowns, 250);
+
+  // Get all dropdown items with data-toast attribute
+  const toastTriggers = document.querySelectorAll('.dropdown-item[data-toast]');
+  const toastContainer = document.querySelector('.toast-container');
+
+  toastTriggers.forEach(trigger => {
+    trigger.addEventListener('click', function(e) {
+      e.preventDefault(); // Prevent default link behavior
+
+      // Create a new toast
+      const toastMessage = this.getAttribute('data-toast');
+      const toastId = 'toast-' + Date.now(); // Unique ID for each toast
+      const toastHTML = `
+        <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
+          <div class="toast-header">
+            <i class="fas fa-bell me-2"></i>
+            <strong class="me-auto">Notification</strong>
+            <small>Juste maintenant</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+          <div class="toast-body">
+            ${toastMessage}
+          </div>
+        </div>
+      `;
+
+      // Append toast to container
+      toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+
+      // Initialize and show the toast
+      const toastElement = document.getElementById(toastId);
+      const toast = new bootstrap.Toast(toastElement);
+      toast.show();
+
+      // Remove toast from DOM after it hides
+      toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+      });
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Prise de rendez-vous{% endblock %}
+{% block menu %}
+  {% include 'patient_menu.html' %}
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+<script src="{% static 'vendor/fullcalendar@6.1.11/dist/index.global.min.js' %}"></script>
+<script src="{% static 'js/appointment.js' %}"></script>
+<script src="{% static 'js/appointment_table.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const isExistingYes = document.getElementById('isExistingYes');
+    const isExistingNo  = document.getElementById('isExistingNo');
+    const sourceDiv     = document.getElementById('sourceDiv');
+    const patientSelectDiv = document.getElementById('patientSelectDiv');
+
+    function toggleSourceAndPatientSelect() {
+        if (isExistingYes && isExistingYes.checked) {
+            if (sourceDiv) sourceDiv.style.display = 'block'; // Toujours afficher le champ source
+            if (patientSelectDiv) patientSelectDiv.style.display = 'block';
+        } else {
+            if (sourceDiv) sourceDiv.style.display = 'block';
+            if (patientSelectDiv) patientSelectDiv.style.display = 'none';
+        }
+    }
+
+    if (isExistingYes)  isExistingYes.addEventListener('change', toggleSourceAndPatientSelect);
+    if (isExistingNo)   isExistingNo.addEventListener('change', toggleSourceAndPatientSelect);
+
+    toggleSourceAndPatientSelect();
+});
+</script>
+{% endblock %}
+
+
+
+{% block content %}
+    <div class="content">
+            <div class="card mb-4">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                    <i class="fas fa-calendar-plus me-2"></i>
+                    Nouveau Rendez-Vous
+                </div>
+                <div class="card-body">
+                <!-- SweetAlert Messages -->
+                {% if request.GET.success == 'rdv_created' %}
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Succès !',
+                            text: 'Rendez-vous créé avec succès !',
+                            confirmButtonColor: '#1e90ff',
+                            timer: 3000,
+                            timerProgressBar: true
+                        });
+                    });
+                </script>
+                {% endif %}
+                
+                {% if request.GET.error %}
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur !',
+                            text: '{{ request.GET.error }}',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    });
+                </script>
+                {% endif %}
+                
+                {% if rdv_error_message %}
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Attention !',
+                            text: '{{ rdv_error_message }}',
+                            confirmButtonColor: '#ffc107'
+                        });
+                    });
+                </script>
+                {% endif %}
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12 mb-2">
+                            <label class="form-label fw-bold">Patient Déjà Existant ?</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="is_existing" id="isExistingYes" value="1" {% if form_data.is_existing == '1' %}checked{% endif %}>
+                                    <label class="form-check-label" for="isExistingYes">Oui</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="is_existing" id="isExistingNo" value="0" {% if form_data.is_existing == '0' %}checked{% endif %}>
+                                    <label class="form-check-label" for="isExistingNo">Non</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6" id="patientSelectDiv" {% if form_data.is_existing == '1' %}style="display:block;"{% else %}style="display:none;"{% endif %}>
+                            <label class="form-label">Patient Existant</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-check"></i></span>
+                                <select class="form-select" name="patient_id" id="patientSelect" required>
+                                    <option value="">Sélectionner</option>
+                                    {% for p in patients %}
+                                    <option value="{{ p.id }}" data-nom="{{ p.last_name }}" data-prenom="{{ p.first_name }}" data-telephone="{{ p.phone }}" data-email="{{ p.email }}" data-source="{{ p.source|default:'' }}" {% if form_data.patient_id == p.id|stringformat:'s' %}selected{% endif %}>{{ p.last_name }} {{ p.first_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Nom</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" name="nom" id="nomInput" placeholder="Nom du patient" value="{{ form_data.nom }}" required>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Prénom</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" name="prenom" id="prenomInput" placeholder="Prénom du patient" value="{{ form_data.prenom }}" required>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Téléphone</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="text" class="form-control" name="telephone" id="telephoneInput" placeholder="Téléphone" value="{{ form_data.telephone }}" required>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" name="email" id="emailInput" placeholder="Email" value="{{ form_data.email }}" required>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Mode De Prise De Rendez-Vous</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-clipboard-list"></i></span>
+                                <select class="form-select" name="mode" required>
+                                    <option value="">Sélectionner</option>
+                                    <option value="telephone" {% if form_data.mode == 'telephone' %}selected{% endif %}>Téléphone</option>
+                                    <option value="mail" {% if form_data.mode == 'mail' %}selected{% endif %}>Mail</option>
+                                    <option value="direct" {% if form_data.mode == 'direct' %}selected{% endif %}>Direct</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Médecin</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-md"></i></span>
+                                <select class="form-select" name="medecin_id" required>
+                                    <option value="">Sélectionner</option>
+                                    {% for m in medecins %}
+                                    <option value="{{ m.id }}" {% if form_data.medecin_id == m.id|stringformat:'s' %}selected{% endif %}>{{ m.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Date Et Heure</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                <input type="datetime-local" class="form-control" name="date_heure" required placeholder="jj/mm/aaaa HH:00" step="3600" min="2023-01-01T00:00" max="2030-12-31T23:00" value="{{ form_data.date_heure }}">
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Motif</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-notes-medical"></i></span>
+                                <input type="text" class="form-control" name="motif" placeholder="Motif du rendez-vous" value="{{ form_data.motif }}" required>
+                            </div>
+                        </div>
+                        <!-- Champ Source - toujours visible -->
+                        <div class="col-12 col-sm-6 col-md-6" id="sourceDiv" style="display:block;">
+                            <label class="form-label">Source</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-share-alt"></i></span>
+                                <select class="form-select" name="source" id="sourceInput">
+                                    <option value="">Sélectionner une source</option>
+                                    {% for source in sources %}
+                                    <option value="{{ source.name }}" {% if form_data.source == source.name %}selected{% endif %}>
+                                        {{ source.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        {% if request.session.user.permissions.patient.write %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            <span class="d-none d-md-inline">Valider le rendez-vous</span>
+                            <span class="d-md-none">Sauvegarder</span>
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+                </div>
+                {% if selected_medecin_id and creneaux_occupees.selected_medecin_id %}
+                <div class="alert alert-info mt-3">
+                    <strong>Créneaux déjà occupés pour ce médecin :</strong>
+                    <ul class="mb-0">
+                        {% for dt in creneaux_occupees.selected_medecin_id %}
+                        <li>{{ dt|date:'d/m/Y H:i' }}</li>
+                        {% empty %}
+                        <li>Aucun créneau occupé</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card mb-4">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                    <i class="fas fa-calendar me-2"></i>
+                    Calendrier Des Rendez-Vous
+                </div>
+                <div class="card-body">
+                <!-- Sélecteur de médecin pour filtrer le calendrier -->
+                <div class="row mb-3">
+                    <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+                        <label for="calendarDoctorFilter" class="form-label">
+                            <i class="fas fa-user-md text-primary me-1"></i>
+                            Filtrer Par Médecin
+                        </label>
+                        <select class="form-select" id="calendarDoctorFilter">
+                            <option value="">Tous les médecins</option>
+                            {% for doctor in doctors %}
+                            <option value="{{ doctor.id }}">{{ doctor.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Calendrier responsive -->
+                <div class="table-responsive">
+                    <div id="calendar" style="min-height: 400px;"></div>
+                </div>
+            </div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-header text-white" style="background-color: #1e90ff;"><i class="fas fa-history me-2"></i>
+                    Rendez-Vous Récents
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Search Bar Component -->
+                    <form method="get" id="search-form">
+                        <div class="row g-2 mb-3">
+                            <!-- Barre de recherche -->
+                            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-1">
+                                <div class="input-group">
+                                    <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="search" id="searchAppointment" name="search_rdv" class="form-control border-primary" placeholder="Rechercher un rendez-vous..." value="{{ search_rdv|default:'' }}">
+                                </div>
+                            </div>
+                            <!-- Filtre médecin -->
+                            <div class="col-6 col-sm-6 col-md-3 col-lg-3 order-2">
+                                <select class="form-select" id="filterMedecin" name="filter_rdv_medecin" title="Filtrer par médecin">
+                                    <option value="">Tous les médecins</option>
+                                    {% for medecin in medecins %}
+                                    <option value="{{ medecin.id }}" {% if filter_rdv_medecin == medecin.id %}selected{% endif %}>{{ medecin.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <!-- Filtre statut -->
+                            <div class="col-4 col-sm-4 col-md-3 col-lg-3 order-3">
+                                <select class="form-select" id="filterStatut" name="filter_rdv_statut" title="Filtrer par statut">
+                                    <option value="">Tous les statuts</option>
+                                    <option value="à venir" {% if filter_rdv_statut == 'à venir' %}selected{% endif %}>À venir</option>
+                                    <option value="effectué" {% if filter_rdv_statut == 'effectué' %}selected{% endif %}>Effectué</option>
+                                    <option value="annulé" {% if filter_rdv_statut == 'annulé' %}selected{% endif %}>Annulé</option>
+                                </select>
+                            </div>
+                            <!-- Bouton export -->
+                            <div class="col-2 col-sm-2 col-md-2 col-lg-2 order-4">
+                                <button type="button" class="btn btn-light border w-100 px-1" id="export-import-btn" title="Importer">
+                                    <i class="fas fa-file-import" id="export-import-icon"></i>
+                                    <span class="d-none d-lg-inline ms-1" id="export-import-text">Importer</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="appointments-table">
+                        {% include 'appointment_table.html' %}
+                    </div>
+                </div>
+            </div>
+    </div>
+
+        <!-- Modal pour afficher les détails du rendez-vous -->
+        <div class="modal fade" id="appointmentDetailsModal" tabindex="-1" aria-labelledby="appointmentDetailsModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-gradient-primary text-white">
+                        <h5 class="modal-title" id="appointmentDetailsModalLabel">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Détails du rendez-vous
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Date Et Heure</label>
+                                <div class="form-control-plaintext border rounded p-2 bg-light" id="modal-date"></div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Patient</label>
+                                <div class="form-control-plaintext border rounded p-2 bg-light" id="modal-patient"></div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Médecin</label>
+                                <div class="form-control-plaintext border rounded p-2 bg-light" id="modal-medecin"></div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Motif</label>
+                                <div class="form-control-plaintext border rounded p-2 bg-light" id="modal-motif"></div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Statut</label>
+                                <div class="form-control-plaintext border rounded p-2 bg-light" id="modal-statut"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endblock %}

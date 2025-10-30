@@ -1,0 +1,821 @@
+{% load static %}
+{% block content %}
+    {% csrf_token %}
+    <div class="content">
+        <h3 class="border-bottom pb-2">
+            <i class="fas fa-file-invoice text-primary me-2"></i>
+            Gestion des commandes - Pharmacie
+          </h3>
+        <div class="card mb-4">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-list-alt me-2"></i>
+                Commandes Pharmacie
+            </div>
+            <div class="card-body">
+                <div id="alert-container"></div>
+                <form id="filter-form" method="get" class="mb-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                            <div class="input-group">
+                                <span class="input-group-text text-white" style="background-color: #1e90ff; border: 1px solid #1e90ff;">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="search" id="search" name="q" class="form-control" style="border: 1px solid #1e90ff;" placeholder="Recherche..." value="">
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-2">
+                            <select id="status" name="status" class="form-select" title="Filtrer par statut">
+                                <option value="">Tous les statuts</option>
+                                <option value="draft">Brouillon</option>
+                                <option value="waiting">En attente</option>
+                                <option value="confirmed">Confirmée</option>
+                                <option value="partial">Réception partielle</option>
+                                <option value="done">Fermé</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-3">
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="exportBtn">
+                                    <i class="fas fa-file-export"></i>
+                                    <span class="d-none d-lg-inline ms-1">Exporter</span>
+                                </button>
+                                {% if request.session.user.permissions.pharmacy.write %}
+                                <button id="scrollToForm" type="button" class="btn btn-primary w-100 text-nowrap px-2">
+                                    <i class="fas fa-plus"></i>
+                                    <span class="d-none d-lg-inline ms-1">Nouvelle commande</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <table class="table table-responsive table-striped table-hover" id="searchableTable">
+                    <thead class="table-light borderless">
+                        <tr class="main-row">
+                            <th>
+                                <input type="checkbox" id="selectAll">
+                            </th>
+                            <th>
+                                <div class="d-flex align-items-center">
+                                    <span>Réf</span>
+                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="d-none d-lg-table-cell">
+                                <div class="d-flex align-items-center">
+                                    <span>Fournisseur</span>
+                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="d-none d-lg-table-cell">
+                                <div class="d-flex align-items-center">
+                                    <span>Date</span>
+                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="d-none d-lg-table-cell">
+                                <div class="d-flex align-items-center">
+                                    <span>Total (MAD)</span>
+                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="d-flex align-items-center">
+                                    <span>Statut</span>
+                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-table-body">
+                    </tbody>
+                </table>
+
+                <nav class="mt-3 pagination-hidden" id="pagination-nav">
+                    <ul class="pagination justify-content-center flex-wrap">
+                        <li class="page-item">
+                            <button class="page-link" id="prev-page" aria-label="Précédent">
+                                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                <span class="d-none d-sm-block">&laquo; Préc</span>
+                            </button>
+                        </li>
+                        <li class="page-item active">
+                            <span class="page-link" id="page-info">1</span>
+                        </li>
+                        <li class="page-item">
+                            <button class="page-link" id="next-page" aria-label="Suivant">
+                                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                <span class="d-none d-sm-block">Suiv &raquo;</span>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="order-detail-modal" tabindex="-1" aria-labelledby="orderDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Détails de la Commande</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="order-detail-content">Chargement des détails...</div>
+                </div>
+                <div class="modal-footer">
+                    <button id="print-order-btn" class="btn btn-primary">Imprimer</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block extra_scripts %}
+    <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'vendor/js/html2pdf.bundle.min.js' %}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", initialize);
+
+        let allOrders = [];
+        let currentFilteredOrders = [];
+        let currentPage = 1;
+        const itemsPerPage = 5;
+        let currentOrderId = null;
+
+        function initialize() {
+            fetchFilteredOrders(); // Doit être appelé en premier pour charger les données
+            setupEventListeners();
+        }
+
+        function showAlert(type, message) {
+            const alertContainer = document.getElementById("alert-container");
+            if (!alertContainer) return;
+
+            const alert = document.createElement("div");
+            alert.className = `alert alert-${type} alert-dismissible fade show d-flex align-items-center`;
+            alert.role = "alert";
+            alert.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'times-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2 fw-bold"></i>
+                <div><strong>${type === 'success' ? 'Succès' : type === 'danger' ? 'Erreur' : type === 'warning' ? 'Attention' : 'Info'} :</strong> ${message}</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            alertContainer.innerHTML = "";
+            alertContainer.appendChild(alert);
+
+            setTimeout(() => {
+                alert.classList.remove("show");
+                setTimeout(() => alert.remove(), 150);
+            }, 5000);
+        }
+
+        function setupEventListeners() {
+            document.getElementById("scrollToForm")?.addEventListener("click", () => {
+                document.getElementById("new-pharmacy-order-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+
+            document.getElementById("exportBtn")?.addEventListener("click", () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.autoTable({ html: document.getElementById("searchableTable") });
+                doc.save("commandes.pdf");
+            });
+
+            document.getElementById("search")?.addEventListener("input", searchOrders);
+            document.getElementById("status")?.addEventListener("change", searchOrders);
+
+            const tableBody = document.getElementById("order-table-body");
+            if (tableBody) {
+                tableBody.addEventListener("click", (e) => {
+                    const button = e.target.closest('button');
+                    if (!button) return;
+
+                    const orderId = button.dataset.orderId;
+                    if (!orderId) return;
+
+                    if (button.classList.contains("view-order-btn")) {
+                        viewOrderDetails(orderId);
+                    } else if (button.classList.contains("delete-order-btn")) {
+                        confirmDelete(orderId);
+                    } else if (button.classList.contains("confirm-order-btn")) {
+                        confirmOrder(orderId);
+                    } else if (button.classList.contains("duplicate-order-btn")) {
+                        duplicateOrder(orderId);
+                    }
+                });
+            }
+        }
+
+        function confirmDelete(orderId) {
+            const confirmModal = document.createElement("div");
+            confirmModal.className = "modal fade";
+            confirmModal.id = "confirmDeleteModal";
+            confirmModal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Supprimer la commande ?</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Cette action est irréversible.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Oui, supprimer</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmModal);
+
+            const modal = new bootstrap.Modal(confirmModal);
+            modal.show();
+
+            document.getElementById("confirmDeleteBtn").addEventListener("click", () => {
+                fetch(`/pharmacy/orders/delete/${orderId}/`, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        showAlert("success", "Commande supprimée avec succès !");
+                        setTimeout(() => location.reload(), 1000);
+                    })
+                    .catch(error => {
+                        showAlert("danger", "Erreur lors de la suppression de la commande.");
+                        console.error("Erreur:", error);
+                    })
+                    .finally(() => modal.hide());
+            });
+
+            confirmModal.addEventListener("hidden.bs.modal", () => confirmModal.remove());
+        }
+
+        function getStatusBadge(state_code, state_display) {
+            let badgeClass = '';
+            switch (state_code) {
+                case 'draft':
+                    badgeClass = 'bg-primary';
+                    break;
+                case 'waiting':
+                    badgeClass = 'bg-warning';
+                    break;
+                case 'confirmed':
+                    badgeClass = 'bg-success';
+                    break;
+                case 'partial':
+                    badgeClass = 'bg-info';
+                    break;
+                case 'done':
+                    badgeClass = 'bg-secondary';
+                    break;
+                default:
+                    badgeClass = 'bg-secondary';
+            }
+            return `<span class="badge ${badgeClass}">${escapeHtml(state_display || state_code || 'N/A')}</span>`;
+        }
+
+        function searchOrders() {
+            const searchInput = document.getElementById("search");
+            const statusInput = document.getElementById("status");
+
+            const searchTerm = searchInput?.value.toLowerCase().trim() || "";
+            const status = statusInput?.value || "";
+
+            currentFilteredOrders = allOrders.filter(order => {
+                const matchesSearch = searchTerm
+                    ? (order.name?.toLowerCase().includes(searchTerm) || order.supplier_name?.toLowerCase().includes(searchTerm))
+                    : true;
+                const matchesStatus = status
+                    ? order.state === status
+                    : true;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            currentPage = 1;
+            displayOrders();
+        }
+
+        function displayOrders() {
+            const tableBody = document.getElementById("order-table-body");
+            if (!tableBody) return;
+
+            tableBody.innerHTML = "";
+
+            if (!currentFilteredOrders?.length) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="text-center">Aucune commande trouvée.</td></tr>`;
+                updatePagination();
+                return;
+            }
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const paginatedOrders = currentFilteredOrders.slice(startIndex, startIndex + itemsPerPage);
+
+            paginatedOrders.forEach((order, index) => {
+                const row = document.createElement("tr");
+                row.className = "main-row";
+                row.innerHTML = `
+                    <td data-label="Sélection">
+                        <input type="checkbox" class="row-check">
+                    </td>
+                    <td data-label="Réf">${escapeHtml(order.name || "N/A")}</td>
+                    <td data-label="Fournisseur" class="d-none d-lg-table-cell">${escapeHtml(order.supplier_name || "N/A")}</td>
+                    <td data-label="Date" class="d-none d-lg-table-cell">${escapeHtml(order.date_order || "N/A")}</td>
+                    <td data-label="Total (MAD)" class="d-none d-lg-table-cell">${escapeHtml(order.amount_total || "0")}</td>
+                    <td data-label="Statut">${getStatusBadge(order.state, order.state_display)}</td>
+                    <td data-label="Actions" class="actions-cell">
+                        <div class="d-flex gap-1 justify-content-start justify-content-lg-end">
+                            <button class="btn btn-sm btn-light border text-info view-order-btn" data-order-id="${order.id}" data-bs-toggle="modal" data-bs-target="#order-detail-modal" title="Voir">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <a href="/pharmacy/orders/request-price/${order.id}/pdf/" class="btn btn-sm btn-light border text-primary" title="Imprimer">
+                                <i class="fas fa-print"></i>
+                            </a>
+                            {% if request.session.user.permissions.pharmacy.write %}
+                            <a href="/pharmacy/orders/edit/${order.id}/" class="btn btn-sm btn-light border text-dark" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% endif %}
+                            {% if request.session.user.permissions.pharmacy.write %}
+                            <button class="btn btn-sm btn-light border text-danger delete-order-btn" data-order-id="${order.id}" title="Supprimer">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                            {% endif %}
+                            {% if request.session.user.permissions.pharmacy.write %}
+                            <button class="btn btn-sm btn-light border text-success confirm-order-btn" data-order-id="${order.id}" ${order.state !== "draft" ? "disabled" : ""} title="${order.state !== "draft" ? "Confirmé" : "Confirmer"}">
+                                <i class="${order.state !== "draft" ? "fas fa-check-double" : "fas fa-check"}"></i>
+                            </button>
+                            ${order.state !== "confirmed" ? `
+                            <button class="btn btn-sm btn-light border text-warning duplicate-order-btn" data-order-id="${order.id}" title="Dupliquer">
+                                <i class="fas fa-copy"></i>
+                            </button>` : ""}
+                            {% endif %}
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(currentFilteredOrders.length / itemsPerPage);
+            const paginationNav = document.getElementById("pagination-nav");
+            const paginationUl = paginationNav ? paginationNav.querySelector("ul.pagination") : null;
+
+            if (!paginationNav || !paginationUl) return;
+
+            if (totalPages > 1) {
+                paginationNav.classList.remove("pagination-hidden");
+            } else {
+                paginationNav.classList.add("pagination-hidden");
+                return;
+            }
+
+            paginationUl.innerHTML = '';
+
+            const prevLi = document.createElement('li');
+            prevLi.className = 'page-item';
+            if (currentPage === 1) {
+                prevLi.classList.add('disabled');
+            }
+            prevLi.innerHTML = `<button class="page-link">
+                                    <span class="d-block d-sm-none">&laquo;</span>
+                                    <span class="d-none d-sm-block">&laquo; Préc</span>
+                                </button>`;
+            prevLi.querySelector('button').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayOrders();
+                }
+            });
+            paginationUl.appendChild(prevLi);
+
+            for (let i = 1; i <= totalPages; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = 'page-item';
+                if (i === currentPage) {
+                    pageLi.classList.add('active');
+                }
+                pageLi.innerHTML = `<button class="page-link">${i}</button>`;
+                pageLi.querySelector('button').addEventListener('click', () => {
+                    currentPage = i;
+                    displayOrders();
+                });
+                paginationUl.appendChild(pageLi);
+            }
+
+            const nextLi = document.createElement('li');
+            nextLi.className = 'page-item';
+            if (currentPage === totalPages) {
+                nextLi.classList.add('disabled');
+            }
+            nextLi.innerHTML = `<button class="page-link">
+                                    <span class="d-block d-sm-none">&raquo;</span>
+                                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                </button>`;
+            nextLi.querySelector('button').addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayOrders();
+                }
+            });
+            paginationUl.appendChild(nextLi);
+        }
+
+        function escapeHtml(text) {
+            const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+            return text.toString().replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function fetchFilteredOrders(e) {
+            if (e) e.preventDefault();
+
+            const inputs = {
+                status: document.getElementById("status")?.value || "",
+                search: document.getElementById("search")?.value || ""
+            };
+            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+
+            if (!csrfToken) {
+                showAlert("danger", "Token CSRF non trouvé.");
+                return;
+            }
+
+            fetch("{% url 'pharmacy_order_list_filtered' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrfToken,
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: new URLSearchParams(inputs)
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    allOrders = data.orders || [];
+                    searchOrders();
+                })
+                .catch(error => {
+                    console.error("Erreur lors du chargement :", error);
+                    const tableBody = document.getElementById("order-table-body");
+                    if (tableBody) {
+                        tableBody.innerHTML = `<tr><td colspan="7" class="text-danger">Erreur lors du chargement des données.</td></tr>`;
+                    }
+                    showAlert("danger", "Erreur lors du chargement des données.");
+                });
+        }
+
+        function viewOrderDetails(orderId) {
+            currentOrderId = orderId;
+            const modalContent = document.getElementById("order-detail-content");
+            if (!modalContent) {
+                console.error("Modal content element not found!");
+                return;
+            }
+
+            modalContent.innerHTML = "<p>Chargement des détails...</p>";
+
+            fetch(`/pharmacy/orders/detail-json/${orderId}/`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Retrieved order data:", data);
+                    const order = data.order || {};
+                    const supplier = data.supplier || {};
+                    const lines = data.order_lines || [];
+
+                    let html = `
+                        <h1>Commande Pharmacie: ${escapeHtml(order.name || "N/A")}</h1>
+                        <div class="order-info">
+                            <p><strong>Fournisseur:</strong> ${escapeHtml(supplier.name || "N/A")}</p>
+                            <p><strong>Adresse:</strong> ${escapeHtml(supplier.address || "N/A")}, ${escapeHtml(supplier.city || "N/A")}</p>
+                            <p><strong>Date:</strong> ${escapeHtml(order.date_order || "N/A")}</p>
+                            <p><strong>Statut:</strong> ${getStatusBadge(order.state_code, order.state)}</p>
+                            <p><strong>Devise:</strong> ${escapeHtml(order.currency || "MAD")}</p>
+                            <p><strong>Notes:</strong> ${escapeHtml(order.notes || "Aucune")}</p>
+                    `;
+
+                    if (order.state_code === "confirmed") {
+                        html += `
+                            <div class="order-info">
+                                <p><strong>Référence Fournisseur :</strong> ${escapeHtml(order.supplier_ref || "Non spécifiée")}</p>
+                                <p><strong>Mode de Paiement :</strong> ${escapeHtml(order.payment_mode || "Non spécifié")}</p>
+                            </div>
+                        `;
+                    }
+
+                    html += `
+                        </div>
+                        <h6>Lignes de commande</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Produit</th>
+                                        <th>Quantité</th>
+                                        <th>Prix unitaire</th>
+                                        <th>Taxe</th>
+                                        <th>Sous-total HT</th>
+                                        <th>Taxe (MAD)</th>
+                                        <th>Total TTC</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    html += lines.length === 0
+                        ? `<tr><td colspan="7" class="text-center">Aucune ligne de commande.</td></tr>`
+                        : lines.map(line => `
+                            <tr>
+                                <td>${escapeHtml(line.name || "N/A")}</td>
+                                <td>${escapeHtml(line.product_qty || "0")}</td>
+                                <td>${escapeHtml(line.price_unit || "0")}</td>
+                                <td>${escapeHtml(Array.isArray(line.taxes) ? line.taxes.join(", ") : (line.taxes || "Aucune"))}</td>
+                                <td>${escapeHtml(line.price_subtotal || "0")}</td>
+                                <td>${escapeHtml(line.tax_amount || "0")}</td>
+                                <td>${escapeHtml(line.total_ttc || "0")}</td>
+                            </tr>
+                        `).join("");
+
+                    html += `
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>Total HT:</strong></td>
+                                        <td>${escapeHtml(order.amount_untaxed || "0")}</td>
+                                        <td>${escapeHtml(order.amount_tax || "0")}</td>
+                                        <td>${escapeHtml(order.amount_total || "0")}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    `;
+
+                    console.log("Generated HTML:", html);
+                    modalContent.innerHTML = html;
+                    console.log("Modal content updated:", modalContent.innerHTML);
+
+                    const printButton = document.getElementById("print-order-btn");
+                    if (printButton) {
+                        printButton.setAttribute("data-order-id", orderId);
+                        printButton.onclick = () => {
+                            window.location.href = `/pharmacy/order/${orderId}/pdf/`;
+                        };
+                    }
+                })
+                .catch(error => {
+                    modalContent.innerHTML = `<p class="text-danger">Erreur lors du chargement des détails.</p>`;
+                    console.error("Erreur:", error);
+                    showAlert("danger", "Erreur lors du chargement des détails de la commande.");
+                });
+        }
+
+        function confirmOrder(orderId) {
+            const supplierRefModal = document.createElement("div");
+            supplierRefModal.className = "modal fade";
+            supplierRefModal.id = "supplierRefModal";
+            supplierRefModal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Référence fournisseur</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <label for="supplierRefInput" class="form-label">Entrez la référence du fournisseur</label>
+                            <input type="text" id="supplierRefInput" class="form-control" placeholder="REF-FOURNISSEUR">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-primary" id="nextSupplierRefBtn">Suivant</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(supplierRefModal);
+
+            const modal = new bootstrap.Modal(supplierRefModal);
+            modal.show();
+
+            document.getElementById("nextSupplierRefBtn").addEventListener("click", () => {
+                const supplierRef = document.getElementById("supplierRefInput").value.trim();
+                if (!supplierRef) {
+                    showAlert("warning", "La référence du fournisseur est requise !");
+                    return;
+                }
+                modal.hide();
+                supplierRefModal.remove();
+
+                const paymentModeModal = document.createElement("div");
+                paymentModeModal.className = "modal fade";
+                paymentModeModal.id = "paymentModeModal";
+                paymentModeModal.innerHTML = `
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Mode de paiement</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <label for="paymentModeSelect" class="form-label">Choisissez un mode</label>
+                                <select id="paymentModeSelect" class="form-select">
+                                    <option value="">Sélectionnez un mode</option>
+                                    ${Object.entries(window.PAYMENT_MODES || {}).map(([id, name]) => `<option value="${id}">${name}</option>`).join("")}
+                                </select>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                <button type="button" class="btn btn-primary" id="confirmPaymentModeBtn">Confirmer</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(paymentModeModal);
+
+                const paymentModal = new bootstrap.Modal(paymentModeModal);
+                paymentModal.show();
+
+                document.getElementById("confirmPaymentModeBtn").addEventListener("click", () => {
+                    const paymentModeId = document.getElementById("paymentModeSelect").value;
+                    if (!paymentModeId) {
+                        showAlert("warning", "Veuillez sélectionner un mode de paiement.");
+                        return;
+                    }
+
+                    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+                    if (!csrfToken) {
+                        showAlert("danger", "Token CSRF non trouvé.");
+                        paymentModal.hide();
+                        return;
+                    }
+
+                    fetch(`/pharmacy/orders/confirm/${orderId}/`, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": csrfToken,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ supplier_ref: supplierRef, payment_mode_id: paymentModeId })
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                showAlert("success", "Commande confirmée avec succès !");
+                                setTimeout(() => location.reload(), 1000);
+                            } else {
+                                showAlert("danger", data.error || "Impossible de confirmer la commande.");
+                            }
+                        })
+                        .catch(error => {
+                            showAlert("danger", "Une erreur est survenue lors de la confirmation.");
+                            console.error("Erreur:", error);
+                        })
+                        .finally(() => paymentModal.hide());
+                });
+
+                paymentModeModal.addEventListener("hidden.bs.modal", () => paymentModeModal.remove());
+            });
+
+            supplierRefModal.addEventListener("hidden.bs.modal", () => supplierRefModal.remove());
+        }
+
+        function duplicateOrder(orderId) {
+            const supplierModal = document.createElement("div");
+            supplierModal.className = "modal fade";
+            supplierModal.id = "duplicateSupplierModal";
+            supplierModal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Choisir le fournisseur</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <select id="new-supplier-id" class="form-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px;">
+                                <option value="">Sélectionnez un fournisseur</option>
+                                ${window.SUPPLIERS_OPTIONS}
+                            </select>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-primary" id="confirmDuplicateBtn">Dupliquer</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(supplierModal);
+
+            const modal = new bootstrap.Modal(supplierModal);
+            modal.show();
+
+            document.getElementById("confirmDuplicateBtn").addEventListener("click", () => {
+                const supplierId = document.getElementById("new-supplier-id").value;
+                if (!supplierId) {
+                    showAlert("warning", "Veuillez sélectionner un fournisseur.");
+                    return;
+                }
+
+                const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+                if (!csrfToken) {
+                    showAlert("danger", "Token CSRF non trouvé.");
+                    modal.hide();
+                    return;
+                }
+
+                fetch(`/pharmacy/orders/duplicate/${orderId}/`, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": csrfToken,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ supplier_id: supplierId })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showAlert("success", "Commande dupliquée avec succès !");
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showAlert("danger", data.error || "Erreur lors de la duplication de la commande.");
+                        }
+                    })
+                    .catch(error => {
+                        showAlert("danger", "Une erreur est survenue lors de la duplication.");
+                        console.error("Erreur:", error);
+                    })
+                    .finally(() => modal.hide());
+            });
+
+            supplierModal.addEventListener("hidden.bs.modal", () => supplierModal.remove());
+        }
+    </script>
+    <script>
+        window.ORDER_LIST_FILTERED_URL = "{% url 'pharmacy_order_list_filtered' %}";
+        window.PAYMENT_MODES = {
+            {% for mode in payment_modes %}
+                '{{ mode.id }}': '{{ mode.name }}'{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        };
+        window.SUPPLIERS_OPTIONS = `
+            {% for supplier in suppliers %}
+                <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+            {% endfor %}
+        `;
+    </script>
+
+    <!-- Messages SweetAlert -->
+    {% if swal_success %}
+        <script>
+            window.swalSuccess = "{{ swal_success|escapejs }}";
+        </script>
+    {% endif %}
+    {% if swal_error %}
+        <script>
+            window.swalError = "{{ swal_error|escapejs }}";
+        </script>
+    {% endif %}
+    
+    {% if swal_success or swal_error %}
+        <script>
+            (function(){
+                if (window.swalSuccess) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Succès',
+                        text: window.swalSuccess,
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+                if (window.swalError) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: window.swalError,
+                        confirmButtonText: 'OK'
+                    });
+                }
+            })();
+        </script>
+    {% endif %}
+{% endblock %}

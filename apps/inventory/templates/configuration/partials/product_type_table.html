@@ -1,0 +1,75 @@
+<div class="card table-card mb-4">
+  <div class="card-body">
+    <div class="row align-items-center mb-3">
+      <div class="col-12 col-md-5">
+        <div class="input-group">
+          <span class="input-group-text input-group-text-primary">
+            <i class="fas fa-search"></i>
+          </span>
+          <input type="search" class="form-control search-input-primary" placeholder="Rechercher par libellé..." 
+          oninput="performSearch('product_type', this.value, 'product-types-tbody')" />
+        </div>
+      </div>
+      <div class="col-md-3 d-none d-md-block"></div>
+      {% if request.session.user.permissions.inventory.write %}
+      <div class="col-12 col-md-4 d-flex justify-content-md-end mt-2 mt-md-0">
+        <button id="btn-add-product-type" class="btn btn-primary w-100 w-md-auto text-nowrap px-3">
+          <i class="fas fa-plus"></i>
+          <span>Ajouter un type de produit</span>
+        </button>
+      </div>
+      {% endif %}
+    </div>
+
+    <table class="table table-hover table-responsive table-striped" style="box-shadow: none;">
+      <thead class="table-light">
+        <tr class="main-row">
+          <th class="sortable" data-sort-field="label">Libellé</th>
+          {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+          <th class="text-center">Actions</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody id="product-types-tbody" data-entity="product-type">
+        {% for pt in product_types %}
+        <!-- Product type -->
+        <tr data-id="{{ pt.pk }}" data-label="{{ pt.label }}">
+          <td data-label="Libellé">{{ pt.label }}</td>
+          {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+          <td data-label="Actions" class="text-center">
+              <button type="button" class="btn btn-sm btn-light btn-edit-config" data-entity="product-type" title="Modifier"><i class="fas fa-edit"></i></button>
+              <button type="button" class="btn btn-sm btn-light text-danger btn-product-type-delete" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+            </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-center text-muted">Aucun type de produit</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if product_types.has_other_pages %}
+    <nav aria-label="Navigation pages"id="product-type-pagination" class="mt-3">
+      <ul class="pagination justify-content-center flex-wrap">
+        {% if product_types.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?product_type_page={{ product_types.previous_page_number }}&tab=product-type{% if request.GET.uom_page %}&uom_page={{ request.GET.uom_page }}{% endif %}{% if request.GET.category_page %}&category_page={{ request.GET.category_page }}{% endif %}{% if request.GET.operation_type_page %}&operation_type_page={{ request.GET.operation_type_page }}{% endif %}{% if request.GET.location_type_page %}&location_type_page={{ request.GET.location_type_page }}{% endif %}{% if request.GET.location_page %}&location_page={{ request.GET.location_page }}{% endif %}">
+            <i class="fas fa-chevron-left d-block d-sm-none"></i><span class="d-none d-sm-block">&laquo; Préc</span></a>
+        </li>
+        {% endif %}
+        {% for num in product_types.paginator.page_range %}
+        <li class="page-item {% if product_types.number == num %}active{% endif %}">
+          <a class="page-link" href="?product_type_page={{ num }}&tab=product-type{% if request.GET.uom_page %}&uom_page={{ request.GET.uom_page }}{% endif %}{% if request.GET.category_page %}&category_page={{ request.GET.category_page }}{% endif %}{% if request.GET.operation_type_page %}&operation_type_page={{ request.GET.operation_type_page }}{% endif %}{% if request.GET.location_type_page %}&location_type_page={{ request.GET.location_type_page }}{% endif %}{% if request.GET.location_page %}&location_page={{ request.GET.location_page }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if product_types.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?product_type_page={{ product_types.next_page_number }}&tab=product-type{% if request.GET.uom_page %}&uom_page={{ request.GET.uom_page }}{% endif %}{% if request.GET.category_page %}&category_page={{ request.GET.category_page }}{% endif %}{% if request.GET.operation_type_page %}&operation_type_page={{ request.GET.operation_type_page }}{% endif %}{% if request.GET.location_type_page %}&location_type_page={{ request.GET.location_type_page }}{% endif %}{% if request.GET.location_page %}&location_page={{ request.GET.location_page }}{% endif %}">
+            <i class="fas fa-chevron-right d-block d-sm-none"></i><span class="d-none d-sm-block">Suiv &raquo;</span></a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>

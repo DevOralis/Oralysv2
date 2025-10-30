@@ -1,0 +1,448 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Oralys - Résumé Patient{% endblock %}
+{% block menu %}
+  {% include 'patient_menu.html' %}
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="card mb-4">
+    <div class="card-header card-header-primary">
+      <i class="fas fa-file-invoice-dollar me-2"></i>
+      Facturation de Patient
+    </div>
+    <div class="card-body">
+      
+      {% if not selected_patient %}
+      <!-- Sélection Patient -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <form method="get" id="patient-form">
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user"></i></span>
+              <select name="patient_id" class="form-select" onchange="this.form.submit()">
+                <option value="">Sélectionner un patient</option>
+                {% for patient in patients %}
+                  <option value="{{ patient.id }}" {% if patient.id|stringformat:"s" == selected_patient_id %}selected{% endif %}>
+                    {{ patient.last_name }} {{ patient.first_name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if selected_patient %}
+      <!-- Informations Patient -->
+      <div class="card mb-4">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>{{ selected_patient.last_name }} {{ selected_patient.first_name }}</h5>
+          <a href="{% url 'patient:patient_summary' %}" class="btn btn-light btn-sm">
+            <i class="fas fa-exchange-alt me-1"></i>Changer Patient
+          </a>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <p><strong>CIN:</strong> {{ selected_patient.cin|default:"Non renseigné" }}</p>
+              <p><strong>Téléphone:</strong> {{ selected_patient.phone|default:"Non renseigné" }}</p>
+            </div>
+            <div class="col-md-3">
+              <p><strong>Email:</strong> {{ selected_patient.email|default:"Non renseigné" }}</p>
+              <p><strong>Date naissance:</strong> {{ selected_patient.birth_date|default:"Non renseigné" }}</p>
+            </div>
+            <div class="col-md-3">
+              <p><strong>Ville:</strong> {{ selected_patient.city|default:"Non renseigné" }}</p>
+              <p><strong>Profession:</strong> {{ selected_patient.profession|default:"Non renseigné" }}</p>
+            </div>
+            <div class="col-md-3">
+              <p><strong>Assurance:</strong> 
+                {% if selected_patient.has_insurance %}
+                  <span class="badge bg-success">Oui</span>
+                {% else %}
+                  <span class="badge bg-secondary">Non</span>
+                {% endif %}
+              </p>
+              {% if selected_patient.has_insurance %}
+                <p><strong>N° Assurance:</strong> {{ selected_patient.insurance_number|default:"Non renseigné" }}</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Consultations du Patient -->
+      {% if consultations %}
+      <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Consultations Médicales ({{ consultations.count }})</h5>
+        </div>
+        <div class="card-body">
+          {% for consultation in consultations %}
+          <div class="border rounded p-3 mb-3">
+            <div class="row">
+              <div class="col-md-3">
+                <h6 class="text-primary">Consultation {{ forloop.counter }}</h6>
+                <p><strong>Date:</strong> {{ consultation.date|date:"d/m/Y" }}</p>
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-success">Médecin</h6>
+                <p><strong>Dr:</strong> {{ consultation.medecin.full_name|default:"Non défini" }}</p>
+                {% if consultation.medecin.speciality %}
+                  <p><strong>Spécialité:</strong> {{ consultation.medecin.speciality.name }}</p>
+                {% endif %}
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-warning">Actes Réalisés</h6>
+                {% if consultation.actes.exists %}
+                  {% for acte in consultation.actes.all %}
+                    <p><span class="badge bg-info">{{ acte.libelle }}</span> - {{ acte.price }} DH</p>
+                  {% endfor %}
+                  <p><strong>Sous-total:</strong> <span class="badge bg-success">{{ consultation.actes.all|length }} acte{{ consultation.actes.all|length|pluralize }}</span></p>
+                {% else %}
+                  <p class="text-muted">Aucun acte défini</p>
+                {% endif %}
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-info">Diagnostic & Notes</h6>
+                {% if consultation.diagnostic %}
+                  <p><strong>Diagnostic:</strong> {{ consultation.diagnostic|truncatewords:5 }}</p>
+                {% endif %}
+                {% if consultation.commentaires %}
+                  <p><strong>Notes:</strong> {{ consultation.commentaires|truncatewords:5 }}</p>
+                {% else %}
+                  <p class="text-muted">Aucune note</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Médicaments Prescrits -->
+      <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-pills me-2"></i>Médicaments Prescrits</h5>
+        </div>
+        <div class="card-body">
+          {% if medication_prescriptions %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead class="table-light">
+                  <tr>
+                    <th>Consultation</th>
+                    <th>Date</th>
+                    <th>Médicament</th>
+                    <th>Dose</th>
+                    <th>Fréquence</th>
+                    <th>Durée</th>
+                    <th>Quantité</th>
+                    <th>Prix Unitaire</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for prescription in medication_prescriptions %}
+                  <tr>
+                    <td>
+                      <span class="badge bg-info">Consultation {{ prescription.consultation.id }}</span>
+                    </td>
+                    <td>
+                      <small class="text-muted">{{ prescription.consultation.date|date:"d/m/Y" }}</small>
+                    </td>
+                    <td>
+                      <strong>{{ prescription.medicament.short_label }}</strong>
+                      {% if prescription.medicament.brand %}
+                        <br><small class="text-muted">{{ prescription.medicament.brand }}</small>
+                      {% endif %}
+                    </td>
+                    <td>{{ prescription.dose|default:"-" }}</td>
+                    <td>{{ prescription.get_frequence_display|default:"-" }}</td>
+                    <td>{{ prescription.duree|default:"-" }}</td>
+                    <td>
+                      {% if prescription.quantite_totale %}
+                        <span class="badge bg-info">{{ prescription.quantite_totale }}</span>
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if prescription.medicament.unit_price %}
+                        {{ prescription.medicament.unit_price|floatformat:2 }} DH
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if prescription.quantite_totale and prescription.medicament.unit_price %}
+                        <span class="badge bg-success">{{ prescription.total_cost|floatformat:2 }} DH</span>
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Résumé des médicaments -->
+            <div class="row mt-3">
+              <div class="col-md-6">
+                <p class="mb-0">
+                  <strong>Total des médicaments prescrits:</strong> 
+                  <span class="badge bg-primary">{{ medication_prescriptions|length }}</span>
+                </p>
+              </div>
+              <div class="col-md-6 text-end">
+                <p class="mb-0">
+                  <strong>Coût total des médicaments:</strong> 
+                  <span class="badge bg-success fs-6">{{ total_cout.medicaments }} DH</span>
+                </p>
+              </div>
+            </div>
+          {% else %}
+            <div class="alert alert-info text-center">
+              <i class="fas fa-info-circle me-2"></i>
+              Aucun médicament prescrit pour ce patient.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Hébergements du Patient -->
+      {% if admissions %}
+      <div class="card mb-4">
+        <div class="card-header bg-warning text-white">
+          <h5 class="mb-0"><i class="fas fa-bed me-2"></i>Séjours d'Hébergement ({{ admissions.count }})</h5>
+        </div>
+        <div class="card-body">
+          {% for admission in admissions %}
+          <div class="border rounded p-3 mb-3">
+            <div class="row">
+              <div class="col-md-3">
+                <h6 class="text-primary">Séjour {{ forloop.counter }}</h6>
+                <p><strong>Du:</strong> {{ admission.admission_date|date:"d/m/Y" }}</p>
+                <p><strong>Au:</strong> {{ admission.discharge_date|date:"d/m/Y"|default:"En cours" }}</p>
+                {% with admission.calculate_stay_duration as duration %}
+                  <p><strong>Durée:</strong> <span class="badge bg-info">{{ duration }} jour{{ duration|pluralize }}</span></p>
+                {% endwith %}
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-success">Chambre</h6>
+                <p><strong>Nom:</strong> {{ admission.room.room_name|default:"Non défini" }}</p>
+                <p><strong>Type:</strong> <span class="badge bg-secondary">{{ admission.room_type|default:"Simple" }}</span></p>
+                <p><strong>Lit:</strong> {{ admission.bed.bed_number|default:"Non assigné" }}</p>
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-warning">Coût Hébergement</h6>
+                {% with admission.calculate_room_cost as room_cost %}
+                  {% if room_cost > 0 %}
+                    <p><strong>Durée:</strong> {{ admission.calculate_stay_duration }} jour{{ admission.calculate_stay_duration|pluralize }}</p>
+                    <p><strong>Tarif:</strong> <span class="badge bg-info">{{ admission.calculate_room_unit_price|floatformat:2 }} DH/jour</span></p>
+                    <p><strong>Total:</strong> <span class="badge bg-success">{{ room_cost|floatformat:2 }} DH</span></p>
+                  {% else %}
+                    <p class="text-muted">Coût non calculé</p>
+                  {% endif %}
+                {% endwith %}
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-info">Statut</h6>
+                {% if admission.discharge_date %}
+                  <span class="badge bg-success">Terminé</span>
+                {% else %}
+                  <span class="badge bg-primary">En cours</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Accompagnants -->
+      {% if companions %}
+      <div class="card mb-4">
+        <div class="card-header bg-warning text-white">
+          <h5 class="mb-0"><i class="fas fa-users me-2"></i>Accompagnants ({{ companions.count }})</h5>
+        </div>
+        <div class="card-body">
+          {% for companion in companions %}
+          <div class="border rounded p-3 mb-3">
+            <div class="row">
+              <div class="col-md-3">
+                <h6 class="text-primary">{{ companion.companion_name }}</h6>
+                <p><strong>Lien:</strong> {{ companion.relationship }}</p>
+                {% if companion.accommodation_start_date and companion.accommodation_end_date %}
+                  <p><strong>Du:</strong> {{ companion.accommodation_start_date|date:"d/m/Y" }}</p>
+                  <p><strong>Au:</strong> {{ companion.accommodation_end_date|date:"d/m/Y" }}</p>
+                  <p><strong>Durée:</strong> <span class="badge bg-info">{{ companion.nb_jours_acc }} jour{{ companion.nb_jours_acc|pluralize }}</span></p>
+                {% endif %}
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-success">Hébergement</h6>
+                {% if companion.room %}
+                  <p><strong>Chambre:</strong> {{ companion.room.room_name }}</p>
+                  <p><strong>Type:</strong> {{ companion.room.room_type }}</p>
+                {% else %}
+                  <p class="text-muted">Pas d'hébergement</p>
+                {% endif %}
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-warning">Coût Accompagnant</h6>
+                {% if companion.acte_accompagnant and companion.nb_jours_acc %}
+                  <p><strong>Tarif:</strong> {{ companion.acte_accompagnant.price }} DH/jour</p>
+                  <p><strong>Total:</strong> <span class="badge bg-success">{{ companion.cout_total }} DH</span></p>
+                {% else %}
+                  <p class="text-muted">Tarif non défini</p>
+                {% endif %}
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-info">Statut</h6>
+                {% if companion.accommodation_end_date %}
+                  <span class="badge bg-success">Terminé</span>
+                {% else %}
+                  <span class="badge bg-primary">En cours</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Résumé Total -->
+      {% if total_cout %}
+      <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+          <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Résumé Financier</h5>
+        </div>
+        <div class="card-body">
+          <div class="row text-center mb-3">
+            <div class="col-md-2">
+              <div class="border-end">
+                <h3 class="text-primary">{{ consultations.count }}</h3>
+                <p class="text-muted">Consultation{{ consultations.count|pluralize }}</p>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="border-end">
+                <h3 class="text-info">{{ total_cout.actes }} DH</h3>
+                <p class="text-muted">Actes Médicaux</p>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="border-end">
+                <h3 class="text-success">{{ total_cout.medicaments }} DH</h3>
+                <p class="text-muted">Médicaments</p>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="border-end">
+                <h3 class="text-warning">{{ total_cout.hebergement }} DH</h3>
+                <p class="text-muted">Hébergement</p>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="border-end">
+                <h3 class="text-secondary">{{ total_cout.accompagnant }} DH</h3>
+                <p class="text-muted">Accompagnants</p>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <h3 class="text-dark">{{ total_cout.total }} DH</h3>
+              <p class="text-muted">Total Général</p>
+            </div>
+          </div>
+          <hr>
+          <div class="row text-center">
+            <div class="col-12">
+              <h2 class="text-success mb-2">{{ total_cout.total }} DH</h2>
+              <p class="text-muted mb-3">Total Général (Consultations + Actes + Médicaments + Hébergement + Accompagnants)</p>
+              
+              <!-- Debug: {{ has_invoice }} -->
+              
+              {% if has_invoice %}
+                <button class="btn btn-secondary btn-lg" disabled title="La facture a déjà été générée pour ce patient">
+                  <i class="fas fa-file-pdf me-2"></i>Facture Déjà Générée
+                </button>
+                <div class="alert alert-info mt-3 mx-auto" style="max-width: 500px;">
+                  <i class="fas fa-info-circle me-2"></i>
+                  Une facture a déjà été générée pour ce patient.
+                </div>
+              {% else %}
+                <button id="generateInvoiceBtn" class="btn btn-primary btn-lg" 
+                        data-url="{% url 'patient:generate_patient_invoice_pdf' selected_patient.id %}"
+                        onclick="generateInvoice(this.getAttribute('data-url'))">
+                  <i class="fas fa-file-pdf me-2"></i>Générer Facture PDF
+                </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% endif %}
+
+      {% if not consultations and selected_patient %}
+      <div class="alert alert-info text-center">
+        <i class="fas fa-info-circle me-2"></i>
+        Aucune consultation trouvée pour ce patient.
+      </div>
+      {% endif %}
+
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+function generateInvoice(url) {
+    const btn = document.getElementById('generateInvoiceBtn');
+    
+    // Confirmer l'action
+    Swal.fire({
+        title: 'Générer la facture?',
+        text: "Cette action créera une facture PDF pour ce patient. Vous ne pourrez pas générer une nouvelle facture après.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Oui, générer!',
+        cancelButtonText: 'Annuler'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Désactiver le bouton
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Génération en cours...';
+            
+            // Ouvrir le PDF dans un nouvel onglet
+            window.open(url, '_blank');
+            
+            // Afficher un message de succès et recharger la page après 2 secondes
+            Swal.fire({
+                title: 'Facture générée!',
+                text: 'La facture a été générée avec succès. La page va se recharger.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                // Recharger la page pour mettre à jour l'état has_invoice
+                window.location.reload();
+            });
+        }
+    });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    {% load static %}
+<head>
+    <meta charset="UTF-8">
+    <title>Dossier Patient - {{ patient.full_name }}</title>
+    <style>
+        /* Styles pour le PDF Patient */
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #555;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .info-item {
+            margin-bottom: 5px;
+        }
+
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 120px;
+            color: #555;
+        }
+
+        .value {
+            display: inline-block;
+        }
+
+        .table-container {
+            margin-top: 15px;
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .table th, .table td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            text-align: left;
+        }
+
+        .table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .table-striped tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10px;
+            color: #777;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        .mb-10 {
+            margin-bottom: 10px;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        @media print {
+            body {
+                font-size: 10px;
+            }
+            
+            .header h1 {
+                font-size: 16px;
+            }
+            
+            .section-title {
+                font-size: 14px;
+            }
+            
+            .label {
+                width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">Hôpital Oralys</div>
+        <div class="info">
+            Adresse : 123 Avenue de la Santé, Rabat<br>
+            Téléphone : 05 37 00 00 00
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Informations personnelles</div>
+        <div class="row">
+            <div class="col"><span class="label">Nom :</span> <span class="value">{{ patient.last_name }}</span></div>
+            <div class="col"><span class="label">Prénom :</span> <span class="value">{{ patient.first_name }}</span></div>
+            <div class="col"><span class="label">CIN :</span> <span class="value">{{ patient.cin }}</span></div>
+        </div>
+        <div class="row">
+            <div class="col"><span class="label">Passeport :</span> <span class="value">{{ patient.passport_number }}</span></div>
+            <div class="col"><span class="label">Sexe :</span> <span class="value">{{ patient.get_gender_display }}</span></div>
+            <div class="col"><span class="label">Date de naissance :</span> <span class="value">{{ patient.birth_date }}</span></div>
+        </div>
+        <div class="row">
+            <div class="col"><span class="label">Nationalité :</span> <span class="value">{{ patient.nationality }}</span></div>
+            <div class="col"><span class="label">Ville :</span> <span class="value">{{ patient.city }}</span></div>
+        </div>
+        <div class="row">
+            <div class="col"><span class="label">Téléphone :</span> <span class="value">{{ patient.phone }}</span></div>
+            <div class="col"><span class="label">GSM :</span> <span class="value">{{ patient.mobile_number }}</span></div>
+        </div>
+        <div class="row">
+            <div class="col"><span class="label">Profession :</span> <span class="value">{{ patient.profession }}</span></div>
+            <div class="col"><span class="label">Conjoint(e) :</span> <span class="value">{{ patient.spouse_name }}</span></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Profession & Conjoint(e)</div>
+        <div class="row">
+            <div class="col"><span class="label">Profession :</span> <span class="value">{{ patient.profession }}</span></div>
+            <div class="col"><span class="label">Conjoint(e) :</span> <span class="value">{{ patient.spouse_name }}</span></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Médecins</div>
+        <div class="row">
+            <div class="col"><span class="label">Type maladie (spécialité) :</span> <span class="value">{{ patient.disease_speciality }}</span></div>
+            <div class="col"><span class="label">Médecin traitant :</span> <span class="value">{{ patient.treating_physician }}</span></div>
+            <div class="col"><span class="label">Médecin correspondant :</span> <span class="value">{{ patient.referring_physician }}</span></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Dossier Mutuelle / Assurance</div>
+        {% if patient.has_insurance %}
+        <div class="row">
+            <div class="col"><span class="label">N° immatriculation :</span> <span class="value">{{ patient.insurance_number }}</span></div>
+            <div class="col"><span class="label">N° affiliation :</span> <span class="value">{{ patient.affiliation_number }}</span></div>
+        </div>
+        <div class="row">
+            <div class="col"><span class="label">Nom de l'adhérent :</span> <span class="value">{{ patient.insured_name }}</span></div>
+            <div class="col"><span class="label">Lien de parenté :</span> <span class="value">{{ patient.relationship }}</span></div>
+        </div>
+        {% else %}
+        <div class="row"><span class="value">Ce patient n'a pas de mutuelle ou d'assurance renseignée.</span></div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <div class="section-title">Contacts d'urgence</div>
+        {% if emergency_contact %}
+        <div class="row">
+            <div class="col"><span class="label">Nom :</span> <span class="value">{{ emergency_contact.name }}</span></div>
+            <div class="col"><span class="label">Téléphone :</span> <span class="value">{{ emergency_contact.phone }}</span></div>
+            <div class="col"><span class="label">Lien :</span> <span class="value">{{ emergency_contact.relationship }}</span></div>
+        </div>
+        {% else %}
+        <div class="row"><span class="value">Aucun contact d'urgence enregistré.</span></div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <div class="section-title">Rendez-vous</div>
+        {% if appointments_list %}
+        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead>
+                <tr style="background:#f2f2f2;">
+                    <th style="padding:4px; border:1px solid #ccc;">Date & heure</th>
+                    <th style="padding:4px; border:1px solid #ccc;">Médecin</th>
+                    <th style="padding:4px; border:1px solid #ccc;">Motif</th>
+                    <th style="padding:4px; border:1px solid #ccc;">Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for appointment in appointments_list %}
+                <tr>
+                    <td style="padding:4px; border:1px solid #ccc;">{{ rdv.date_heure|date:'d/m/Y H:i' }}</td>
+                    <td style="padding:4px; border:1px solid #ccc;">{% if rdv.medecin %}{{ rdv.medecin.full_name }}{% endif %}</td>
+                    <td style="padding:4px; border:1px solid #ccc;">{{ rdv.motif }}</td>
+                    <td style="padding:4px; border:1px solid #ccc;">{{ rdv.statut }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="row"><span class="value">Aucun rendez-vous enregistré.</span></div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <div class="section-title">Consultations effectuées</div>
+        {% if consultations %}
+        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead>
+                <tr style="background:#f2f2f2;">
+                    <th style="padding:4px; border:1px solid #ccc;">Date</th>
+                    <th style="padding:4px; border:1px solid #ccc;">Médecin</th>
+                    <th style="padding:4px; border:1px solid #ccc;">Spécialité</th>
+                    <th style="padding:4px; border:1px solid #ccc;">Commentaires</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in consultations %}
+                <tr>
+                    <td style="padding:4px; border:1px solid #ccc;">{{ c.date|date:'d/m/Y H:i' }}</td>
+                    <td style="padding:4px; border:1px solid #ccc;">{% if c.medecin %}{{ c.medecin.full_name }}{% endif %}</td>
+                    <td style="padding:4px; border:1px solid #ccc;">{{ c.speciality }}</td>
+                    <td style="padding:4px; border:1px solid #ccc;">{{ c.commentaires|truncatechars:60 }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="row"><span class="value">Aucune consultation enregistrée.</span></div>
+        {% endif %}
+    </div>
+</body>
+</html> 

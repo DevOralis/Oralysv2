@@ -1,0 +1,533 @@
+{% extends 'base.html' %}
+{% block menu %}
+  {% include 'dashboard/dashboard_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <!-- Statistics Cards Row -->
+    <div class="row g-4 mb-5">
+        <div class="col-xl-3 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-lg bg-primary bg-gradient rounded-3 me-3">
+                            <i class="fas fa-bed text-white fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-subtitle mb-1 text-muted">Chambres Totales</h6>
+                            <h2 class="card-title mb-0 text-primary fw-bold" id="total-rooms">{{ total_rooms }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-lg bg-success bg-gradient rounded-3 me-3">
+                            <i class="fas fa-user-injured text-white fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-subtitle mb-1 text-muted">Chambres Occupées</h6>
+                            <h2 class="card-title mb-0 text-success fw-bold" id="occupied-rooms">{{ occupied_rooms }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-lg bg-info bg-gradient rounded-3 me-3">
+                            <i class="fas fa-percent text-white fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-subtitle mb-1 text-muted">Taux Occupation</h6>
+                            <h2 class="card-title mb-0 text-info fw-bold">{{ occupancy_rate|floatformat:2 }}%</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-lg bg-warning bg-gradient rounded-3 me-3">
+                            <i class="fas fa-procedures text-white fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-subtitle mb-1 text-muted">Admissions Totales</h6>
+                            <h2 class="card-title mb-0 text-warning fw-bold">{{ admissions|length }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-5">
+        <!-- Admissions Evolution Chart -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-line text-primary me-2"></i>Évolution Admissions
+                        </h5>
+                        <div class="dropdown">
+                            <select class="form-select form-select-sm" id="period-select" style="width: 120px;">
+                                <option value="7">7 jours</option>
+                                <option value="30" selected>30 jours</option>
+                                <option value="90">90 jours</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="admissions-chart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Room Type Distribution -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie text-success me-2"></i>Répartition Type Chambre
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="room-type-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-filter text-secondary me-2"></i>Filtres
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="filter-form" class="row g-3">
+                <div class="col-md-3">
+                    <label for="start-date" class="form-label fw-semibold">Date Début</label>
+                    <input type="date" class="form-control" id="start-date">
+                </div>
+                <div class="col-md-3">
+                    <label for="end-date" class="form-label fw-semibold">Date Fin</label>
+                    <input type="date" class="form-control" id="end-date">
+                </div>
+                <div class="col-md-3">
+                    <label for="room-type" class="form-label fw-semibold">Type de chambre</label>
+                    <select class="form-select" id="room-type">
+                        <option value="">Tous Types</option>
+                        {% for room_type in room_types %}
+                            <option value="{{ room_type.0 }}">{{ room_type.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label fw-semibold">Statut</label>
+                    <select class="form-select" id="status">
+                        <option value="">Tous Statuts</option>
+                        <option value="available">Disponible</option>
+                        <option value="occupied">Occupé</option>
+                        <option value="maintenance">En maintenance</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="button" class="btn btn-primary" id="apply-filters">
+                        <i class="fas fa-search me-1"></i>Appliquer Filtres
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tables Row -->
+    <div class="row g-4">
+        <!-- Recent Admissions -->
+        <div class="col-xl-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-procedures text-primary me-2"></i>Admissions Récentes
+                    </h5>
+                    <a href="{% url 'hosting:admission_list' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>Voir Tout
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0 fw-semibold">Référence</th>
+                                    <th class="border-0 fw-semibold">Patient</th>
+                                    <th class="border-0 fw-semibold">Date</th>
+                                    <th class="border-0 fw-semibold">Chambre</th>
+                                    <th class="border-0 fw-semibold">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admissions-table-body">
+                                {% for admission in admissions|slice:":5" %}
+                                <tr>
+                                    <td class="fw-medium">{{ admission.admission_id }}</td>
+                                    <td>{{ admission.patient }}</td>
+                                    <td class="text-muted">{{ admission.admission_date|date:"d/m/Y" }}</td>
+                                    <td class="fw-medium">{{ admission.room }}</td>
+                                    <td>
+                                        {% if admission.discharge_date %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>{{ admission.get_discharge_reason_display }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-clock me-1"></i>En Cours
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        <i class="fas fa-inbox me-2"></i>Aucune admission récente
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Reservations -->
+        <div class="col-xl-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar-check text-success me-2"></i>Réservations Récentes
+                    </h5>
+                    <a href="{% url 'hosting:reservation_list' %}" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-eye me-1"></i>Voir Tout
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0 fw-semibold">Référence</th>
+                                    <th class="border-0 fw-semibold">Patient</th>
+                                    <th class="border-0 fw-semibold">Date Début</th>
+                                    <th class="border-0 fw-semibold">Chambre</th>
+                                    <th class="border-0 fw-semibold">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reservations-table-body">
+                                {% for reservation in reservations|slice:":5" %}
+                                <tr>
+                                    <td class="fw-medium">{{ reservation.reservation_id }}</td>
+                                    <td>{{ reservation.patient }}</td>
+                                    <td class="text-muted">{{ reservation.start_date|date:"d/m/Y" }}</td>
+                                    <td class="fw-medium">{{ reservation.room }}</td>
+                                    <td>
+                                        {% if reservation.reservation_status == 'confirmed' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>{{ reservation.get_reservation_status_display }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock me-1"></i>{{ reservation.get_reservation_status_display }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        <i class="fas fa-inbox me-2"></i>Aucune réservation récente
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Chart.js pour les graphiques -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Admissions Evolution Chart
+    const admissionsCtx = document.getElementById('admissions-chart').getContext('2d');
+    let admissionsChart;
+
+    // Initialize admissions chart with sample data
+    const initializeAdmissionsChart = () => {
+        admissionsChart = new Chart(admissionsCtx, {
+            type: 'line',
+            data: {
+                labels: ['Semaine 1', 'Semaine 2', 'Semaine 3', 'Semaine 4'],
+                datasets: [{
+                    label: 'Admissions',
+                    data: [
+                        {{ admission_counts.7|default:0 }},
+                        {{ admission_counts.30|default:0 }},
+                        {{ admission_counts.90|default:0 }},
+                        {{ admissions|length|default:0 }}
+                    ],
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Évolution des Admissions'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Nombre d\'Admissions'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Période'
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    // Room Type Distribution Chart
+    const roomTypeCtx = document.getElementById('room-type-chart').getContext('2d');
+    let roomTypeChart;
+
+    const initializeRoomTypeChart = () => {
+        roomTypeChart = new Chart(roomTypeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    {% for item in room_type_counts %}
+                        '{{ item.room_type }}'{% if not forloop.last %},{% endif %}
+                    {% empty %}
+                        'Standard', 'VIP', 'Suite'
+                    {% endfor %}
+                ],
+                datasets: [{
+                    data: [
+                        {% for item in room_type_counts %}
+                            {{ item.count }}{% if not forloop.last %},{% endif %}
+                        {% empty %}
+                            15, 8, 3
+                        {% endfor %}
+                    ],
+                    backgroundColor: [
+                        '#198754', // Success
+                        '#ffc107', // Warning
+                        '#dc3545', // Danger
+                        '#0dcaf0', // Info
+                        '#6f42c1', // Purple
+                        '#fd7e14'  // Orange
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Répartition par Type'
+                    }
+                }
+            }
+        });
+    };
+
+    // Initialize charts
+    initializeAdmissionsChart();
+    initializeRoomTypeChart();
+
+    // Period selector for admissions chart
+    document.getElementById('period-select').addEventListener('change', function() {
+        const period = this.value;
+        
+        // Show loading state
+        admissionsChart.data.datasets[0].data = [0, 0, 0, 0];
+        admissionsChart.update();
+        
+        // Simulate API call (replace with actual endpoint)
+        setTimeout(() => {
+            // Update chart with new data based on period
+            let newData;
+            switch(period) {
+                case '7':
+                    newData = [2, 4, 3, 5];
+                    break;
+                case '30':
+                    newData = [{{ admission_counts.7|default:0 }}, {{ admission_counts.30|default:0 }}, {{ admission_counts.90|default:0 }}, {{ admissions|length|default:0 }}];
+                    break;
+                case '90':
+                    newData = [8, 12, 15, 18];
+                    break;
+                default:
+                    newData = [5, 7, 6, 8];
+            }
+            
+            admissionsChart.data.datasets[0].data = newData;
+            admissionsChart.update();
+        }, 500);
+    });
+
+    // Filter functionality
+    const filterForm = document.getElementById('filter-form');
+    const admissionsTableBody = document.getElementById('admissions-table-body');
+    const reservationsTableBody = document.getElementById('reservations-table-body');
+
+    document.getElementById('apply-filters').addEventListener('click', () => {
+        // Show loading state
+        admissionsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Chargement...</td></tr>';
+        reservationsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm text-success" role="status"></div> Chargement...</td></tr>';
+
+        // Simulate filtering (replace with actual API calls)
+        setTimeout(() => {
+            // Reset tables with filtered data
+            // This would be replaced with actual server-side filtering
+            location.reload();
+        }, 1000);
+    });
+});
+</script>
+
+<style>
+.avatar {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.table th {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.form-label.fw-semibold {
+    font-weight: 600;
+    color: #495057;
+}
+
+.card-header {
+    padding: 1.5rem 1.5rem 0.5rem;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+.fw-medium {
+    font-weight: 500;
+}
+
+/* Loading animation for spinners */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .card-header h5 {
+        font-size: 1rem;
+    }
+    
+    .avatar {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .card-title {
+        font-size: 1.5rem;
+    }
+}
+</style>
+
+{% endblock %}

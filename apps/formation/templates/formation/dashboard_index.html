@@ -1,0 +1,1124 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Formation{% endblock %}
+{% block menu %}
+{% include "formation/menu_formation.html" %}
+{% endblock %}
+{% block content %}
+
+<div class="content">
+  <!-- Alerts Section - Utilisation des composants standards -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- KPI Cards Section - Utilisation du composant standard -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-chart-line me-1"></i>
+      Statistiques Principales
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="kpi-card text-white h-100" style="background-color: #1e90ff;">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-book fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ stats.total_formations|default:0 }}</h3>
+                <p class="mb-0">Formations</p>
+              </div>
+            </div>
+            <div class="mt-3">
+              <a href="{% url 'formation_home' %}" class="text-white-50 text-decoration-none">
+                <i class="fas fa-arrow-right me-1"></i> Voir toutes
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="kpi-card bg-success text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-calendar-alt fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ stats.sessions_actives|default:0 }}</h3>
+                <p class="mb-0">Sessions Actives</p>
+              </div>
+            </div>
+            <div class="mt-3">
+              <a href="{% url 'session_home' %}" class="text-white-50 text-decoration-none">
+                <i class="fas fa-arrow-right me-1"></i> Gérer sessions
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="kpi-card bg-info text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-users fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ stats.total_participants|default:0 }}</h3>
+                <p class="mb-0">Participants</p>
+              </div>
+            </div>
+            <div class="mt-3">
+              <a href="{% url 'inscription_home' %}" class="text-white-50 text-decoration-none">
+                <i class="fas fa-arrow-right me-1"></i> Voir participants
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="kpi-card bg-warning text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-chalkboard-teacher fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ stats.total_formateurs|default:0 }}</h3>
+                <p class="mb-0">Formateurs</p>
+              </div>
+            </div>
+            <div class="mt-3">
+              <a href="{% url 'formateur_home' %}" class="text-white-50 text-decoration-none">
+                <i class="fas fa-arrow-right me-1"></i> Gérer formateurs
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions Rapides -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-bolt me-1"></i>
+      Actions Rapides
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-lg-3 col-md-6 mb-3">
+          <button class="btn btn-action w-100" style="border-color: #1e90ff; color: #1e90ff;" data-bs-toggle="modal" data-bs-target="#modalNouvelleFormation">
+            <i class="fas fa-plus mb-2"></i>
+            <div>Nouvelle Formation</div>
+          </button>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <button class="btn btn-outline-success btn-action w-100" data-bs-toggle="modal" data-bs-target="#modalNouvelleSession">
+            <i class="fas fa-calendar-plus mb-2"></i>
+            <div>Planifier Session</div>
+          </button>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <button class="btn btn-outline-info btn-action w-100" data-bs-toggle="modal" data-bs-target="#modalNouveauFormateur">
+            <i class="fas fa-user-plus mb-2"></i>
+            <div>Ajouter Formateur</div>
+          </button>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <a href="{% url 'cours_programmes_home' %}" class="btn btn-outline-warning btn-action w-100">
+            <i class="fas fa-book-open mb-2"></i>
+            <div>Cours & Programmes</div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu principal en deux colonnes -->
+  <div class="row">
+    <!-- Colonne gauche -->
+    <div class="col-lg-8">
+      <!-- Sessions récentes -->
+      <div class="card mb-4">
+        <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #1e90ff;">
+          <i class="fas fa-calendar-alt me-1"></i> Sessions Récentes
+          <a href="{% url 'session_home' %}" class="btn btn-sm btn-light">Voir toutes</a>
+        </div>
+        <div class="card-body">
+          {% if recent_sessions %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead class="table-light">
+                  <tr>
+                    <th>Formation</th>
+                    <th>Formateur</th>
+                    <th>Date</th>
+                    <th>Statut</th>
+                    <th>Participants</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for session in recent_sessions %}
+                  <tr>
+                    <td>
+                      <strong>{{ session.formation.titre }}</strong>
+                      <br><small class="text-muted">{{ session.formation.code }}</small>
+                    </td>
+                    <td>{{ session.formateur.prenom }} {{ session.formateur.nom }}</td>
+                    <td>
+                      {{ session.date_debut|date:"d/m/Y" }}
+                      <br><small class="text-muted">{{ session.date_debut|date:"H:i" }}</small>
+                    </td>
+                    <td>
+                      <span class="badge bg-{% if session.statut == 'planifiée' %}secondary{% elif session.statut == 'en_cours' %}primary{% elif session.statut == 'terminée' %}success{% else %}danger{% endif %}">
+                        {{ session.get_statut_display }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge bg-info">{{ session.participants_count|default:0 }}/{{ session.places_totales }}</span>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-center py-4">
+              <i class="fas fa-calendar text-muted" style="font-size: 3rem;"></i>
+              <p class="text-muted mt-2">Aucune session récente</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Formations par domaine ET par type depuis la base de données -->
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+              <i class="fas fa-chart-pie me-1"></i> Formations par Domaine
+            </div>
+            <div class="card-body">
+              {% if formations_par_domaine %}
+                {% for domaine in formations_par_domaine %}
+                <div class="mb-3">
+                  <div class="domain-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="domain-name">{{ domaine.domaine__display|default:"Non défini" }}</span>
+                      <span class="badge bg-primary">{{ domaine.count }}</span>
+                    </div>
+                    <div class="progress mt-2" style="height: 6px;">
+                      <div class="progress-bar" style="width: {{ domaine.percentage }}%"></div>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="text-center py-4">
+                  <i class="fas fa-chart-pie text-muted" style="font-size: 3rem;"></i>
+                  <p class="text-muted mt-2">Aucune donnée disponible</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+              <i class="fas fa-chart-bar me-1"></i> Formations par Type
+            </div>
+            <div class="card-body">
+              {% if formations_par_type %}
+                {% for type in formations_par_type %}
+                <div class="mb-3">
+                  <div class="domain-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="domain-name">{{ type.type_display }}</span>
+                      <span class="badge bg-success">{{ type.count }}</span>
+                    </div>
+                    <div class="progress mt-2" style="height: 6px;">
+                      <div class="progress-bar bg-success" style="width: {{ type.percentage }}%"></div>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="text-center py-4">
+                  <i class="fas fa-chart-bar text-muted" style="font-size: 3rem;"></i>
+                  <p class="text-muted mt-2">Aucune donnée disponible</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Colonne droite -->
+    <div class="col-lg-4">
+      <!-- Top Formateurs -->
+      <div class="card mb-4">
+        <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #1e90ff;">
+          <i class="fas fa-star me-1"></i> Top Formateurs
+          <a href="{% url 'formateur_home' %}" class="btn btn-sm btn-light">Voir tous</a>
+        </div>
+        <div class="card-body">
+          {% if top_formateurs %}
+            {% for formateur in top_formateurs %}
+            <div class="formateur-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ formateur.prenom }} {{ formateur.nom }}</strong>
+                  <br><small class="text-muted">{{ formateur.service }}</small>
+                </div>
+                <div class="text-end">
+                  <span class="badge bg-success">{{ formateur.sessions_count }} sessions</span>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-4">
+              <i class="fas fa-user-graduate text-muted" style="font-size: 3rem;"></i>
+              <p class="text-muted mt-2">Aucun formateur actif</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Alertes Personnalisées -->
+      <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-bell me-1"></i> Alertes
+        </div>
+        <div class="card-body">
+          <!-- Sessions à venir -->
+          {% if upcoming_sessions %}
+            <div class="custom-alert custom-alert-info">
+              <div class="custom-alert-icon">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+              <div class="custom-alert-content">
+                <div class="custom-alert-title">Sessions à venir</div>
+                <div class="custom-alert-text">{{ upcoming_sessions|length }} session(s) prévue(s) cette semaine</div>
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Places disponibles -->
+          {% if sessions_places_limitees %}
+            <div class="custom-alert custom-alert-warning">
+              <div class="custom-alert-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <div class="custom-alert-content">
+                <div class="custom-alert-title">Places limitées</div>
+                <div class="custom-alert-text">{{ sessions_places_limitees|length }} session(s) avec places limitées</div>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if not upcoming_sessions and not sessions_places_limitees %}
+            <div class="text-center py-4">
+              <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+              <p class="text-muted mt-2">Tout va bien !</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Statistiques détaillées -->
+      <div class="card">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-info-circle me-1"></i> Statistiques Détaillées
+        </div>
+        <div class="card-body">
+          <!-- Statistiques par type (dynamiques depuis la base) -->
+          {% if types_with_stats %}
+            {% for type_stat in types_with_stats %}
+            <div class="stat-item">
+              <div class="d-flex justify-content-between">
+                <span>{{ type_stat.label }}</span>
+                <strong>{{ type_stat.count }}</strong>
+              </div>
+            </div>
+            {% endfor %}
+          {% endif %}
+          
+          <!-- Séparateur -->
+          <hr class="my-3">
+          
+          <!-- Autres statistiques -->
+          <div class="stat-item">
+            <div class="d-flex justify-content-between">
+              <span>Taux présence moyen</span>
+              <strong>{{ stats.taux_presence|default:0 }}%</strong>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="d-flex justify-content-between">
+              <span>Score moyen</span>
+              <strong>{{ stats.score_moyen|default:0 }}/100</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals pour actions rapides -->
+<!-- Modal Nouvelle Formation -->
+<div class="modal fade" id="modalNouvelleFormation" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header text-white" style="background-color: #1e90ff;">
+        <h5 class="modal-title">
+          <i class="fas fa-plus me-2"></i>
+          Nouvelle Formation
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formationForm" method="post" action="{% url 'formation_home' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Code <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                <input type="text" class="form-control" name="code" required maxlength="10" placeholder="Code formation">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Type <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                <select class="form-select" name="type" required>
+                  <option value="">Choisir...</option>
+                  {% if types_with_stats %}
+                    {% for type_stat in types_with_stats %}
+                    <option value="{{ type_stat.value }}">{{ type_stat.label }}</option>
+                    {% endfor %}
+                  {% endif %}
+                </select>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Titre <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-heading"></i></span>
+                <input type="text" class="form-control" name="titre" required maxlength="255" placeholder="Titre de la formation">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Durée (heures) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                <input type="number" class="form-control" name="duree_heures" required min="1" placeholder="Durée en heures">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Coût</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-euro-sign"></i></span>
+                <input type="number" class="form-control" name="cout" step="0.01" min="0" placeholder="Coût de la formation">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Domaine <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-folder"></i></span>
+                <select class="form-select" name="domaine" required>
+                  <option value="">Choisir un domaine...</option>
+                  {% if domaines_choices %}
+                    {% for domaine in domaines_choices %}
+                    <option value="{{ domaine.value }}">{{ domaine.label }}</option>
+                    {% endfor %}
+                  {% else %}
+                    <!-- Fallback si les données ne sont pas disponibles -->
+                    <option value="IT">Informatique</option>
+                    <option value="HR">Ressources Humaines</option>
+                    <option value="Finance">Finance</option>
+                    <option value="life">Life</option>
+                    <option value="economie">Économie</option>
+                    <option value="medecine">Médecine</option>
+                    <option value="management">Management</option>
+                    <option value="qualite">Qualité</option>
+                    <option value="securite">Sécurité</option>
+                    <option value="marketing">Marketing</option>
+                  {% endif %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Fournisseur <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-building"></i></span>
+                <select class="form-select" name="supplier" required>
+                  <option value="">Choisir un fournisseur...</option>
+                  {% if suppliers_list %}
+                    {% for supplier in suppliers_list %}
+                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                    {% endfor %}
+                  {% else %}
+                    <!-- Fallback si les données ne sont pas disponibles -->
+                    <option value="1">Formation Plus SARL</option>
+                    <option value="2">Centre Excellence Formation</option>
+                    <option value="3">Institut Spécialisé</option>
+                    <option value="4">Academy Skills</option>
+                  {% endif %}
+                </select>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                <textarea class="form-control" name="description" rows="3" placeholder="Description de la formation"></textarea>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="formationForm" class="btn text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-save me-1"></i> Créer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nouvelle Session -->
+<div class="modal fade" id="modalNouvelleSession" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-calendar-plus me-2"></i>
+          Planifier une Session
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="sessionForm" method="post" action="{% url 'session_home' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Formation <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+                <select class="form-select" name="formation" required>
+                  <option value="">Choisir une formation...</option>
+                  {% for formation in formations_list %}
+                  <option value="{{ formation.code }}">{{ formation.titre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Formateur <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                <select class="form-select" name="formateur" required>
+                  <option value="">Choisir un formateur...</option>
+                  {% for formateur in formateurs_list %}
+                  <option value="{{ formateur.id }}">{{ formateur.prenom }} {{ formateur.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Date début <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="datetime-local" class="form-control" name="date_debut" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Date fin <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="datetime-local" class="form-control" name="date_fin" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Lieu</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                <input type="text" class="form-control" name="lieu" maxlength="255" placeholder="Lieu de la session">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Places totales <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-users"></i></span>
+                <input type="number" class="form-control" name="places_totales" required min="1" placeholder="Nombre de places">
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Statut <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                <select class="form-select" name="statut" required>
+                  <option value="">Choisir un statut...</option>
+                  <option value="planifiée" selected>Planifiée</option>
+                  <option value="en_cours">En cours</option>
+                  <option value="terminée">Terminée</option>
+                  <option value="annulée">Annulée</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="sessionForm" class="btn btn-success">
+          <i class="fas fa-calendar-plus me-1"></i> Planifier
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nouveau Formateur -->
+<div class="modal fade" id="modalNouveauFormateur" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header text-white" style="background-color: #1e90ff;">
+        <h5 class="modal-title">
+          <i class="fas fa-user-plus me-2"></i>
+          Nouveau Formateur
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formateurForm" method="post" action="{% url 'formateur_home' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Nom <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                <input type="text" class="form-control" name="nom" required maxlength="100" placeholder="Nom du formateur">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Prénom <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                <input type="text" class="form-control" name="prenom" required maxlength="100" placeholder="Prénom du formateur">
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Service <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
+                <input type="text" class="form-control" name="service" required maxlength="100" placeholder="Service du formateur">
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="formateurForm" class="btn text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-save me-1"></i> Ajouter
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Styles spécifiques au dashboard */
+.btn-action {
+  height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  border: 1px solid #dee2e6;
+  background-color: white;
+  color: #2c3e50;
+}
+
+.btn-action:hover {
+  background-color: #ecf0f1;
+  transform: translateY(-2px);
+}
+
+.btn-action i {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+}
+
+/* Domain/Type items avec meilleure présentation */
+.domain-item {
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #2c3e50;
+}
+
+.domain-name {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+/* Formateur items */
+.formateur-item {
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  border-left: 3px solid #27ae60;
+}
+
+/* Stat items dans la sidebar */
+.stat-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+/* Alertes personnalisées */
+.custom-alert {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: slideInAlert 0.6s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.custom-alert::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+  animation: shimmer 3s infinite;
+  pointer-events: none;
+}
+
+.custom-alert-icon {
+  margin-right: 15px;
+  font-size: 1.2rem;
+  min-width: 24px;
+  animation: pulse 2s infinite;
+}
+
+.custom-alert-content {
+  flex: 1;
+}
+
+.custom-alert-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.custom-alert-text {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  line-height: 1.3;
+}
+
+/* Types d'alertes personnalisées */
+.custom-alert-info {
+  background-color: #e8f4fc;
+  border-left-color: #2980b9;
+  color: #0c5460;
+}
+
+.custom-alert-info .custom-alert-icon {
+  color: #2980b9;
+}
+
+.custom-alert-warning {
+  background-color: #fef5e7;
+  border-left-color: #f39c12;
+  color: #856404;
+}
+
+.custom-alert-warning .custom-alert-icon {
+  color: #f39c12;
+}
+
+.custom-alert-danger {
+  background-color: #fdedec;
+  border-left-color: #e74c3c;
+  color: #721c24;
+}
+
+.custom-alert-danger .custom-alert-icon {
+  color: #e74c3c;
+}
+
+.custom-alert-success {
+  background-color: #e8f5e8;
+  border-left-color: #27ae60;
+  color: #155724;
+}
+
+.custom-alert-success .custom-alert-icon {
+  color: #27ae60;
+}
+
+/* Animations pour les alertes personnalisées */
+@keyframes slideInAlert {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7; 
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .btn-action {
+    height: 80px;
+    margin-bottom: 10px;
+  }
+
+  .custom-alert {
+    padding: 12px 15px;
+    margin-bottom: 12px;
+  }
+  
+  .custom-alert-icon {
+    margin-right: 10px;
+    font-size: 1.1rem;
+  }
+
+  .custom-alert-title {
+    font-size: 0.9rem;
+  }
+
+  .custom-alert-text {
+    font-size: 0.85rem;
+  }
+
+  .domain-item, .formateur-item {
+    margin-bottom: 15px;
+  }
+}
+
+/* Animation d'apparition pour les éléments */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Effet Hover sur les alertes personnalisées */
+.custom-alert:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // ========== GESTION DES ALERTES PERSONNALISÉES ==========
+  const customAlerts = document.querySelectorAll('.custom-alert');
+  
+  // Animation d'entrée échelonnée pour les alertes
+  customAlerts.forEach((alert, index) => {
+    alert.style.opacity = '0';
+    alert.style.transform = 'translateX(-100%)';
+    
+    setTimeout(() => {
+      alert.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      alert.style.opacity = '1';
+      alert.style.transform = 'translateX(0)';
+    }, index * 200);
+  });
+
+  // ========== ANIMATION DES CARTES ==========
+  const cards = document.querySelectorAll('.card');
+  cards.forEach((card, index) => {
+    setTimeout(() => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(30px)';
+      card.style.transition = 'all 0.6s ease';
+      
+      setTimeout(() => {
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      }, 100);
+    }, index * 150);
+  });
+
+  // ========== ANIMATION DES ÉLÉMENTS DE DOMAINE ET TYPE ==========
+  const domainItems = document.querySelectorAll('.domain-item');
+  domainItems.forEach((item, index) => {
+    setTimeout(() => {
+      item.style.opacity = '0';
+      item.style.transform = 'translateX(-20px)';
+      item.style.transition = 'all 0.4s ease';
+      
+      setTimeout(() => {
+        item.style.opacity = '1';
+        item.style.transform = 'translateX(0)';
+      }, 50);
+    }, index * 100);
+  });
+
+  // ========== VALIDATION DES FORMULAIRES ==========
+  const forms = document.querySelectorAll('form');
+  forms.forEach(form => {
+    form.addEventListener('submit', function(e) {
+      const requiredFields = this.querySelectorAll('[required]');
+      const submitBtn = this.querySelector('button[type="submit"]');
+      let isValid = true;
+
+      requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+          field.classList.add('is-invalid');
+          isValid = false;
+        } else {
+          field.classList.remove('is-invalid');
+        }
+      });
+
+      // Validation spécifique pour les dates
+      const dateDebut = this.querySelector('input[name="date_debut"]');
+      const dateFin = this.querySelector('input[name="date_fin"]');
+      
+      if (dateDebut && dateFin && dateDebut.value && dateFin.value) {
+        if (new Date(dateDebut.value) >= new Date(dateFin.value)) {
+          dateFin.classList.add('is-invalid');
+          isValid = false;
+          
+          // Afficher message d'erreur spécifique
+          showFormError(this, 'La date de fin doit être postérieure à la date de début.');
+        }
+      }
+
+      if (!isValid) {
+        e.preventDefault();
+        
+        if (!this.querySelector('.validation-error-alert')) {
+          showFormError(this, 'Veuillez corriger les erreurs dans le formulaire.');
+        }
+      } else {
+        // Désactiver le bouton et afficher le loader
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = submitBtn.textContent + '...';
+        }
+      }
+    });
+
+    // Supprimer les erreurs de validation en temps réel
+    const requiredFields = form.querySelectorAll('[required]');
+    requiredFields.forEach(field => {
+      field.addEventListener('input', function() {
+        if (this.value.trim()) {
+          this.classList.remove('is-invalid');
+          
+          // Supprimer l'alerte d'erreur si tous les champs sont valides
+          const allFields = form.querySelectorAll('[required]');
+          const allValid = Array.from(allFields).every(f => f.value.trim());
+          if (allValid) {
+            const errorAlert = form.querySelector('.validation-error-alert');
+            if (errorAlert) {
+              errorAlert.style.transition = 'opacity 0.3s ease';
+              errorAlert.style.opacity = '0';
+              setTimeout(() => errorAlert.remove(), 300);
+            }
+          }
+        }
+      });
+    });
+  });
+
+  // ========== FONCTION POUR AFFICHER LES ERREURS DE FORMULAIRE ==========
+  function showFormError(form, message) {
+    const existingError = form.querySelector('.validation-error-alert');
+    if (existingError) {
+      existingError.remove();
+    }
+    
+    const errorAlert = document.createElement('div');
+    errorAlert.className = 'custom-alert custom-alert-danger validation-error-alert';
+    errorAlert.innerHTML = `
+      <div class="custom-alert-icon">
+        <i class="fas fa-exclamation-circle"></i>
+      </div>
+      <div class="custom-alert-content">
+        <div class="custom-alert-title">Erreur de validation</div>
+        <div class="custom-alert-text">${message}</div>
+      </div>
+    `;
+    
+    // Insérer l'alerte au début du modal body
+    const modalBody = form.closest('.modal-body');
+    if (modalBody) {
+      modalBody.insertBefore(errorAlert, modalBody.firstChild);
+      
+      // Supprimer l'alerte après 5 secondes
+      setTimeout(() => {
+        if (errorAlert.parentNode) {
+          errorAlert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+          errorAlert.style.opacity = '0';
+          errorAlert.style.transform = 'translateX(-100%)';
+          setTimeout(() => {
+            errorAlert.remove();
+          }, 500);
+        }
+      }, 5000);
+    }
+  }
+
+  // ========== GESTION DES MODALS ==========
+  const modals = document.querySelectorAll('.modal');
+  modals.forEach(modal => {
+    modal.addEventListener('shown.bs.modal', function() {
+      // Focus sur le premier champ
+      const firstInput = this.querySelector('input:not([type="hidden"]), select, textarea');
+      if (firstInput) {
+        firstInput.focus();
+      }
+    });
+
+    modal.addEventListener('hidden.bs.modal', function() {
+      // Reset du formulaire et suppression des erreurs
+      const form = this.querySelector('form');
+      if (form) {
+        form.reset();
+        form.querySelectorAll('.is-invalid').forEach(field => {
+          field.classList.remove('is-invalid');
+        });
+        
+        const errorAlert = form.querySelector('.validation-error-alert');
+        if (errorAlert) {
+          errorAlert.remove();
+        }
+        
+        // Réactiver le bouton submit
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = submitBtn.textContent.replace('...', '');
+        }
+      }
+    });
+  });
+
+  // ========== AUTO-COMPLÉTION ET SUGGESTIONS ==========
+  // Auto-format du code en majuscules
+  const codeInput = document.querySelector('input[name="code"]');
+  if (codeInput) {
+    codeInput.addEventListener('input', function() {
+      this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    });
+  }
+
+  // ========== NOTIFICATION DE SUCCÈS ==========
+  window.showSuccessMessage = function(message) {
+    const alertsContainer = document.querySelector('.card-body');
+    if (!alertsContainer) return;
+    
+    const successAlert = document.createElement('div');
+    successAlert.className = 'custom-alert custom-alert-success';
+    successAlert.innerHTML = `
+      <div class="custom-alert-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="custom-alert-content">
+        <div class="custom-alert-title">Succès</div>
+        <div class="custom-alert-text">${message}</div>
+      </div>
+    `;
+    
+    alertsContainer.insertBefore(successAlert, alertsContainer.firstChild);
+    
+    // Animation d'entrée
+    successAlert.style.opacity = '0';
+    successAlert.style.transform = 'translateX(-100%)';
+    setTimeout(() => {
+      successAlert.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      successAlert.style.opacity = '1';
+      successAlert.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Supprimer après 4 secondes
+    setTimeout(() => {
+      if (successAlert.parentNode) {
+        successAlert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        successAlert.style.opacity = '0';
+        successAlert.style.transform = 'translateX(-100%)';
+        setTimeout(() => {
+          successAlert.remove();
+        }, 500);
+      }
+    }, 4000);
+  };
+});
+</script>
+
+{% endblock %}

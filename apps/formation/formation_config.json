@@ -1,0 +1,50 @@
+{
+  "formation_types": [
+    {
+      "value": "interne",
+      "label": "Interne"
+    },
+    {
+      "value": "externe",
+      "label": "Externe"
+    },
+    {
+      "value": "e_learning",
+      "label": "E-learning"
+    }
+  ],
+  "formation_domaines": [
+    {
+      "value": "Finance",
+      "label": "Finance"
+    },
+    {
+      "value": "life",
+      "label": "Life"
+    },
+    {
+      "value": "economie",
+      "label": "Économie"
+    },
+    {
+      "value": "medecine",
+      "label": "Médecine"
+    },
+    {
+      "value": "management",
+      "label": "Management"
+    },
+    {
+      "value": "qualite",
+      "label": "Qualité"
+    },
+    {
+      "value": "securite",
+      "label": "Sécurité"
+    },
+    {
+      "value": "marketing",
+      "label": "Marketing"
+    }
+  ]
+}

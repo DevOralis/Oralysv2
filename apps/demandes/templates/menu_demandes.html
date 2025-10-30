@@ -1,0 +1,50 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    
+    <div class="menu-items">
+      <a href="{% url 'demandes:statistiques_demandes' %}" class="menu-item {% if request.resolver_match.url_name == 'statistiques_demandes' %}active{% endif %}">
+        <i class="fas fa-chart-pie"></i>
+        <span class="menu-text">Accueil</span>
+      </a>
+      
+      <a href="{% url 'demandes:demandes_internes' %}" class="menu-item {% if request.resolver_match.url_name == 'demandes_internes' %}active{% endif %}">
+        <i class="fas fa-building"></i>
+        <span class="menu-text">Demandes Internes</span>
+      </a>
+      
+      <a href="{% url 'demandes:demandes_patients' %}" class="menu-item {% if request.resolver_match.url_name == 'demandes_patients' %}active{% endif %}">
+        <i class="fas fa-user-injured"></i>
+        <span class="menu-text">Demandes Patients</span>
+      </a>
+      
+      <a href="{% url 'demandes:configuration_demandes' %}" class="menu-item {% if request.resolver_match.url_name == 'configuration_demandes' %}active{% endif %}">
+        <i class="fas fa-cogs"></i>
+        <span class="menu-text">Configuration</span>
+      </a>
+      
+   
+    </div>
+  </nav>
+</div>
+
+<style>
+.menu-item.active {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-left: 3px solid #fff !important;
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+</style>

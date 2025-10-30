@@ -1,0 +1,956 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Oralys - Admissions{% endblock %}
+{% block menu %}
+  {% include 'hosting_menu.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ========== RECHERCHE JAVASCRIPT SIMPLE ==========
+document.addEventListener('DOMContentLoaded', function() {
+    // Éléments de recherche
+    const searchInput = document.getElementById('admission-search');
+    const dischargeSelect = document.querySelector('select[name="discharge_reason"]');
+    const tableBody = document.querySelector('#searchableTable tbody');
+    const allRows = Array.from(tableBody.querySelectorAll('tr'));
+    
+    // Sauvegarder les données originales de chaque ligne
+    const originalRowsData = allRows.map(row => {
+        const cells = row.querySelectorAll('td');
+        return {
+            element: row,
+            text: Array.from(cells).map(cell => cell.textContent.toLowerCase().trim()).join(' '),
+            dischargeReason: getDischargeReasonFromRow(row)
+        };
+    });
+
+    // Fonction pour extraire la raison de sortie d'une ligne
+    function getDischargeReasonFromRow(row) {
+        const dischargeCell = row.querySelector('td[data-label="Raison de sortie"]');
+        if (!dischargeCell) return '';
+        
+        const text = dischargeCell.textContent.toLowerCase().trim();
+        
+        // Mapper les textes affichés aux valeurs du select (selon le modèle Django)
+        if (text.includes('en cours')) return 'active';
+        if (text.includes('fin de séjour')) return 'end_of_stay';
+        if (text.includes('décès')) return 'death';
+        if (text.includes('transfert')) return 'transfer';
+        
+        return '';
+    }
+
+    // Fonction de recherche
+    function performSearch() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const selectedDischargeReason = dischargeSelect.value;
+        
+        let visibleCount = 0;
+        
+        originalRowsData.forEach(rowData => {
+            let showRow = true;
+            
+            // Filtrer par terme de recherche
+            if (searchTerm && !rowData.text.includes(searchTerm)) {
+                showRow = false;
+            }
+            
+            // Filtrer par raison de sortie
+            if (selectedDischargeReason) {
+                if (selectedDischargeReason === 'active') {
+                    // Afficher seulement les admissions en cours
+                    if (rowData.dischargeReason !== 'active') {
+                        showRow = false;
+                    }
+                } else {
+                    // Afficher seulement les admissions avec la raison sélectionnée
+                    if (rowData.dischargeReason !== selectedDischargeReason) {
+                        showRow = false;
+                    }
+                }
+            }
+            
+            // Afficher/masquer la ligne
+            if (showRow) {
+                rowData.element.style.display = '';
+                visibleCount++;
+            } else {
+                rowData.element.style.display = 'none';
+            }
+        });
+        
+        // Afficher/masquer le message "Aucune admission"
+        updateEmptyMessage(visibleCount);
+    }
+
+    // Fonction pour mettre à jour le message vide
+    function updateEmptyMessage(visibleCount) {
+        let emptyRow = tableBody.querySelector('.empty-message-row');
+        
+        if (visibleCount === 0) {
+            if (!emptyRow) {
+                emptyRow = document.createElement('tr');
+                emptyRow.className = 'empty-message-row';
+                emptyRow.innerHTML = `
+                    <td colspan="10" class="text-center text-muted py-4">
+                        <i class="fas fa-search me-2"></i>
+                        Aucun résultat trouvé pour cette recherche
+                    </td>
+                `;
+                tableBody.appendChild(emptyRow);
+            }
+        } else {
+            if (emptyRow) {
+                emptyRow.remove();
+            }
+        }
+    }
+
+    // Écouteurs d'événements
+    searchInput.addEventListener('input', function() {
+        // Debounce pour éviter trop d'appels
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(performSearch, 300);
+    });
+    
+    dischargeSelect.addEventListener('change', performSearch);
+    
+    // Supprimer le comportement de soumission automatique du formulaire
+    const searchForm = document.getElementById('search-form');
+    if (searchForm) {
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // Empêcher la soumission
+        });
+    }
+
+    // ========== LOGIQUE IMPORT/EXPORT (inchangée) ==========
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-check');
+    const exportImportBtn = document.getElementById('exportImportBtn');
+    const exportImportIcon = exportImportBtn.querySelector('i');
+    const exportImportText = exportImportBtn.querySelector('span');
+
+    function updateImportExportButton() {
+        const checkedBoxes = document.querySelectorAll('.row-check:checked');
+        
+        if (checkedBoxes.length > 0) {
+            exportImportIcon.className = 'fas fa-file-export';
+            exportImportText.textContent = 'Exporter';
+        } else {
+            exportImportIcon.className = 'fas fa-file-import';
+            exportImportText.textContent = 'Importer';
+        }
+    }
+
+    selectAllCheckbox.addEventListener('change', function() {
+        const isChecked = this.checked;
+        // Ne cocher que les lignes visibles
+        const visibleCheckboxes = Array.from(rowCheckboxes).filter(cb => 
+            cb.closest('tr').style.display !== 'none'
+        );
+        visibleCheckboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+        updateImportExportButton();
+    });
+
+    rowCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const visibleCheckboxes = Array.from(rowCheckboxes).filter(cb => 
+                cb.closest('tr').style.display !== 'none'
+            );
+            const allVisibleChecked = visibleCheckboxes.every(cb => cb.checked);
+            const noneVisibleChecked = visibleCheckboxes.every(cb => !cb.checked);
+            
+            selectAllCheckbox.checked = allVisibleChecked;
+            selectAllCheckbox.indeterminate = !allVisibleChecked && !noneVisibleChecked;
+            
+            updateImportExportButton();
+        });
+    });
+
+    exportImportBtn.addEventListener('click', function() {
+        const checkedBoxes = document.querySelectorAll('.row-check:checked');
+        
+        if (checkedBoxes.length > 0) {
+            const selectedIds = Array.from(checkedBoxes).map(cb => {
+                const row = cb.closest('tr');
+                const detailBtn = row.querySelector('.detail-btn, .edit-btn, .delete-btn');
+                if (detailBtn && detailBtn.dataset.admissionId) {
+                    return detailBtn.dataset.admissionId;
+                }
+                return null;
+            }).filter(id => id !== null);
+            
+            Swal.fire({
+                icon: 'info',
+                title: 'Export en cours',
+                text: `Export de ${selectedIds.length} admission(s) sélectionnée(s)...`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            console.log('Export des admissions:', selectedIds);
+        } else {
+            Swal.fire({
+                icon: 'info',
+                title: 'Import',
+                text: 'Fonctionnalité d\'import à implémenter...',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
+    });
+
+    // ========== LOGIQUE EXISTANTE (impression, édition, suppression, etc.) ==========
+    const printButtons = document.querySelectorAll('.btn-print');
+    
+    printButtons.forEach(button => {
+        button.addEventListener('click', function (e) {
+            e.preventDefault();
+            const admissionId = this.getAttribute('data-admission-id');
+            if (admissionId) {
+                window.open(`/hosting/admissions/pdf/${admissionId}/`, '_blank');
+            } else {
+                console.error('ID d\'admission non trouvé');
+            }
+        });
+    });
+
+    const detailButtons = document.querySelectorAll('.detail-btn');
+    detailButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const admissionId = this.dataset.admissionId;
+            loadAdmissionDetails(admissionId);
+        });
+    });
+
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const admissionId = this.dataset.admissionId;
+            Swal.fire({
+                title: 'Confirmer la suppression',
+                text: "Êtes-vous sûr de vouloir supprimer cette admission ?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Oui, supprimer',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    deleteAdmission(admissionId);
+                }
+            });
+        });
+    });
+
+    const editButtons = document.querySelectorAll('.edit-btn, a[href*="admission_update"]');
+    editButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            let admissionId;
+            if (this.dataset.admissionId) {
+                admissionId = this.dataset.admissionId;
+            } else {
+                const href = this.getAttribute('href');
+                const match = href.match(/admissions\/(\d+)\/update/);
+                if (match) {
+                    admissionId = match[1];
+                }
+            }
+            
+            if (admissionId) {
+                loadAdmissionForEdit(admissionId);
+            }
+        });
+    });
+    
+    const admissionForm = document.querySelector('#newAdmissionForm form');
+    if (admissionForm) {
+        admissionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const admissionId = this.dataset.admissionId;
+            if (admissionId) {
+                submitAdmissionUpdate(this, admissionId);
+            } else {
+                const formData = new FormData(this);
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showAlert('success', data.message);
+                        this.reset();
+                        document.getElementById('newAdmissionForm').classList.remove('show');
+                        if (data.redirect) {
+                            window.location.href = data.redirect;
+                        } else {
+                            location.reload();
+                        }
+                    } else {
+                        showAlert('error', data.message || 'Erreur lors de la création');
+                        if (data.errors) {
+                            displayFormErrors(data.errors);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    showAlert('error', 'Erreur lors de la communication avec le serveur');
+                });
+            }
+        });
+    }
+    
+    const cancelButton = document.querySelector('#newAdmissionForm button[data-bs-toggle="collapse"]');
+    if (cancelButton) {
+        cancelButton.addEventListener('click', function() {
+            resetAdmissionForm();
+        });
+    }
+});
+
+// ========== FONCTIONS UTILITAIRES (inchangées) ==========
+function loadAdmissionDetails(admissionId) {
+    const modal = document.getElementById('admissionDetailsModal');
+    const modalBody = modal.querySelector('.modal-body');
+    
+    modalBody.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
+    
+    fetch(`/hosting/admissions/${admissionId}/detail/`)
+        .then(response => response.text())
+        .then(html => {
+            modalBody.innerHTML = html;
+        })
+        .catch(error => {
+            modalBody.innerHTML = '<div class="alert alert-danger">Erreur lors du chargement des détails</div>';
+        });
+    
+    new bootstrap.Modal(modal).show();
+}
+
+function loadAdmissionForEdit(admissionId) {
+    fetch(`/hosting/admissions/${admissionId}/update/`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            populateAdmissionForm(data.form, data.admission);
+            
+            const formTitle = document.querySelector('#newAdmissionForm .card-header');
+            if (formTitle) {
+                formTitle.innerHTML = '<i class="fas fa-edit me-2"></i>Modifier l\'Admission';
+            }
+            
+            const form = document.querySelector('#newAdmissionForm form');
+            if (form) {
+                form.action = `/hosting/admissions/${admissionId}/update/`;
+                form.dataset.admissionId = admissionId;
+            }
+            
+            let hiddenIdField = form.querySelector('input[name="admission_id"]');
+            if (!hiddenIdField) {
+                hiddenIdField = document.createElement('input');
+                hiddenIdField.type = 'hidden';
+                hiddenIdField.name = 'admission_id';
+                hiddenIdField.value = admissionId;
+                form.appendChild(hiddenIdField);
+            }
+            
+            const collapseElement = document.getElementById('newAdmissionForm');
+            if (collapseElement) {
+                collapseElement.classList.add('show');
+            }
+            
+            collapseElement.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            showAlert('error', 'Erreur lors du chargement des données de l\'admission');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showAlert('error', 'Erreur lors de la communication avec le serveur');
+    });
+}
+
+function populateAdmissionForm(formData, admission) {
+    const fields = ['patient', 'consultation', 'assignment_mode', 'room', 'bed', 'room_type', 'discharge_reason'];
+    fields.forEach(field => {
+        const select = document.querySelector(`select[name="${field}"]`);
+        if (select && formData[field]) {
+            select.value = formData[field];
+        }
+    });
+    
+    const dateFields = ['admission_date', 'discharge_date'];
+    dateFields.forEach(field => {
+        const input = document.querySelector(`input[name="${field}"]`);
+        if (input && formData[field]) {
+            input.value = formData[field];
+        }
+    });
+    
+    const notesField = document.querySelector('textarea[name="notes"]');
+    if (notesField && formData.notes) {
+        notesField.value = formData.notes;
+    }
+}
+
+function resetAdmissionForm() {
+    const form = document.querySelector('#newAdmissionForm form');
+    if (form) {
+        form.action = '/hosting/admissions/create/';
+        form.removeAttribute('data-admission-id');
+        
+        const hiddenIdField = form.querySelector('input[name="admission_id"]');
+        if (hiddenIdField) {
+            hiddenIdField.remove();
+        }
+        
+        form.reset();
+        
+        const formTitle = document.querySelector('#newAdmissionForm .card-header');
+        if (formTitle) {
+            formTitle.innerHTML = '<i class="fas fa-edit me-2"></i>Nouvelle Admission';
+        }
+    }
+}
+
+function submitAdmissionUpdate(form, admissionId) {
+    const formData = new FormData(form);
+    
+    fetch(`/hosting/admissions/${admissionId}/update/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showAlert('success', data.message);
+            
+            const collapseElement = document.getElementById('newAdmissionForm');
+            if (collapseElement) {
+                collapseElement.classList.remove('show');
+            }
+            
+            resetAdmissionForm();
+            
+            if (data.redirect) {
+                window.location.href = data.redirect;
+            } else {
+                location.reload();
+            }
+        } else {
+            showAlert('error', data.message || 'Erreur lors de la modification');
+            
+            if (data.errors) {
+                displayFormErrors(data.errors);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showAlert('error', 'Erreur lors de la communication avec le serveur');
+    });
+}
+
+function displayFormErrors(errors) {
+    document.querySelectorAll('.text-danger.small').forEach(el => el.remove());
+    
+    Object.keys(errors).forEach(fieldName => {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+        if (field) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'text-danger small mt-1';
+            errorDiv.textContent = errors[fieldName][0];
+            
+            field.parentNode.appendChild(errorDiv);
+        }
+    });
+}
+
+function showAlert(type, message) {
+    if (type === 'success') {
+        Swal.fire({
+            icon: 'success',
+            title: 'Succès',
+            text: message,
+            timer: 2500,
+            showConfirmButton: false
+        });
+    } else {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        const cardBody = document.querySelector('.card-body');
+        if (cardBody) {
+            cardBody.insertBefore(alertDiv, cardBody.firstChild);
+        }
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+}
+
+function deleteAdmission(admissionId) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/hosting/admissions/${admissionId}/delete/`;
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    
+    form.appendChild(csrfInput);
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card mb-4">
+          <div class="card-header card-header-primary">
+            <i class="fas fa-user me-2"></i>
+            Gestion des Admissions
+          </div>
+          <div class="card-body">
+            <!-- Messages Django -->
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+
+            <!-- Formulaire de recherche et filtres -->
+            <form method="get" id="search-form">
+              <div class="row g-2 mb-3">
+                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                  <div class="input-group">
+                    <span class="input-group-text input-group-text-primary">
+                      <i class="fas fa-search"></i>
+                    </span>
+                    <input type="search" name="q" id="admission-search" class="form-control search-input-primary" 
+                           placeholder="Rechercher une admission..." value="{{ request.GET.q|default:'' }}">
+                  </div>
+                </div>
+                <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+                  <select name="discharge_reason" class="form-select" title="Filtrer par raison de sortie">
+                    <option value="">Toutes les raisons</option>
+                    <option value="active" {% if request.GET.discharge_reason == 'active' %}selected{% endif %}>En cours</option>
+                    <option value="end_of_stay" {% if request.GET.discharge_reason == 'end_of_stay' %}selected{% endif %}>Fin de séjour</option>
+                    <option value="transfer" {% if request.GET.discharge_reason == 'transfer' %}selected{% endif %}>Transfert</option>
+                    <option value="death" {% if request.GET.discharge_reason == 'death' %}selected{% endif %}>Décès</option>
+                  </select>
+                </div>
+                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                  <div class="d-flex gap-1">
+                    <button type="button" id="exportImportBtn" class="btn btn-light border w-100 text-nowrap px-2">
+                      <i class="fas fa-file-import"></i>
+                      <span class="d-none d-lg-inline ms-1">Importer</span>
+                    </button>
+              {% if request.session.user.permissions.hosting.write %}
+                    <button type="button" class="btn btn-primary w-100 text-nowrap px-2" 
+                            data-bs-toggle="collapse" data-bs-target="#newAdmissionForm">
+                      <i class="fas fa-plus"></i>
+                      <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                    </button>
+               {% endif %}
+                  </div>
+                </div>
+              </div>
+            </form>
+
+            <!-- Tableau des admissions -->
+            <table class="table table-responsive table-striped table-hover" id="searchableTable">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th><input type="checkbox" id="selectAll"></th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Patient</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Consultation</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Chambre</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Lit</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Mode</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Date d'admission</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Date de sortie</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Raison de sortie</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for admission in admissions %}
+                  <tr>
+                    <td data-label="Sélection"><input type="checkbox" class="row-check"></td>
+                    <td data-label="Patient">{{ admission.patient }}</td>
+                    <td data-label="Consultation">{{ admission.consultation }}</td>
+                    <td data-label="Chambre">{{ admission.room.room_name|default:"Non assignée" }}</td>
+                    <td data-label="Lit">{{ admission.bed.bed_number|default:"Non assigné" }}</td>
+                    <td data-label="Mode">{{ admission.get_assignment_mode_display }}</td>
+                    <td data-label="Date d'admission">{{ admission.admission_date|date:"d/m/Y" }}</td>
+                    <td data-label="Date de sortie">
+                      {% if admission.discharge_date %}
+                        {{ admission.discharge_date|date:"d/m/Y" }}
+                      {% else %}
+                        <span class="badge bg-success">En cours</span>
+                      {% endif %}
+                    </td>
+                    <td data-label="Raison de sortie">
+                      {% if admission.discharge_reason %}
+                        {{ admission.get_discharge_reason_display }}
+                      {% else %}
+                        <span class="badge bg-info">En cours</span>
+                      {% endif %}
+                    </td>
+              <td data-label="Actions" class="actions-cell">
+                <div class="d-flex gap-1 justify-content-end">
+                  <a href="{% url 'patient:simple_invoice_form' %}?patient={{ admission.patient.patient_id }}" 
+                     class="btn btn-sm btn-light border text-success" 
+                     title="Facturation globale">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                  </a>
+                  <button class="btn btn-sm btn-light border text-primary btn-print" 
+                          title="Imprimer" 
+                          data-admission-id="{{ admission.admission_id }}">
+                    <i class="fas fa-print"></i>
+                  </button>
+                  {% if request.session.user.permissions.hosting.update %}
+                  <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                          title="Modifier" data-admission-id="{{ admission.admission_id }}">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  {% endif %}
+                  {% if request.session.user.permissions.hosting.delete %}
+                  <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                          title="Supprimer" data-admission-id="{{ admission.admission_id }}">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="10" class="text-center text-muted py-4">
+                      <i class="fas fa-info-circle me-2"></i>
+                      Aucune admission enregistrée
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            <!-- Pagination Django -->
+            {% if page_obj.has_other_pages %}
+            <nav class="mt-3">
+              <ul class="pagination justify-content-center flex-wrap">
+                {% if page_obj.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.discharge_reason %}&discharge_reason={{ request.GET.discharge_reason }}{% endif %}" aria-label="Premier">
+                      <span class="d-none d-sm-block">&laquo;&laquo;</span>
+                      <i class="fas fa-angle-double-left d-block d-sm-none"></i>
+                    </a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.discharge_reason %}&discharge_reason={{ request.GET.discharge_reason }}{% endif %}" aria-label="Précédent">
+                      <span class="d-none d-sm-block">&laquo; Préc</span>
+                      <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    </a>
+                  </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                  {% if page_obj.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.discharge_reason %}&discharge_reason={{ request.GET.discharge_reason }}{% endif %}">{{ num }}</a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.discharge_reason %}&discharge_reason={{ request.GET.discharge_reason }}{% endif %}" aria-label="Suivant">
+                      <span class="d-none d-sm-block">Suiv &raquo;</span>
+                      <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    </a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.discharge_reason %}&discharge_reason={{ request.GET.discharge_reason }}{% endif %}" aria-label="Dernier">
+                      <span class="d-none d-sm-block">&raquo;&raquo;</span>
+                      <i class="fas fa-angle-double-right d-block d-sm-none"></i>
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Formulaire de nouvelle admission -->
+        <div class="collapse mt-4 {% if form.errors %}show{% endif %}" id="newAdmissionForm">
+          <div class="card mb-4">
+            <div class="card-header card-header-primary">
+              <i class="fas fa-edit me-2"></i>
+{% if form.instance.pk %}Modifier l'Admission{% else %}Nouvelle Admission{% endif %}            </div>
+            <div class="card-body">
+              <form method="post" action="{% if admission %}{% url 'hosting:admission_update' admission.admission_id %}{% else %}{% url 'hosting:admission_create' %}{% endif %}">
+                {% csrf_token %}
+                <div class="row g-3">
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label">Patient :</label>
+                    <select name="patient" class="form-select" title="Choisir un patient" required>
+                      <option value="">Choisir un patient</option>
+                      {% for patient in patients %}
+                        <option value="{{ patient.id }}" 
+                                {% if form.patient.value == patient.id or admission.patient.id == patient.id %}selected{% endif %}>
+                          {{ patient }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    {% if form.patient.errors %}
+                      <div class="text-danger small mt-1">{{ form.patient.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label">Consultation :</label>
+                    <select name="consultation" class="form-select" title="Choisir une consultation" required>
+                      <option value="">Choisir une consultation</option>
+                      {% for consultation in consultations %}
+                        <option value="{{ consultation.id }}" 
+                                {% if form.consultation.value == consultation.id or admission.consultation.id == consultation.id %}selected{% endif %}>
+                          {{ consultation }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    {% if form.consultation.errors %}
+                      <div class="text-danger small mt-1">{{ form.consultation.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label">Mode d'assignation :</label>
+                    <select name="assignment_mode" class="form-select" title="Choisir un mode" required>
+                      <option value="">Choisir un mode</option>
+                      {% for mode in assignment_modes %}
+                        <option value="{{ mode.0 }}" 
+                                {% if form.assignment_mode.value == mode.0 or admission.assignment_mode == mode.0 %}selected{% endif %}>
+                          {{ mode.1 }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    {% if form.assignment_mode.errors %}
+                      <div class="text-danger small mt-1">{{ form.assignment_mode.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  
+<div class="col-12 col-sm-6 col-md-4">
+  <label class="form-label">Chambre :</label>
+  <select name="room" class="form-select" title="Choisir une chambre" required>
+    <option value="">Choisir une chambre</option>
+    {% for room in rooms %}
+      <option value="{{ room.room_id }}" 
+              {% if form.room.value == room.room_id or admission.room.room_id == room.room_id %}selected{% endif %}>
+        {{ room.room_name }}
+      </option>
+    {% endfor %}
+  </select>
+  {% if form.room.errors %}
+    <div class="text-danger small mt-1">{{ form.room.errors.0 }}</div>
+  {% endif %}
+</div>
+                  
+<div class="col-12 col-sm-6 col-md-4">
+  <label class="form-label">Lit :</label>
+  <select name="bed" class="form-select" title="Choisir un lit">
+    <option value="">Non assigné</option>
+    {% for bed in beds %}
+      <option value="{{ bed.bed_id }}" 
+              {% if form.bed.value == bed.bed_id or admission.bed.bed_id == bed.bed_id %}selected{% endif %}>
+        {{ bed.bed_number }}
+      </option>
+    {% endfor %}
+  </select>
+  {% if form.bed.errors %}
+    <div class="text-danger small mt-1">{{ form.bed.errors.0 }}</div>
+  {% endif %}
+</div>
+                  
+                  <div class="col-12 col-sm-6 col-md-4">
+  <label for="id_room_type" class="form-label">Type de chambre :</label>
+  <select name="room_type" id="id_room_type" class="form-select" required>
+    <option value="">Choisir un type de chambre</option>
+    {% for room_type in room_types %}
+      <option value="{{ room_type.id }}"
+        {% if form.room_type.value|stringformat:"s" == room_type.id|stringformat:"s" %}selected{% endif %}>
+        {{ room_type.name }}
+      </option>
+    {% endfor %}
+  </select>
+  {% if form.room_type.errors %}
+    <div class="text-danger small mt-1">{{ form.room_type.errors.0 }}</div>
+  {% endif %}
+                  </div>
+                  
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label">Date d'admission :</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                      <input type="date" name="admission_date" class="form-control" 
+                             value="{{ form.admission_date.value|date:'Y-m-d'|default:'' }}" required>
+                    </div>
+                    {% if form.admission_date.errors %}
+                      <div class="text-danger small mt-1">{{ form.admission_date.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label">Date de sortie :</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                      <input type="date" name="discharge_date" class="form-control" 
+                             value="{{ form.discharge_date.value|date:'Y-m-d'|default:'' }}">
+                    </div>
+                    {% if form.discharge_date.errors %}
+                      <div class="text-danger small mt-1">{{ form.discharge_date.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label">Raison de sortie :</label>
+                    <select name="discharge_reason" class="form-select" title="Choisir une raison">
+                      <option value="">Non spécifiée</option>
+                      {% for reason in discharge_reasons %}
+                        <option value="{{ reason.0 }}"
+                            {% if form.discharge_reason.value|stringformat:"s" == reason.0|stringformat:"s" %}selected{% endif %}>
+                            {{ reason.1 }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    {% if form.discharge_reason.errors %}
+                      <div class="text-danger small mt-1">{{ form.discharge_reason.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  
+                  <div class="col-12">
+                    <label class="form-label">Notes :</label>
+                    <textarea name="notes" class="form-control" rows="3" placeholder="Remarques...">{{ form.notes.value|default:'' }}</textarea>
+                    {% if form.notes.errors %}
+                      <div class="text-danger small mt-1">{{ form.notes.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                
+                <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#newAdmissionForm">
+                    <i class="fas fa-times"></i>
+                    <span class="d-none d-sm-inline ms-1">Annuler</span>
+                  </button>
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-save"></i>
+                    <span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal pour les détails -->
+        <div class="modal fade" id="admissionDetailsModal" tabindex="-1">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Détails de l'Admission</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <p>Chargement...</p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

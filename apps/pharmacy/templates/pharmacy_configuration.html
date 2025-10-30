@@ -1,0 +1,2653 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Configuration{% endblock %}
+
+{% block menu %}
+  {% include 'pharmacy_menu.html' %}
+{% endblock %}
+
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-gear text-primary me-2"></i>
+    Configuration
+  </h3>
+  <!-- Container principal pour les tables de configuration -->
+  <div class="container-fluid">
+        <ul class="nav nav-tabs mb-3" id="configTabs" role="tablist">
+                <li class="nav-item text-sm-center" role="presentation">
+            <button class="nav-link active border-bottom-0" id="pharmaform-tab" data-bs-toggle="tab" data-bs-target="#pharmaform" type="button" role="tab">Formes galéniques</button>
+          </li>
+                <li class="nav-item text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" id="dci-tab" data-bs-toggle="tab" data-bs-target="#dci" type="button" role="tab">DCI</button>
+          </li>
+                <li class="nav-item text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" id="category-tab" data-bs-toggle="tab" data-bs-target="#category" type="button" role="tab">Catégories</button>
+          </li>
+                <li class="nav-item text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" id="unit-tab" data-bs-toggle="tab" data-bs-target="#unit" type="button" role="tab">Unités de mesure</button>
+          </li>
+                <li class="nav-item text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" id="pharmacy-tab" data-bs-toggle="tab" data-bs-target="#pharmacy" type="button" role="tab">Pharmacies</button>
+          </li>
+                <li class="nav-item text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" id="locationtype-tab" data-bs-toggle="tab" data-bs-target="#locationtype" type="button" role="tab">Types de stockage</button>
+          </li>
+                <li class="nav-item text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" id="location-tab" data-bs-toggle="tab" data-bs-target="#location" type="button" role="tab">Postes de stockage</button>
+          </li>
+                <li class="nav-item text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" id="operationtype-tab" data-bs-toggle="tab" data-bs-target="#operation" type="button" role="tab">Types d'opération</button>
+          </li>
+        </ul>
+
+        <div class="tab-content mt-3" id="configTabsContent">
+      <!-- Formes galéniques -->
+      <div class="tab-pane fade show active" id="pharmaform" role="tabpanel" aria-labelledby="pharmaform-tab">
+        <div class="card table-card mb-4">
+          <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-pharmaform">
+          <div class="row align-items-center mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchPharmaform" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-md-4 d-none d-md-block"></div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3">
+              <div class="d-flex gap-1 justify-content-end">
+                {% if request.session.user.permissions.pharmacy.write %}
+
+                <button type="button" class="btn btn-primary btn-add add-btn" data-entity="pharmaform">
+                  <i class="fas fa-plus"></i>
+                  <span class="ms-1">Ajouter Forme Galénique</span>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </form>
+        <table class="table table-striped table-responsive table-hover" id="pharmaform">
+            <thead class="table-light">
+              <tr class="main-row">
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                                      </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Description</span>
+                                      </div>
+                </th>
+          {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                <th class="text-center">Actions</th>
+          {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for form in pharma_forms %}
+                <tr>
+                  <td data-label="Libellé">{{ form.name }}</td>
+                  <td data-label="Description">{{ form.description|default_if_none:"-" }}</td>
+                {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+            
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="pharmaform" 
+                         data-id="{{ form.id|stringformat:'d' }}" 
+                         data-name="{{ form.name|escapejs }}"
+                         data-description="{{ form.description|default_if_none:''|escapejs }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="pharmaform" 
+                         data-id="{{ form.id|stringformat:'d' }}" 
+                         data-name="{{ form.name|escapejs }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                {% endif %}
+                </tr>
+              {% empty %}
+                <tr id="pharmaform-no-results"><td colspan="3" class="text-center text-muted">Aucune forme galénique</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        <!-- Pagination Component -->
+        <nav aria-label="Navigation pages" class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="pharmaformPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i><span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i><span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- DCI -->
+      <div class="tab-pane fade" id="dci" role="tabpanel">
+        <div class="card table-card mb-4">
+          <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-dci">
+          <div class="row align-items-center mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchDci" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-md-4 d-none d-md-block"></div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3">
+              <div class="d-flex gap-1 justify-content-end">
+                {% if request.session.user.permissions.pharmacy.write %}
+
+                <button type="button" class="btn btn-primary btn-add add-btn" data-entity="dci">
+                  <i class="fas fa-plus"></i>
+                  <span class="ms-1">Ajouter DCI</span>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </form>
+        <table class="table table-striped table-responsive table-hover" id="dci">
+            <thead class="table-light">
+              <tr class="main-row">
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                                      </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Description</span>
+                                      </div>
+                </th>
+          {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                <th class="text-center">Actions</th>
+          {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for dci in dci_list %}
+                <tr>
+                  <td data-label="Libellé">{{ dci.label }}</td>
+                  <td data-label="Description">{{ dci.description|default_if_none:"-" }}</td>
+                  {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="dci" 
+                         data-id="{{ dci.dci_id }}" 
+                         data-name="{{ dci.label|escapejs }}"
+                         data-description="{{ dci.description|default_if_none:''|escapejs }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="dci" 
+                         data-id="{{ dci.dci_id }}" 
+                         data-name="{{ dci.label|escapejs }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+             {% endif %}
+                </tr>
+              {% empty %}
+                <tr id="dci-no-results"><td colspan="3" class="text-center text-muted">Aucune DCI enregistrée</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="dciPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pharmacies -->
+      <div class="tab-pane fade" id="pharmacy" role="tabpanel">
+        <div class="card table-card mb-4">
+          <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-pharmacy">
+          <div class="row align-items-center mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchPharmacy" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-md-4 d-none d-md-block"></div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3">
+              <div class="d-flex gap-1 justify-content-end">
+                {% if request.session.user.permissions.pharmacy.write %}
+                <button type="button" class="btn btn-primary btn-add add-btn" data-entity="pharmacy">
+                  <i class="fas fa-plus"></i>
+                  <span class="ms-1">Ajouter Pharmacie</span>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </form>
+          <table class="table table-striped table-responsive table-hover" id="pharmacy">
+            <thead class="table-light">
+              <tr class="main-row">
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Nom de la pharmacie</span>
+                                      </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Adresse</span>
+                                      </div>
+                </th>
+          {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                <th class="text-center">Actions</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for pharmacy in pharmacy_list %}
+                <tr>
+                  <td data-label="Nom de la pharmacie">{{ pharmacy.label }}</td>
+                  <td data-label="Adresse">{{ pharmacy.adress|default_if_none:"-" }}</td>
+              {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="pharmacy" 
+                         data-id="{{ pharmacy.pharmacy_id|stringformat:'d' }}" 
+                         data-name="{{ pharmacy.label|escapejs }}"
+                         data-address="{{ pharmacy.adress|default_if_none:''|escapejs }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="pharmacy" 
+                         data-id="{{ pharmacy.pharmacy_id|stringformat:'d' }}" 
+                         data-name="{{ pharmacy.label|escapejs }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+       {% endif %}
+                </tr>
+              {% empty %}
+                <tr id="pharmacy-no-results"><td colspan="3" class="text-center text-muted">Aucune pharmacie enregistrée</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="pharmacyPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- Types d'emplacement -->
+      <div class="tab-pane fade" id="locationtype" role="tabpanel">
+        <div class="card table-card mb-4">
+          <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-locationtype">
+          <div class="row align-items-center mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchLocationType" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-md-4 d-none d-md-block"></div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3">
+              <div class="d-flex gap-1 justify-content-end">
+                {% if request.session.user.permissions.pharmacy.write %}
+
+                <button type="button" class="btn btn-primary btn-add add-btn" data-entity="locationtype">
+                  <i class="fas fa-plus"></i>
+                  <span class="ms-1">Ajouter Type de Stockage</span>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </form>
+
+          <table class="table table-striped table-responsive table-hover" id="locationtype">
+            <thead class="table-light">
+              <tr class="main-row">
+
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                                      </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Description</span>
+                                      </div>
+                </th>
+            {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                <th class="text-center">Actions</th>
+            {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for lt in location_types %}
+                <tr>
+                  <td data-label="Libellé">{{ lt.name }}</td>
+                  <td data-label="Description">{{ lt.description|default_if_none:"-" }}</td>
+                  {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="locationtype" 
+                         data-id="{{ lt.location_type_id }}" 
+                         data-name="{{ lt.name|escapejs }}"
+                         data-description="{{ lt.description|default_if_none:''|escapejs }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="locationtype" 
+                         data-id="{{ lt.location_type_id }}" 
+                         data-name="{{ lt.name|escapejs }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                   {% endif %}               
+
+                </tr>
+              {% empty %}
+                <tr id="locationtype-no-results"><td colspan="4" class="text-center text-muted">Aucun type d'emplacement enregistré</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="locationtypePagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emplacements -->
+      <div class="tab-pane fade" id="location" role="tabpanel">
+        <div class="card table-card mb-4">
+          <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-location">
+          <div class="row align-items-center mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchLocation" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-md-4 d-none d-md-block"></div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3">
+              <div class="d-flex gap-1 justify-content-end">
+                {% if request.session.user.permissions.pharmacy.write %}
+
+                <button type="button" class="btn btn-primary btn-add add-btn" data-entity="location">
+                  <i class="fas fa-plus"></i>
+                  <span class="ms-1">Ajouter Poste de Stockage</span>
+                </button>
+             {% endif %}
+              </div>
+            </div>
+          </div>
+        </form>
+
+          <table class="table table-striped table-responsive table-hover" id="location">
+            <thead class="table-light">
+              <tr class="main-row">
+
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Nom</span>
+                                      </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Type</span>
+                                      </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Parent</span>
+                                      </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Pharmacie</span>
+                                      </div>
+                </th>
+          {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                <th class="text-center">Actions</th>
+              {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for location in locations %}
+                <tr>
+                  <td data-label="Nom">{{ location.name }}</td>
+                  <td data-label="Type">{{ location.location_type.name }}</td>
+                  <td data-label="Parent">{{ location.parent_location.name|default_if_none:"-" }}</td>
+                  <td data-label="Pharmacie">{{ location.pharmacy.label|default_if_none:"-" }}</td>
+                 {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}                     
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="location" 
+                         data-id="{{ location.location_id }}" 
+                         data-name="{{ location.name|escapejs }}"
+                         data-location-type="{{ location.location_type.location_type_id|default_if_none:'' }}"
+                         data-parent-location="{{ location.parent_location.location_id|default_if_none:'' }}"
+                         data-pharmacy="{{ location.pharmacy.pharmacy_id|default_if_none:'' }}"
+                         data-is-parent="{% if not location.parent_location %}true{% else %}false{% endif %}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="location" 
+                         data-id="{{ location.location_id }}" 
+                         data-name="{{ location.name|escapejs }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+            {% endif %}
+                </tr>
+              {% empty %}
+                <tr id="location-no-results"><td colspan="6" class="text-center text-muted">Aucun poste enregistré</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="locationPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- Types d'opérations -->
+    
+
+      <!-- Catégories -->
+      <div class="tab-pane fade" id="category" role="tabpanel">
+        <div class="card table-card mb-4">
+          <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-category">
+          <div class="row align-items-center mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchCategory" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-md-4 d-none d-md-block"></div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3">
+              <div class="d-flex gap-1 justify-content-end">
+                {% if request.session.user.permissions.pharmacy.write %}
+
+                <button type="button" class="btn btn-primary btn-add add-btn" data-entity="category">
+                  <i class="fas fa-plus"></i>
+                  <span class="ms-1">Ajouter Catégorie</span>
+                </button>
+       {% endif %}
+
+              </div>
+            </div>
+          </div>
+        </form>
+
+          <table class="table table-striped table-responsive table-hover" id="category">
+            <thead class="table-light">
+              <tr class="main-row">
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                                      </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Description</span>
+                                      </div>
+                </th>
+                {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                <th class="text-center">Actions</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for category in product_categories %}
+                <tr>
+                  <td data-label="Libellé">{{ category.label }}</td>
+                  <td data-label="Description">{{ category.description|default_if_none:"-" }}</td>
+                  {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="category" 
+                         data-id="{{ category.categ_id }}" 
+                         data-name="{{ category.label|escapejs }}"
+                         data-description="{{ category.description|default_if_none:''|escapejs }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="category" 
+                         data-id="{{ category.categ_id }}" 
+                         data-name="{{ category.label|escapejs }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                  {% endif %}
+                </tr>
+              {% empty %}
+                <tr id="category-no-results"><td colspan="3" class="text-center text-muted">Aucune catégorie enregistrée</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="categoryPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+          </div>
+        </div>
+      </div> 
+
+      <!-- Unités de mesure -->
+      <div class="tab-pane fade" id="unit" role="tabpanel">
+        <div class="card table-card mb-4">
+          <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-unit">
+          <div class="row align-items-center mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchUnit" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-md-4 d-none d-md-block"></div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3">
+              <div class="d-flex gap-1 justify-content-end">
+                {% if request.session.user.permissions.pharmacy.write %}
+
+                <button type="button" class="btn btn-primary btn-add add-btn" data-entity="unit">
+                  <i class="fas fa-plus"></i>
+                  <span class="ms-1">Ajouter Unité</span>
+                </button>
+                 {% endif %}
+
+              </div>
+            </div>
+          </div>
+        </form>
+
+          <table class="table table-striped table-responsive table-hover" id="unit">
+            <thead class="table-light">
+              <tr class="main-row">
+
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                                      </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Symbole</span>
+                                      </div>
+                </th>
+                {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                <th class="text-center">Actions</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for unit in product_units %}
+                <tr>
+                  <td data-label="Libellé">{{ unit.label }}</td>
+                  <td data-label="Symbole">{{ unit.symbole }}</td>
+                  {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="unit" 
+                         data-id="{{ unit.uom_id }}" 
+                         data-name="{{ unit.label|escapejs }}"
+                         data-symbol="{{ unit.symbole|escapejs }}"
+                         data-description="{{ unit.description|default_if_none:''|escapejs }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="unit" 
+                         data-id="{{ unit.uom_id }}" 
+                         data-name="{{ unit.label|escapejs }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                  {% endif %}
+                </tr>
+              {% empty %}
+                <tr id="unit-no-results"><td colspan="4" class="text-center text-muted">Aucune unité de mesure enregistrée</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="unitPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- Types d'opération -->
+      <div class="tab-pane fade" id="operation" role="tabpanel">
+        <div class="card table-card mb-4">
+          <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-operation">
+          <div class="row align-items-center mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchOperationType" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-md-4 d-none d-md-block"></div>
+            <div class="col-12 col-sm-12 col-md-3 col-lg-3">
+              <div class="d-flex gap-1 justify-content-end">
+                {% if request.session.user.permissions.pharmacy.write %}
+                <button type="button" class="btn btn-primary btn-add add-btn" data-entity="operationtype">
+                  <i class="fas fa-plus"></i>
+                  <span class="ms-1">Ajouter Type d'Opération</span>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </form>
+
+          <table class="table table-striped table-responsive table-hover" id="operationType">
+            <thead class="table-light">
+              <tr class="main-row">
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                                      </div>
+                </th>
+                {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                <th class="text-center">Actions</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for operation_type in operation_types %}
+                <tr>
+                  <td data-label="Libellé">{{ operation_type.label }}</td>
+                  {% if request.session.user.permissions.pharmacy.update and request.session.user.permissions.pharmacy.delete %}
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="operationtype" 
+                         data-id="{{ operation_type.operation_type_id }}" 
+                         data-name="{{ operation_type.label|escapejs }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="operationtype" 
+                         data-id="{{ operation_type.operation_type_id }}" 
+                         data-name="{{ operation_type.label|escapejs }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                  {% endif %}
+                </tr>
+              {% empty %}
+                <tr id="operation-type-no-results"><td colspan="2" class="text-center text-muted">Aucun type d'opération enregistré</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="operationTypePagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+          </div>
+        </div>
+      </div>
+      
+    
+    <!-- Footer inside card -->
+
+  </div> <!-- End tables container -->
+
+  <!-- Container séparé pour le formulaire d'édition -->
+  
+  <!-- Carte de formulaire séparée (style inventaire) -->
+  <div class="card form-card mb-4 mt-4 p-0 d-none" id="editFormContainer" style="scroll-margin-top: 120px;">
+    {% if request.session.user.permissions.pharmacy.write %}
+
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i id="formIcon" class="fas fa-plus me-2"></i><span id="formTitle">Ajouter</span>
+    </div>
+                    {% endif %}
+
+    <div class="card-body p-3">
+      <form id="editForm" method="post" action="/pharmacy/configuration/">
+      {% csrf_token %}
+      <input type="hidden" name="entity" id="entityInput">
+      <input type="hidden" name="pk" id="pkInput">
+      <input type="hidden" name="action" id="actionInput" value="add">
+      
+      <!-- Champs pour les formes galéniques -->
+      <div class="mb-3 pharmaform-field" style="display: none;">
+        <label for="pharmaformNameInput" class="form-label">Libellé :</label>
+        <input type="text" class="form-control" id="pharmaformNameInput" name="name" required>
+      </div>
+      <div class="mb-3 pharmaform-field" style="display: none;">
+        <label for="pharmaformDescriptionInput" class="form-label">Description :</label>
+        <textarea class="form-control" id="pharmaformDescriptionInput" name="description" rows="3"></textarea>
+      </div>
+      
+      <!-- Champs pour les DCI -->
+      <div class="mb-3 dci-field" style="display: none;">
+        <label for="dciNameInput" class="form-label">Nom :</label>
+        <input type="text" class="form-control" id="dciNameInput" name="label" required>
+      </div>
+      <div class="mb-3 dci-field" style="display: none;">
+        <label for="dciDescriptionInput" class="form-label">Description :</label>
+        <textarea class="form-control" id="dciDescriptionInput" name="description" rows="3"></textarea>
+      </div>
+      
+      <!-- Champs pour les pharmacies -->
+      <div class="mb-3 pharmacy-field" style="display: none;">
+        <label for="pharmacyNameInput" class="form-label">Nom :</label>
+        <input type="text" class="form-control" id="pharmacyNameInput" name="label" required>
+      </div>
+      <div class="mb-3 pharmacy-field" style="display: none;">
+        <label for="pharmacyAddressInput" class="form-label">Adresse : </label>
+        <input type="text" class="form-control" id="pharmacyAddressInput" name="adress">
+      </div>
+      
+      <!-- Champs pour les types d'emplacement -->
+      <div class="mb-3 locationtype-field" style="display: none;">
+        <label for="locationTypeNameInput" class="form-label">Nom :</label>
+        <input type="text" class="form-control" id="locationTypeNameInput" name="name" required>
+      </div>
+      <div class="mb-3 locationtype-field" style="display: none;">
+        <label for="locationTypeDescriptionInput" class="form-label">Description : </label>
+        <textarea class="form-control" id="locationTypeDescriptionInput" name="description" rows="3"></textarea>
+      </div>
+      
+      <!-- Champs pour les emplacements -->
+      <div class="row location-field" style="display: none;">
+        <div class="col-md-6 mb-3">
+          <label for="locationNameInput" class="form-label">Nom :</label>
+          <input type="text" class="form-control" id="locationNameInput" name="name" required>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="locationTypeSelect" class="form-label">Type :</label>
+          <select class="form-select" id="locationTypeSelect" name="location_type" required>
+            <option value="">Choisir un type</option>
+            {% for location_type in location_types %}
+              <option value="{{ location_type.location_type_id }}">{{ location_type.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      
+      <div class="row location-field" style="display: none;">
+        <div class="col-md-6 mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="isRootLocationCheckbox">
+            <label class="form-check-label" for="isRootLocationCheckbox">
+              <strong>Est un emplacement racine</strong>
+            </label>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3" id="parentLocationDiv">
+          <label for="parentLocationSelect" class="form-label">Emplacement parent :</label>
+          <select class="form-select" id="parentLocationSelect" name="parent_location">
+            <option value="">Choisir un parent</option>
+            {% for location in locations %}
+              <option value="{{ location.location_id }}">{{ location.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      
+      <div class="row location-field" style="display: none;">
+        <div class="col-md-6 mb-3">
+          <label for="locationPharmacySelect" class="form-label">Pharmacie :</label>
+          <select class="form-select" id="locationPharmacySelect" name="pharmacy">
+            <option value="">Sélectionner une pharmacie</option>
+            {% for pharmacy in pharmacy_list %}
+              <option value="{{ pharmacy.pharmacy_id }}">{{ pharmacy.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      
+      <!-- Champs pour les types d'opération -->
+      <div class="mb-3 operationtype-field" style="display: none;">
+        <label for="operationTypeNameInput" class="form-label">Nom :</label>
+        <input type="text" class="form-control" id="operationTypeNameInput" name="label" required>
+      </div>
+      
+      <!-- Champs pour les catégories -->
+      <div class="mb-3 category-field" style="display: none;">
+        <label for="categoryNameInput" class="form-label">Nom :</label>
+        <input type="text" class="form-control" id="categoryNameInput" name="label" required>
+      </div>
+      <div class="mb-3 category-field" style="display: none;">
+        <label for="categoryDescriptionInput" class="form-label">Description :</label>
+        <textarea class="form-control" id="categoryDescriptionInput" name="description" rows="3"></textarea>
+      </div>
+      
+
+
+      <!-- Champs pour les unités de mesure -->
+      <div class="mb-3 unit-field" style="display: none;">
+        <label for="unitNameInput" class="form-label">Nom :</label>
+        <input type="text" class="form-control" id="unitNameInput" name="label" required>
+      </div>
+      <div class="mb-3 unit-field" style="display: none;">
+        <label for="unitSymbolInput" class="form-label">Symbole :</label>
+        <input type="text" class="form-control" id="unitSymbolInput" name="symbole" required>
+      </div>
+      
+      <div class="d-flex justify-content-end">
+        <button type="button" class="btn btn-secondary me-2 btn-cancel"><i class="fas fa-times me-2"></i>Annuler</button>
+        <button type="button" class="btn btn-primary  btn-save"><i class="fas fa-save me-2"></i>Sauvegarder</button>
+      </div>
+    </form>
+  </div> <!-- End card-body -->
+</div> <!-- End form card -->
+  <div class="modal fade" id="dciModal" tabindex="-1" aria-labelledby="dciModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          
+          <h5 class="modal-title" id="dciModalLabel">Ajouter une DCI</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="dciForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="dci">
+            <input type="hidden" name="action" id="dciAction" value="add">
+            <input type="hidden" name="pk" id="dciPk" value="">
+            <div class="mb-3">
+              <label for="dciName" class="form-label">Nom :</label>
+              <input type="text" class="form-control" id="dciName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="dciDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="dciDescription" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="dciForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pharmacies -->
+  <div class="modal fade" id="pharmacyModal" tabindex="-1" aria-labelledby="pharmacyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pharmacyModalLabel">Ajouter une Pharmacie</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="pharmacyForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="pharmacy">
+            <input type="hidden" name="action" id="pharmacyAction" value="add">
+            <input type="hidden" name="pk" id="pharmacyPk" value="">
+            <div class="mb-3">
+              <label for="pharmacyName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="pharmacyName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="pharmacyCode" class="form-label">Code</label>
+              <input type="text" class="form-control" id="pharmacyCode" name="code">
+            </div>
+            <div class="mb-3">
+              <label for="pharmacyAddress" class="form-label">Adresse</label>
+              <textarea class="form-control" id="pharmacyAddress" name="address" rows="2"></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="pharmacyPhone" class="form-label">Téléphone</label>
+              <input type="text" class="form-control" id="pharmacyPhone" name="phone">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="pharmacyForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Types d'emplacement -->
+  <div class="modal fade" id="locationTypeModal" tabindex="-1" aria-labelledby="locationTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="locationTypeModalLabel">Ajouter un Type d'emplacement</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="locationTypeForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="location_type">
+            <input type="hidden" name="action" id="locationTypeAction" value="add">
+            <input type="hidden" name="pk" id="locationTypePk" value="">
+            <div class="mb-3">
+              <label for="locationTypeName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="locationTypeName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="locationTypeDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="locationTypeDescription" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="locationTypeForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Emplacements -->
+  <div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="locationModalLabel">Ajouter un Emplacement</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="locationForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="location">
+            <input type="hidden" name="action" id="locationAction" value="add">
+            <input type="hidden" name="pk" id="locationPk" value="">
+            <div class="mb-3">
+              <label for="locationName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="locationName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="locationType" class="form-label">Type d'emplacement</label>
+              <select class="form-select" id="locationType" name="location_type" required>
+                <option value="">Sélectionner un type</option>
+                {% for type in location_types %}
+                <option value="{{ type.id }}">{{ type.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="locationPharmacy" class="form-label">Pharmacie</label>
+              <select class="form-select" id="locationPharmacy" name="pharmacy" required>
+                <option value="">Sélectionner une pharmacie</option>
+                {% for pharmacy in pharmacies %}
+                <option value="{{ pharmacy.id }}">{{ pharmacy.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="locationForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Types d'opération -->
+  <div class="modal fade" id="operationTypeModal" tabindex="-1" aria-labelledby="operationTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="operationTypeModalLabel">Ajouter un Type d'opération</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="operationTypeForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="operation_type">
+            <input type="hidden" name="action" id="operationTypeAction" value="add">
+            <input type="hidden" name="pk" id="operationTypePk" value="">
+            <div class="mb-3">
+              <label for="operationTypeName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="operationTypeName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="operationTypeDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="operationTypeDescription" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="operationTypeForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Catégories de produit -->
+  <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="categoryModalLabel">Ajouter une Catégorie de produit</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="categoryForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="category">
+            <input type="hidden" name="action" id="categoryAction" value="add">
+            <input type="hidden" name="pk" id="categoryPk" value="">
+            <div class="mb-3">
+              <label for="categoryName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="categoryName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="categoryDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="categoryDescription" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="categoryForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Unités de mesure -->
+  <div class="modal fade" id="unitModal" tabindex="-1" aria-labelledby="unitModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="unitModalLabel">Ajouter une Unité de mesure</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="unitForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="unit">
+            <input type="hidden" name="action" id="unitAction" value="add">
+            <input type="hidden" name="pk" id="unitPk" value="">
+            <div class="mb-3">
+              <label for="unitName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="unitName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="unitSymbol" class="form-label">Symbole</label>
+              <input type="text" class="form-control" id="unitSymbol" name="symbol">
+            </div>
+            <div class="mb-3">
+              <label for="unitDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="unitDescription" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="unitForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="container-fluid">
+  <div class="card form-card mb-4 mt-4 p-0 d-none" id="editFormContainer" style="scroll-margin-top: 120px;">
+  <div class="card-header text-white" style="background-color: #1e90ff;">
+    <i id="formIcon" class="fas fa-plus me-2"></i><span id="formTitle">Ajouter</span>
+  </div>
+  <div class="card-body p-3">
+    <form id="editForm" method="post" action="/pharmacy/configuration/">
+    {% csrf_token %}
+    <input type="hidden" name="entity" id="entityInput">
+    <input type="hidden" name="pk" id="pkInput">
+    <input type="hidden" name="action" id="actionInput" value="add">
+    
+    <!-- Champs pour les formes galéniques -->
+    <div class="mb-3 pharmaform-field" style="display: none;">
+      <label for="pharmaformNameInput" class="form-label">Libellé :</label>
+      <input type="text" class="form-control" id="pharmaformNameInput" name="name" required>
+    </div>
+    <div class="mb-3 pharmaform-field" style="display: none;">
+      <label for="pharmaformDescriptionInput" class="form-label">Description :</label>
+      <textarea class="form-control" id="pharmaformDescriptionInput" name="description" rows="3"></textarea>
+    </div>
+    
+    <!-- Champs pour les DCI -->
+    <div class="mb-3 dci-field" style="display: none;">
+      <label for="dciNameInput" class="form-label">Nom :</label>
+      <input type="text" class="form-control" id="dciNameInput" name="label" required>
+    </div>
+    <div class="mb-3 dci-field" style="display: none;">
+      <label for="dciDescriptionInput" class="form-label">Description :</label>
+      <textarea class="form-control" id="dciDescriptionInput" name="description" rows="3"></textarea>
+    </div>
+    
+    <!-- Champs pour les pharmacies -->
+    <div class="mb-3 pharmacy-field" style="display: none;">
+      <label for="pharmacyNameInput" class="form-label">Nom :</label>
+      <input type="text" class="form-control" id="pharmacyNameInput" name="label" required>
+    </div>
+    <div class="mb-3 pharmacy-field" style="display: none;">
+      <label for="pharmacyAddressInput" class="form-label">Adresse :</label>
+      <input type="text" class="form-control" id="pharmacyAddressInput" name="adress">
+    </div>
+    
+    <!-- Champs pour les types d'emplacement -->
+    <div class="mb-3 locationtype-field" style="display: none;">
+      <label for="locationTypeNameInput" class="form-label">Nom :</label>
+      <input type="text" class="form-control" id="locationTypeNameInput" name="name" required>
+    </div>
+    <div class="mb-3 locationtype-field" style="display: none;">
+      <label for="locationTypeDescriptionInput" class="form-label">Description :</label>
+      <textarea class="form-control" id="locationTypeDescriptionInput" name="description" rows="3"></textarea>
+    </div>
+    
+    <!-- Champs pour les emplacements -->
+    <div class="row location-field" style="display: none;">
+      <div class="col-md-6 mb-3">
+        <label for="locationNameInput" class="form-label">Nom :</label>
+        <input type="text" class="form-control" id="locationNameInput" name="name" required>
+      </div>
+      <div class="col-md-6 mb-3">
+        <label for="locationTypeSelect" class="form-label">Type :</label>
+        <select class="form-select" id="locationTypeSelect" name="location_type" required>
+          <option value="">Choisir un type</option>
+          {% for location_type in location_types %}
+            <option value="{{ location_type.location_type_id }}">{{ location_type.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    
+    <div class="row location-field" style="display: none;">
+      <div class="col-md-6 mb-3">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="isRootLocationCheckbox">
+          <label class="form-check-label" for="isRootLocationCheckbox">
+            <strong>Est un emplacement racine</strong>
+          </label>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3" id="parentLocationDiv">
+        <label for="parentLocationSelect" class="form-label">Emplacement parent :</label>
+        <select class="form-select" id="parentLocationSelect" name="parent_location">
+          <option value="">Choisir un parent</option>
+          {% for location in locations %}
+            <option value="{{ location.location_id }}">{{ location.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    
+    <div class="row location-field" style="display: none;">
+      <div class="col-md-6 mb-3">
+        <label for="locationPharmacySelect" class="form-label">Pharmacie :</label>
+        <select class="form-select" id="locationPharmacySelect" name="pharmacy">
+          <option value="">Sélectionner une pharmacie</option>
+          {% for pharmacy in pharmacy_list %}
+            <option value="{{ pharmacy.pharmacy_id }}">{{ pharmacy.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    
+    <!-- Champs pour les types d'opération -->
+    <div class="mb-3 operationtype-field" style="display: none;">
+      <label for="operationTypeNameInput" class="form-label">Nom :</label>
+      <input type="text" class="form-control" id="operationTypeNameInput" name="label" required>
+    </div>
+    
+    <!-- Champs pour les catégories -->
+    <div class="mb-3 category-field" style="display: none;">
+      <label for="categoryNameInput" class="form-label">Nom :</label>
+      <input type="text" class="form-control" id="categoryNameInput" name="label" required>
+    </div>
+    <div class="mb-3 category-field" style="display: none;">
+      <label for="categoryDescriptionInput" class="form-label">Description :</label>
+      <textarea class="form-control" id="categoryDescriptionInput" name="description" rows="3"></textarea>
+    </div>
+    
+    <!-- Champs pour les unités de mesure -->
+    <div class="mb-3 unit-field" style="display: none;">
+      <label for="unitNameInput" class="form-label">Nom :</label>
+      <input type="text" class="form-control" id="unitNameInput" name="label" required>
+    </div>
+    <div class="mb-3 unit-field" style="display: none;">
+      <label for="unitSymbolInput" class="form-label">Symbole :</label>
+      <input type="text" class="form-control" id="unitSymbolInput" name="symbole" required>
+    </div>
+    
+    <div class="d-flex justify-content-end">
+      <button type="button" class="btn btn-secondary me-2 btn-cancel"><i class="fas fa-times me-2"></i>Annuler</button>
+      <button type="button" class="btn btn-primary btn-save"><i class="fas fa-save me-2"></i>Sauvegarder</button>
+    </div>
+  </form>
+  </div> <!-- End card-body -->
+</div> <!-- End form card -->
+  <div class="modal fade" id="dciModal" tabindex="-1" aria-labelledby="dciModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dciModalLabel">Ajouter une DCI</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="dciForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="dci">
+            <input type="hidden" name="action" id="dciAction" value="add">
+            <input type="hidden" name="pk" id="dciPk" value="">
+            <div class="mb-3">
+              <label for="dciName" class="form-label">Nom :</label>
+              <input type="text" class="form-control" id="dciName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="dciDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="dciDescription" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="dciForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pharmacies -->
+  <div class="modal fade" id="pharmacyModal" tabindex="-1" aria-labelledby="pharmacyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pharmacyModalLabel">Ajouter une Pharmacie</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="pharmacyForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="pharmacy">
+            <input type="hidden" name="action" id="pharmacyAction" value="add">
+            <input type="hidden" name="pk" id="pharmacyPk" value="">
+            <div class="mb-3">
+              <label for="pharmacyName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="pharmacyName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="pharmacyCode" class="form-label">Code</label>
+              <input type="text" class="form-control" id="pharmacyCode" name="code">
+            </div>
+            <div class="mb-3">
+              <label for="pharmacyAddress" class="form-label">Adresse</label>
+              <textarea class="form-control" id="pharmacyAddress" name="address" rows="2"></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="pharmacyPhone" class="form-label">Téléphone</label>
+              <input type="text" class="form-control" id="pharmacyPhone" name="phone">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="pharmacyForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Types d'emplacement -->
+  <div class="modal fade" id="locationTypeModal" tabindex="-1" aria-labelledby="locationTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="locationTypeModalLabel">Ajouter un Type d'emplacement</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="locationTypeForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="location_type">
+            <input type="hidden" name="action" id="locationTypeAction" value="add">
+            <input type="hidden" name="pk" id="locationTypePk" value="">
+            <div class="mb-3">
+              <label for="locationTypeName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="locationTypeName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="locationTypeDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="locationTypeDescription" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="locationTypeForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Emplacements -->
+  <div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="locationModalLabel">Ajouter un Emplacement</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="locationForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="location">
+            <input type="hidden" name="action" id="locationAction" value="add">
+            <input type="hidden" name="pk" id="locationPk" value="">
+            <div class="mb-3">
+              <label for="locationName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="locationName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="locationType" class="form-label">Type d'emplacement</label>
+              <select class="form-select" id="locationType" name="location_type" required>
+                <option value="">Sélectionner un type</option>
+                {% for type in location_types %}
+                <option value="{{ type.id }}">{{ type.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="locationPharmacy" class="form-label">Pharmacie</label>
+              <select class="form-select" id="locationPharmacy" name="pharmacy" required>
+                <option value="">Sélectionner une pharmacie</option>
+                {% for pharmacy in pharmacies %}
+                <option value="{{ pharmacy.id }}">{{ pharmacy.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="locationForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Types d'opération -->
+  <div class="modal fade" id="operationTypeModal" tabindex="-1" aria-labelledby="operationTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="operationTypeModalLabel">Ajouter un Type d'opération</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="operationTypeForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="operation_type">
+            <input type="hidden" name="action" id="operationTypeAction" value="add">
+            <input type="hidden" name="pk" id="operationTypePk" value="">
+            <div class="mb-3">
+              <label for="operationTypeName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="operationTypeName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="operationTypeDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="operationTypeDescription" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="operationTypeForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Catégories de produit -->
+  <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="categoryModalLabel">Ajouter une Catégorie de produit</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="categoryForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="category">
+            <input type="hidden" name="action" id="categoryAction" value="add">
+            <input type="hidden" name="pk" id="categoryPk" value="">
+            <div class="mb-3">
+              <label for="categoryName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="categoryName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="categoryDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="categoryDescription" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="categoryForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Unités de mesure -->
+  <div class="modal fade" id="unitModal" tabindex="-1" aria-labelledby="unitModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="unitModalLabel">Ajouter une Unité de mesure</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="unitForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="entity" value="unit">
+            <input type="hidden" name="action" id="unitAction" value="add">
+            <input type="hidden" name="pk" id="unitPk" value="">
+            <div class="mb-3">
+              <label for="unitName" class="form-label">Nom</label>
+              <input type="text" class="form-control" id="unitName" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="unitSymbol" class="form-label">Symbole</label>
+              <input type="text" class="form-control" id="unitSymbol" name="symbol">
+            </div>
+            <div class="mb-3">
+              <label for="unitDescription" class="form-label">Description</label>
+              <textarea class="form-control" id="unitDescription" name="description" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+          <button type="submit" form="unitForm" class="btn btn-primary">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div> <!-- End form & modals container -->
+</div> <!-- End content -->
+
+{% endblock %}
+{% block extra_scripts %}
+    <!-- Bootstrap JS -->
+    <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+    <!-- Custom JS inline -->
+    <script>
+        // État global de l'application
+        const appState = {
+            currentEntity: null,
+            currentAction: null,
+            currentItemId: null
+        };
+
+        // Initialisation de la page
+        // Fonction de pagination (définie avant utilisation)
+        function initializePagination(tableId, paginationId, itemsPerPage) {
+            console.log(`[PAGINATION] Initialisation pour ${tableId}`);
+            const table = document.getElementById(tableId);
+            const pagination = document.getElementById(paginationId);
+            
+            if (!table) {
+                console.log(`[PAGINATION] Table ${tableId} non trouvée`);
+                return;
+            }
+            if (!pagination) {
+                console.log(`[PAGINATION] Pagination ${paginationId} non trouvée`);
+                return;
+            }
+            
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.id.includes('no-results'));
+            
+            console.log(`[PAGINATION] ${tableId}: ${rows.length} lignes trouvées`);
+            
+            if (rows.length <= itemsPerPage) {
+                console.log(`[PAGINATION] ${tableId}: Pagination masquée (${rows.length} <= ${itemsPerPage})`);
+                // Temporairement, on affiche toujours la pagination pour tester
+                // pagination.style.display = 'none';
+                // return;
+            }
+            
+            console.log(`[PAGINATION] ${tableId}: Pagination activée`);
+            
+            let currentPage = 1;
+            const totalPages = Math.ceil(rows.length / itemsPerPage);
+            
+            function showPage(page) {
+                rows.forEach((row, index) => {
+                    const start = (page - 1) * itemsPerPage;
+                    const end = start + itemsPerPage;
+                    row.style.display = (index >= start && index < end) ? '' : 'none';
+                });
+                updatePaginationButtons();
+            }
+            
+            function updatePaginationButtons() {
+                pagination.innerHTML = '';
+                
+                // Previous button
+                const prevLi = document.createElement('li');
+                prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+                prevLi.innerHTML = `<a class="page-link" href="#">Préc</a>`;
+                if (currentPage > 1) {
+                    prevLi.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        currentPage--;
+                        showPage(currentPage);
+                    });
+                }
+                pagination.appendChild(prevLi);
+                
+                // Page numbers
+                for (let i = 1; i <= totalPages; i++) {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                    li.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        currentPage = i;
+                        showPage(currentPage);
+                    });
+                    pagination.appendChild(li);
+                }
+                
+                // Next button
+                const nextLi = document.createElement('li');
+                nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+                nextLi.innerHTML = `<a class="page-link" href="#">Suiv</a>`;
+                if (currentPage < totalPages) {
+                    nextLi.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        currentPage++;
+                        showPage(currentPage);
+                    });
+                }
+                pagination.appendChild(nextLi);
+            }
+            
+            // Initialize first page
+            showPage(1);
+            console.log(`[PAGINATION] ${tableId}: Pagination complètement initialisée`);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initEventListeners();
+            hideAllForms();
+            initTabMemory();
+            
+            // Initialisation de la pagination pour toutes les entités
+            console.log('[PAGINATION] Début initialisation pagination');
+            initializePagination('pharmaform', 'pharmaformPagination', 5);
+            initializePagination('dci', 'dciPagination', 5);
+            initializePagination('pharmacy', 'pharmacyPagination', 5);
+            initializePagination('locationtype', 'locationtypePagination', 5);
+            initializePagination('location', 'locationPagination', 5);
+            initializePagination('category', 'categoryPagination', 5);
+            initializePagination('unit', 'unitPagination', 5);
+            initializePagination('operationType', 'operationTypePagination', 5);
+            console.log('[PAGINATION] Fin initialisation pagination');
+        });
+
+        // Initialisation de la mémoire des onglets
+        function initTabMemory() {
+            const activeTab = localStorage.getItem('pharmacyConfigActiveTab') || 'pharma-forms';
+            const activeTabButton = document.querySelector(`[data-bs-target="#${activeTab}"]`);
+            const activeTabPane = document.getElementById(activeTab);
+            
+            if (activeTabButton && activeTabPane) {
+                // Supprimer la classe 'active' de tous les onglets
+                document.querySelectorAll('.nav-link').forEach(button => button.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active', 'show'));
+                
+                // Ajouter la classe 'active' aux bons onglets
+                activeTabButton.classList.add('active');
+                activeTabPane.classList.add('active', 'show');
+            }
+        }
+
+        // Initialiser les gestionnaires d'événements
+        function initEventListeners() {
+            // Gestionnaire pour le bouton d'ajout
+            document.querySelectorAll('.btn-add').forEach(button => {
+                button.addEventListener('click', function() {
+                    const entity = this.getAttribute('data-entity');
+                    // Définir l'état de l'application
+                    appState.currentEntity = entity;
+                    appState.currentAction = 'add';
+                    appState.currentItemId = null;
+                    
+                    // Définir les champs cachés
+                    document.getElementById('entityInput').value = entity;
+                    document.getElementById('actionInput').value = 'add';
+                    document.getElementById('pkInput').value = '';
+                    
+                    // Mettre à jour le titre et afficher le formulaire
+                    updateFormTitle(entity, 'add');
+                    showForm(entity);
+                    resetForm();
+                });
+            });
+
+            // Gestionnaire pour les boutons d'édition
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const entity = this.getAttribute('data-entity');
+                    const row = this.closest('tr');
+                    const pk = this.getAttribute('data-id');
+                    
+                    // Définir l'état de l'application
+                    appState.currentEntity = entity;
+                    appState.currentAction = 'edit';
+                    appState.currentItemId = pk;
+                    
+                    // Définir les champs cachés
+                    document.getElementById('entityInput').value = entity;
+                    document.getElementById('actionInput').value = 'edit';
+                    document.getElementById('pkInput').value = pk;
+                    
+                    // Mettre à jour le titre et afficher le formulaire AVANT de remplir
+                    updateFormTitle(entity, 'edit');
+                    showForm(entity);
+                    
+                    // Remplir le formulaire avec les données de la ligne APRÈS affichage
+                    fillFormFromRow(entity, this);
+                });
+            });
+
+            // Gestionnaire pour les boutons de suppression
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const entity = this.getAttribute('data-entity');
+                    const pk = this.getAttribute('data-id');
+                    const row = this.closest('tr');
+                    
+                    Swal.fire({
+                        title: 'Êtes-vous sûr ?',
+                        text: 'Vous ne pourrez pas revenir en arrière !',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Oui, supprimer !',
+                        cancelButtonText: 'Annuler'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            deleteItem(entity, pk, row);
+                        }
+                    });
+                });
+            });
+
+            // Gestionnaire pour le bouton de sauvegarde
+            document.querySelector('.btn-save')?.addEventListener('click', function() {
+                const form = document.querySelector('#editForm');
+                const formData = new FormData();
+                
+                // Ajouter le token CSRF
+                const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]');
+                if (csrfToken) {
+                    formData.append('csrfmiddlewaretoken', csrfToken.value);
+                }
+                
+                // Ajouter les champs cachés
+                formData.append('entity', appState.currentEntity || document.getElementById('entityInput').value);
+                formData.append('action', appState.currentAction || document.getElementById('actionInput').value);
+                if (appState.currentAction === 'edit' && appState.currentItemId) {
+                    formData.append('pk', appState.currentItemId);
+                }
+                
+                // Ajouter seulement les champs visibles pour l'entité actuelle
+                const entity = appState.currentEntity;
+                const selector = '.' + entity + '-field input, .' + entity + '-field textarea, .' + entity + '-field select';
+                const visibleFields = form.querySelectorAll(selector);
+                visibleFields.forEach(field => {
+                    if (field.name && field.value !== undefined) {
+                        formData.append(field.name, field.value);
+                    }
+                });
+                
+                saveItem(formData, this);
+            });
+
+            // Gestionnaire pour le bouton d'annulation
+            document.querySelector('.btn-cancel')?.addEventListener('click', function() {
+                document.getElementById('editFormContainer').style.display = 'none';
+                resetForm();
+            });
+
+            // Gestionnaires pour la recherche
+            document.getElementById('searchPharmaform')?.addEventListener('input', function() {
+                filterTable('searchPharmaform', this.value);
+            });
+            document.getElementById('searchDci')?.addEventListener('input', function() {
+                filterTable('searchDci', this.value);
+            });
+            document.getElementById('searchPharmacy')?.addEventListener('input', function() {
+                filterTable('searchPharmacy', this.value);
+            });
+            document.getElementById('searchLocationType')?.addEventListener('input', function() {
+                filterTable('searchLocationType', this.value);
+            });
+            document.getElementById('searchLocation')?.addEventListener('input', function() {
+                filterTable('searchLocation', this.value);
+            });
+            document.getElementById('searchCategory')?.addEventListener('input', function() {
+                filterTable('searchCategory', this.value);
+            });
+            document.getElementById('searchUnit')?.addEventListener('input', function() {
+                filterTable('searchUnit', this.value);
+            });
+            document.getElementById('searchOperationType')?.addEventListener('input', function() {
+                filterTable('searchOperationType', this.value);
+            });
+
+            // Gestionnaires pour les changements d'onglets
+            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tabButton => {
+                tabButton.addEventListener('shown.bs.tab', handleTabChange);
+            });
+        }
+
+        // Gestion du changement d'onglet
+        function handleTabChange(e) {
+            const tabId = e.target.getAttribute('data-bs-target').substring(1);
+            appState.currentEntity = tabId;
+            localStorage.setItem('pharmacyConfigActiveTab', tabId);
+            hideAllForms();
+        }
+
+        // Gestion du clic sur le bouton d'ajout
+        function handleAddClick(button) {
+            const entity = button.dataset.entity;
+            appState.currentEntity = entity;
+            appState.currentAction = 'add';
+            appState.currentItemId = null;
+            
+            showForm(entity);
+            resetForm(entity);
+            updateFormTitle(entity, 'add');
+        }
+
+        // Gestion du clic sur le bouton d'édition
+        function handleEditClick(button) {
+            const entity = button.dataset.entity;
+            const id = button.dataset.id;
+            const row = button.closest('tr');
+            
+            appState.currentEntity = entity;
+            appState.currentAction = 'edit';
+            appState.currentItemId = id;
+            
+            // Remplir le formulaire avec les données de la ligne
+            fillFormFromRow(entity, row);
+            showForm(entity);
+            updateFormTitle(entity, 'edit');
+        }
+
+        // Mettre à jour le titre du formulaire
+        function updateFormTitle(entity, action) {
+            const titleElement = document.querySelector('#editFormContainer h5');
+            if (titleElement) {
+                const entityNames = {
+                    'pharmaform': 'forme galénique',
+                    'dci': 'DCI',
+                    'pharmacy': 'pharmacie',
+                    'locationtype': 'type d\'emplacement',
+                    'location': 'emplacement',
+                    'operationtype': 'type d\'opération',
+                    'category': 'catégorie',
+                    'unit': 'unité de mesure'
+                };
+                
+                const actionText = action === 'add' ? 'Ajouter' : 'Modifier';
+                const entityName = entityNames[entity] || entity;
+                titleElement.textContent = `${actionText} ${entityName}`;
+            }
+        }
+
+        // Gestion du clic sur le bouton de suppression
+        function handleDeleteClick(button) {
+            const entity = button.dataset.entity;
+            const id = button.dataset.id;
+            const name = button.dataset.name || 'cet élément';
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer "${name}" ?`)) {
+                deleteItem(entity, id);
+            }
+        }
+
+        // Gestion du clic sur le bouton d'annulation
+        function handleCancelClick() {
+            hideAllForms();
+            resetForm(appState.currentEntity);
+        }
+
+        // Gestion du clic sur le bouton d'enregistrement
+        function handleSaveClick(button) {
+            const form = document.querySelector('#editForm');
+            if (!form) return;
+            
+            // Validation côté client
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            const formData = new FormData(form);
+            formData.append('entity', appState.currentEntity);
+            formData.append('action', appState.currentAction);
+            
+            if (appState.currentAction === 'edit') {
+                formData.append('pk', appState.currentItemId);
+            }
+            
+            saveItem(formData, button);
+        }
+
+        // Afficher le formulaire pour une entité
+        function showForm(entity) {
+            hideAllForms();
+            const formContainer = document.getElementById('editFormContainer');
+            if (formContainer) {
+                formContainer.style.display = 'block';
+                showRelevantFormFields(entity);
+                
+                // Faire défiler jusqu'au formulaire
+                formContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+                // Focus sur le premier champ
+                const firstInput = formContainer.querySelector('input[type="text"], textarea, select');
+                if (firstInput) {
+                    setTimeout(() => firstInput.focus(), 300);
+                }
+            }
+        }
+
+        // Masquer tous les formulaires
+        function hideAllForms() {
+            const formContainer = document.getElementById('editFormContainer');
+            if (formContainer) {
+                formContainer.style.display = 'none';
+            }
+            hideAllFormFields();
+        }
+
+        // Masquer tous les champs de formulaire
+        function hideAllFormFields() {
+            const formFields = document.querySelectorAll('.pharmaform-field, .dci-field, .pharmacy-field, .locationtype-field, .location-field, .operationtype-field, .category-field, .unit-field');
+            formFields.forEach(field => {
+                field.style.display = 'none';
+            });
+        }
+
+        // Afficher les champs pertinents
+        function showRelevantFormFields(entity) {
+            hideAllFormFields();
+            
+            switch(entity) {
+                case 'pharmaform':
+                    document.querySelectorAll('.pharmaform-field').forEach(field => {
+                        field.style.display = 'block';
+                    });
+                    break;
+                case 'dci':
+                    document.querySelectorAll('.dci-field').forEach(field => {
+                        field.style.display = 'block';
+                    });
+                    break;
+                case 'pharmacy':
+                    document.querySelectorAll('.pharmacy-field').forEach(field => {
+                        field.style.display = 'block';
+                    });
+                    break;
+                case 'locationtype':
+                    document.querySelectorAll('.locationtype-field').forEach(field => {
+                        field.style.display = 'block';
+                    });
+                    break;
+                case 'location':
+                    document.querySelectorAll('.location-field').forEach(field => {
+                        field.style.display = 'flex';
+                    });
+                    break;
+                case 'operationtype':
+                    document.querySelectorAll('.operationtype-field').forEach(field => {
+                        field.style.display = 'block';
+                    });
+                    break;
+                case 'category':
+                    document.querySelectorAll('.category-field').forEach(field => {
+                        field.style.display = 'block';
+                    });
+                    break;
+                case 'unit':
+                    document.querySelectorAll('.unit-field').forEach(field => {
+                        field.style.display = 'block';
+                    });
+                    break;
+            }
+        }
+
+        // Réinitialiser le formulaire
+        function resetForm() {
+            const form = document.querySelector('#editForm');
+            if (form) {
+                form.reset();
+                // Réinitialiser les champs cachés
+                document.getElementById('entityInput').value = '';
+                document.getElementById('pkInput').value = '';
+                document.getElementById('actionInput').value = 'add';
+                
+                // Réinitialiser les selects
+                const selects = form.querySelectorAll('select');
+                selects.forEach(select => {
+                    select.selectedIndex = 0;
+                });
+            }
+        }
+
+        // Vider tous les champs du formulaire
+        function clearAllFormFields() {
+            const form = document.getElementById('editForm');
+            if (form) {
+                // Vider tous les inputs et textareas
+                form.querySelectorAll('input[type="text"], input[type="email"], textarea').forEach(field => {
+                    field.value = '';
+                });
+                // Réinitialiser tous les selects
+                form.querySelectorAll('select').forEach(select => {
+                    select.selectedIndex = 0;
+                });
+            }
+        }
+
+        // Remplir les champs du formulaire à partir des données de la ligne
+        function fillFormFromRow(entity, button) {
+            // Ne pas vider les champs, juste les remplir directement
+            
+            // Configuration spécifique pour chaque entité
+            switch(entity) {
+                case 'pharmaform':
+                    fillFormFieldFromData('name', button.getAttribute('data-name'));
+                    fillFormFieldFromData('description', button.getAttribute('data-description'));
+                    break;
+                case 'dci':
+                    fillFormFieldFromData('label', button.getAttribute('data-name'));
+                    fillFormFieldFromData('description', button.getAttribute('data-description'));
+                    break;
+                case 'pharmacy':
+                    fillFormFieldFromData('label', button.getAttribute('data-name'));
+                    fillFormFieldFromData('adress', button.getAttribute('data-address'));
+                    break;
+                case 'locationtype':
+                    fillFormFieldFromData('name', button.getAttribute('data-name'));
+                    fillFormFieldFromData('description', button.getAttribute('data-description'));
+                    break;
+                case 'location':
+                    fillFormFieldFromData('name', button.getAttribute('data-name'));
+                    fillFormFieldFromData('location_type', button.getAttribute('data-location-type'));
+                    fillFormFieldFromData('parent_location', button.getAttribute('data-parent-location'));
+                    fillFormFieldFromData('pharmacy', button.getAttribute('data-pharmacy'));
+                    break;
+                case 'operationtype':
+                    fillFormFieldFromData('label', button.getAttribute('data-name'));
+                    break;
+                case 'category':
+                    fillFormFieldFromData('label', button.getAttribute('data-name'));
+                    fillFormFieldFromData('description', button.getAttribute('data-description'));
+                    break;
+                case 'unit':
+                    fillFormFieldFromData('label', button.getAttribute('data-name'));
+                    fillFormFieldFromData('symbole', button.getAttribute('data-symbol'));
+                    break;
+            }
+        }
+
+        // Remplir un champ de formulaire
+        function fillFormField(fieldName, cell) {
+            const field = document.querySelector(`[name="${fieldName}"]`);
+            if (field && cell) {
+                const value = cell.textContent.trim();
+                if (field.tagName === 'SELECT') {
+                    const option = Array.from(field.options).find(opt => opt.text.trim() === value);
+                    if (option) option.selected = true;
+                } else {
+                    field.value = value;
+                }
+            }
+        }
+
+        // Remplir un champ de formulaire à partir de données
+        function fillFormFieldFromData(fieldName, value) {
+            // Obtenir l'entité courante
+            const entity = document.getElementById('entityInput').value;
+            
+            // 1. Essayer de trouver le champ par ID spécifique (ex: dciNameInput, dciDescriptionInput)
+            let field = null;
+            
+            // Pour le cas spécial de la description DCI
+            if (entity === 'dci' && fieldName === 'description') {
+                field = document.getElementById('dciDescriptionInput');
+            }
+            // Pour les champs de catégorie
+            else if (entity === 'category') {
+                if (fieldName === 'label') {
+                    field = document.getElementById('categoryNameInput');
+                } else if (fieldName === 'description') {
+                    field = document.getElementById('categoryDescriptionInput');
+                }
+            }
+            // Pour les champs de pharmacie
+            else if (entity === 'pharmacy') {
+                if (fieldName === 'label') {
+                    field = document.getElementById('pharmacyNameInput');
+                } else if (fieldName === 'adress') {
+                    field = document.getElementById('pharmacyAddressInput');
+                }
+            }
+            // Pour les champs de type d'emplacement
+            else if (entity === 'locationtype') {
+                if (fieldName === 'name') {
+                    field = document.getElementById('locationTypeNameInput');
+                } else if (fieldName === 'description') {
+                    field = document.getElementById('locationTypeDescriptionInput');
+                }
+            }
+            // Pour les champs d'emplacement
+            else if (entity === 'location') {
+                if (fieldName === 'name') {
+                    field = document.getElementById('locationNameInput');
+                } else if (fieldName === 'location_type') {
+                    field = document.getElementById('locationTypeSelect');
+                } else if (fieldName === 'parent_location') {
+                    field = document.getElementById('parentLocationSelect');
+                } else if (fieldName === 'pharmacy') {
+                    field = document.getElementById('locationPharmacySelect');
+                }
+            }
+            // Pour les champs de type d'opération
+            else if (entity === 'operationtype') {
+                if (fieldName === 'label') {
+                    field = document.getElementById('operationTypeNameInput');
+                }
+            }
+            // Pour les champs d'unité de mesure
+            else if (entity === 'unit') {
+                if (fieldName === 'label') {
+                    field = document.getElementById('unitNameInput');
+                } else if (fieldName === 'symbole') {
+                    field = document.getElementById('unitSymbolInput');
+                } else if (fieldName === 'description') {
+                    field = document.getElementById('unitDescriptionInput');
+                }
+            }
+            
+            // Si non trouvé, essayer avec le nom du champ
+            if (!field) {
+                field = document.querySelector(`[name="${fieldName}"]`);
+            }
+            
+            if (!field) {
+                return;
+            }
+            
+            if (value === null || value === undefined) {
+                return;
+            }
+            
+            if (field.tagName === 'SELECT') {
+                // Essayer d'abord par valeur, puis par texte
+                let option = Array.from(field.options).find(opt => opt.value === value);
+                if (!option && value) {
+                    option = Array.from(field.options).find(opt => opt.textContent.trim() === value);
+                }
+                if (option) {
+                    option.selected = true;
+                } else {
+                    field.selectedIndex = -1;
+                }
+            } else {
+                field.value = value;
+            }
+        }
+
+        // Enregistrer un élément (AJAX)
+        function saveItem(formData, button) {
+            const originalButtonHtml = button.innerHTML;
+            
+            // Désactiver le bouton pendant la soumission
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Enregistrement...';
+            
+            fetch('/pharmacy/configuration/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Afficher un message de succès avec SweetAlert
+                    const actionText = appState.currentAction === 'add' ? 'ajouté' : 'modifié';
+                    Swal.fire({
+                        title: 'Succès !',
+                        text: `Élément ${actionText} avec succès !`,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    // Gérer les erreurs de validation
+                    let errorMessage = 'Une erreur est survenue';
+                    if (data.error) {
+                        if (typeof data.error === 'object') {
+                            const errors = Object.values(data.error).flat();
+                            errorMessage = errors.join(', ');
+                        } else {
+                            errorMessage = data.error;
+                        }
+                    }
+                    throw new Error(errorMessage);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                Swal.fire({
+                    title: 'Erreur !',
+                    text: error.message || 'Une erreur est survenue lors de l\'enregistrement',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            })
+            .finally(() => {
+                // Réactiver le bouton
+                button.disabled = false;
+                button.innerHTML = originalButtonHtml;
+            });
+        }
+
+        // Supprimer un élément (AJAX)
+        function deleteItem(entity, id) {
+            const formData = new FormData();
+            formData.append('entity', entity);
+            formData.append('action', 'delete');
+            formData.append('pk', id);
+            
+            fetch('/pharmacy/configuration/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Supprimé !',
+                        text: 'Élément supprimé avec succès !',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    throw new Error(data.error || 'Erreur lors de la suppression');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                Swal.fire({
+                    title: 'Erreur !',
+                    text: error.message || 'Erreur lors de la suppression',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            });
+        }
+
+        // Filtrer les tables
+        function filterTable(searchInputId, query) {
+            // Extraire l'entité du nom de l'input de recherche
+            let entity = searchInputId.replace('search', '').toLowerCase();
+            
+            // Mapping des entités vers les IDs des onglets
+            const entityMapping = {
+                'pharmaform': 'pharma-forms',
+                'dci': 'dci-tab',
+                'pharmacy': 'pharmacy-tab',
+                'locationtype': 'location-type-tab',
+                'location': 'location-tab',
+                'category': 'category-tab',
+                'unit': 'unit-tab',
+                'operationtype': 'operation-tab'
+            };
+            
+            // Mapping des noms d'entités pour les messages
+            const entityNames = {
+                'pharmaform': 'forme galénique',
+                'dci': 'DCI',
+                'pharmacy': 'pharmacie',
+                'locationtype': 'type d\'emplacement',
+                'location': 'emplacement',
+                'category': 'catégorie',
+                'unit': 'unité de mesure',
+                'operationtype': 'type d\'opération'
+            };
+            
+            const tabId = entityMapping[entity] || entity;
+            const tabPane = document.getElementById(tabId);
+            if (!tabPane) {
+                console.log('Onglet non trouvé:', tabId);
+                return;
+            }
+            
+            const table = tabPane.querySelector('table');
+            if (!table) {
+                console.log('Table non trouvée dans l\'onglet:', tabId);
+                return;
+            }
+            
+            const rows = table.querySelectorAll('tbody tr:not(.no-results-row)');
+            const lowerQuery = query.toLowerCase();
+            let visibleCount = 0;
+            
+            // Supprimer l'ancien message "Aucun résultat" s'il existe
+            const existingNoResultsRow = table.querySelector('.no-results-row');
+            if (existingNoResultsRow) {
+                existingNoResultsRow.remove();
+            }
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                let found = false;
+                
+                // Chercher dans toutes les cellules sauf la dernière (Actions)
+                for (let i = 0; i < cells.length - 1; i++) {
+                    if (cells[i].textContent.toLowerCase().includes(lowerQuery)) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                const shouldShow = found || query === '';
+                row.style.display = shouldShow ? '' : 'none';
+                if (shouldShow) visibleCount++;
+            });
+            
+            // Ajouter un message "Aucun résultat" si nécessaire
+            if (visibleCount === 0 && query !== '') {
+                const tbody = table.querySelector('tbody');
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.className = 'no-results-row';
+                
+                const colCount = table.querySelectorAll('thead th').length;
+                const entityName = entityNames[entity] || 'résultat';
+                
+                noResultsRow.innerHTML = `
+                    <td colspan="${colCount}" class="text-center text-muted py-4">
+                        <i class="fas fa-search me-2"></i>
+                        Aucun ${entityName} trouvé pour "${query}"
+                    </td>
+                `;
+                
+                tbody.appendChild(noResultsRow);
+            }
+        }
+
+        // Fonction utilitaire pour récupérer un cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Gestionnaire pour le checkbox "Emplacement racine"
+        function initRootLocationCheckbox() {
+            const rootCheckbox = document.getElementById('isRootLocationCheckbox');
+            const parentLocationDiv = document.getElementById('parentLocationDiv');
+            const parentLocationSelect = document.getElementById('parentLocationSelect');
+            
+            if (rootCheckbox && parentLocationDiv) {
+                rootCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        // Si emplacement racine est coché, masquer le champ parent
+                        parentLocationDiv.style.display = 'none';
+                        if (parentLocationSelect) {
+                            parentLocationSelect.value = ''; // Vider la sélection
+                        }
+                    } else {
+                        // Si emplacement racine n'est pas coché, afficher le champ parent
+                        parentLocationDiv.style.display = 'block';
+                    }
+                });
+            }
+        }
+
+        // Initialiser le checkbox quand le formulaire d'emplacement est affiché
+        function initLocationFormHandlers() {
+            // Observer les changements de style pour détecter quand les champs location sont affichés
+            const locationFields = document.querySelectorAll('.location-field');
+            if (locationFields.length > 0) {
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            const target = mutation.target;
+                            if (target.classList.contains('location-field') && 
+                                target.style.display !== 'none') {
+                                // Les champs location sont maintenant visibles, initialiser le checkbox
+                                setTimeout(initRootLocationCheckbox, 100);
+                            }
+                        }
+                    });
+                });
+                
+                locationFields.forEach(function(field) {
+                    observer.observe(field, { attributes: true, attributeFilter: ['style'] });
+                });
+            }
+        }
+
+        // Initialiser au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            initLocationFormHandlers();
+        });
+    </script>
+    
+    <!-- Script de recherche automatique universelle -->
+    <script src="{% static 'js/pharmacy_auto_search.js' %}"></script>
+    
+
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/pharmacy_configuration.js' %}"></script>
+    {% endblock %}

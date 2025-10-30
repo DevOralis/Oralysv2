@@ -1,0 +1,664 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Formations{% endblock %}
+{% block menu %}
+{% include "formation/menu_formation.html" %}
+{% endblock %}
+{% block content %}
+
+<div class="content">
+  <!-- Alerts Section - Utilisation des composants standards -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Main Content Card -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-graduation-cap me-2"></i>
+      Liste des Formations
+    </div>
+    <div class="card-body">
+      <!-- Search Bar Component - Utilisation du composant standard -->
+      <form method="get" id="search-form" class="mb-4">
+        <div class="row g-2">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+            <div class="input-group">
+              
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" 
+                     name="q" 
+                     id="search-title" 
+                     class="form-control border-primary" 
+                     placeholder="Rechercher par titre..." 
+                     value="{{ query|default:'' }}">
+            </div>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm()">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Table Component - Utilisation du composant standard -->
+      <div class="table-responsive">
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless" style="background-color: #f8f9fa;">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Code</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>Titre</th>
+              <th class="d-none d-md-table-cell">Type</th>
+              <th class="d-none d-md-table-cell">Durée (h)</th>
+              <th class="d-none d-md-table-cell">Coût</th>
+              <th class="d-none d-md-table-cell">Domaine</th>
+              <th class="d-none d-md-table-cell">Fournisseur</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="formations-table">
+            {% for formation in formations %}
+            <tr class="main-row">
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td><span class="badge bg-primary">{{ formation.code }}</span></td>
+              <td>{{ formation.titre }}</td>
+              <td class="d-none d-md-table-cell">
+                <span class="badge bg-{% if formation.type == 'interne' %}info{% elif formation.type == 'externe' %}warning{% else %}success{% endif %}">
+                  {{ formation.get_type_display }}
+                </span>
+              </td>
+              <td class="d-none d-md-table-cell text-center">{{ formation.duree_heures }}h</td>
+              <td class="d-none d-md-table-cell text-center">{% if formation.cout %}{{ formation.cout|floatformat:2 }} MAD{% else %}-{% endif %}</td>
+              <td class="d-none d-md-table-cell">
+                {% if formation.domaine %}
+                  <span class="badge bg-secondary">{{ formation.get_domaine_display }}</span>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell">{{ formation.supplier.name }}</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ formation.code }}">
+                  Voir détails
+                </button>
+                <div class="d-none d-md-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-dark" 
+                          data-formation-code="{{ formation.code }}" 
+                          data-formation-titre="{{ formation.titre }}"
+                          data-formation-description="{{ formation.description|default:'' }}"
+                          data-formation-type="{{ formation.type }}"
+                          data-formation-duree="{{ formation.duree_heures }}"
+                          data-formation-cout="{{ formation.cout|default:'' }}"
+                          data-formation-domaine="{{ formation.domaine|default:'' }}"
+                          data-formation-supplier="{{ formation.supplier.id }}"
+                          onclick="openEditForm(this)"
+                          title="Modifier cette formation">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#modalDeleteFormation"
+                          data-formation-code="{{ formation.code }}" 
+                          data-formation-titre="{{ formation.titre }}"
+                          title="Supprimer cette formation">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="collapse bg-light" id="details-{{ formation.code }}">
+              <td colspan="10" class="p-3">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Code:</strong> {{ formation.code }}</p>
+                    <p class="mb-2"><strong>Titre:</strong> {{ formation.titre }}</p>
+                    <p class="mb-2"><strong>Description:</strong> {{ formation.description|truncatechars:100|default:"-" }}</p>
+                    <p class="mb-2"><strong>Type:</strong> 
+                      <span class="badge bg-{% if formation.type == 'interne' %}info{% elif formation.type == 'externe' %}warning{% else %}success{% endif %}">
+                        {{ formation.get_type_display }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Durée:</strong> {{ formation.duree_heures }}h</p>
+                    <p class="mb-2"><strong>Coût:</strong> {% if formation.cout %}{{ formation.cout|floatformat:2 }} MAD{% else %}-{% endif %}</p>
+                    <p class="mb-2"><strong>Domaine:</strong> 
+                      {% if formation.domaine %}
+                        <span class="badge bg-secondary">{{ formation.get_domaine_display }}</span>
+                      {% else %}
+                        -
+                      {% endif %}
+                    </p>
+                    <p class="mb-2"><strong>Fournisseur:</strong> {{ formation.supplier.name }}</p>
+                  </div>
+                  <div class="col-12 mt-3">
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-dark" 
+                              data-formation-code="{{ formation.code }}" 
+                              data-formation-titre="{{ formation.titre }}"
+                              data-formation-description="{{ formation.description|default:'' }}"
+                              data-formation-type="{{ formation.type }}"
+                              data-formation-duree="{{ formation.duree_heures }}"
+                              data-formation-cout="{{ formation.cout|default:'' }}"
+                              data-formation-domaine="{{ formation.domaine|default:'' }}"
+                              data-formation-supplier="{{ formation.supplier.id }}"
+                              onclick="openEditForm(this)"
+                              title="Modifier cette formation">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                      </button>
+                      <button class="btn btn-sm btn-danger" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#modalDeleteFormation"
+                              data-formation-code="{{ formation.code }}" 
+                              data-formation-titre="{{ formation.titre }}"
+                              title="Supprimer cette formation">
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="10" class="text-center text-muted">Aucune formation disponible</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if formations.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if formations.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ formations.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </span>
+            </li>
+          {% endif %}
+
+          {% for num in formations.paginator.page_range %}
+            {% if formations.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+            {% elif num > formations.number|add:'-3' and num < formations.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if formations.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ formations.next_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Formulaire d'ajout de formation -->
+  <div class="card mb-4" id="add-formation">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2"></i>
+      Nouvelle Formation
+    </div>
+    <div class="card-body">
+      <form id="formationForm" method="post" action="{% url 'formation_home' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="id_code">Code <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+              <input type="text" class="form-control" id="id_code" name="code" required maxlength="10">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_type">Type <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-tag"></i></span>
+              <select class="form-select" id="id_type" name="type" required>
+                <option value="">Sélectionner un type</option>
+                {% for value, label in formation_types %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="id_titre">Titre <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-heading"></i></span>
+              <input type="text" class="form-control" id="id_titre" name="titre" required maxlength="255">
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="id_description">Description</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+              <textarea class="form-control" id="id_description" name="description" rows="4" placeholder="Décrivez la formation..."></textarea>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_duree_heures">Durée (heures) <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-clock"></i></span>
+              <input type="number" class="form-control" id="id_duree_heures" name="duree_heures" required min="1">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_cout">Coût (MAD)</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-money-bill"></i></span>
+              <input type="number" class="form-control" id="id_cout" name="cout" step="0.01" min="0" placeholder="0.00">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_domaine">Domaine</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-folder"></i></span>
+              <select class="form-select" id="id_domaine" name="domaine">
+                <option value="">Sélectionner un domaine</option>
+                {% for value, label in formation_domaines %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_supplier">Fournisseur <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-building"></i></span>
+              <select class="form-select" id="id_supplier" name="supplier" required>
+                <option value="">Sélectionner un fournisseur</option>
+                {% for supplier in suppliers %}
+                  <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de formation -->
+  <div class="card mb-4" id="edit-formation" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier la Formation
+    </div>
+    <div class="card-body">
+      <form id="editFormationForm" method="post" action="{% url 'formation_home' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="code" id="edit_formation_code">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="edit_code">Code <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+              <input type="text" class="form-control" id="edit_code" name="code" required maxlength="10" readonly>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_type">Type <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-tag"></i></span>
+              <select class="form-select" id="edit_type" name="type" required>
+                <option value="">Sélectionner un type</option>
+                {% for value, label in formation_types %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="edit_titre">Titre <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-heading"></i></span>
+              <input type="text" class="form-control" id="edit_titre" name="titre" required maxlength="255">
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="edit_description">Description</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+              <textarea class="form-control" id="edit_description" name="description" rows="4" placeholder="Décrivez la formation..."></textarea>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_duree_heures">Durée (heures) <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-clock"></i></span>
+              <input type="number" class="form-control" id="edit_duree_heures" name="duree_heures" required min="1">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_cout">Coût (MAD)</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-money-bill"></i></span>
+              <input type="number" class="form-control" id="edit_cout" name="cout" step="0.01" min="0" placeholder="0.00">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_domaine">Domaine</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-folder"></i></span>
+              <select class="form-select" id="edit_domaine" name="domaine">
+                <option value="">Sélectionner un domaine</option>
+                {% for value, label in formation_domaines %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_supplier">Fournisseur <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-building"></i></span>
+              <select class="form-select" id="edit_supplier" name="supplier" required>
+                <option value="">Sélectionner un fournisseur</option>
+                {% for supplier in suppliers %}
+                  <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Modifier
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour supprimer une formation -->
+<div class="modal fade" id="modalDeleteFormation" tabindex="-1" aria-labelledby="modalDeleteFormationLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalDeleteFormationLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Confirmer la suppression
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+          <div><strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer la formation : <strong id="delete_formation_titre"></strong> ?</div>
+        </div>
+        <p class="text-danger"><i class="fas fa-info-circle me-1"></i> Cette action est irréversible.</p>
+        <form id="deleteFormationForm" method="post" action="{% url 'formation_home' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="code" id="delete_formation_code">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="deleteFormationForm" class="btn btn-danger">
+          <i class="fas fa-trash-alt me-1"></i> Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript pour gérer les modals et la recherche -->
+<script>
+// Gestion de la sélection multiple
+const selectAllCheckbox = document.getElementById('selectAll');
+const rowCheckboxes = document.querySelectorAll('.row-check');
+
+if (selectAllCheckbox) {
+  selectAllCheckbox.addEventListener('change', function() {
+    rowCheckboxes.forEach(checkbox => {
+      checkbox.checked = this.checked;
+    });
+  });
+}
+
+rowCheckboxes.forEach(checkbox => {
+  checkbox.addEventListener('change', function() {
+    const checkedBoxes = document.querySelectorAll('.row-check:checked');
+    const totalBoxes = rowCheckboxes.length;
+    
+    if (checkedBoxes.length === totalBoxes) {
+      selectAllCheckbox.checked = true;
+    } else {
+      selectAllCheckbox.checked = false;
+    }
+  });
+});
+
+// Modal édition/suppression
+document.addEventListener('DOMContentLoaded', function() {
+  // Modal d'édition
+  // Pré-remplissage du formulaire d'édition lorsqu'on clique sur un bouton Modifier
+  window.openEditForm = function(button){
+    const formationCode = button.getAttribute('data-formation-code');
+    const formationTitre = button.getAttribute('data-formation-titre');
+    const formationDescription = button.getAttribute('data-formation-description');
+    const formationType = button.getAttribute('data-formation-type');
+    const formationDuree = button.getAttribute('data-formation-duree');
+    const formationCout = button.getAttribute('data-formation-cout');
+    const formationDomaine = button.getAttribute('data-formation-domaine');
+    const formationSupplier = button.getAttribute('data-formation-supplier');
+
+    const editSection = document.getElementById('edit-formation');
+    const addSection = document.getElementById('add-formation');
+    const currentCode = document.getElementById('edit_formation_code').value || '';
+
+    // Si le formulaire d'édition est déjà ouvert pour la même formation, basculer vers l'ajout
+    if (editSection.style.display !== 'none' && currentCode === formationCode) {
+      editSection.style.display = 'none';
+      addSection.style.display = 'block';
+      window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+      return;
+    }
+
+    // Remplir le formulaire d'édition
+    document.getElementById('edit_formation_code').value = formationCode;
+    document.getElementById('edit_code').value = formationCode;
+    document.getElementById('edit_titre').value = formationTitre;
+    document.getElementById('edit_description').value = formationDescription;
+    document.getElementById('edit_type').value = formationType;
+    document.getElementById('edit_duree_heures').value = formationDuree;
+    document.getElementById('edit_cout').value = formationCout;
+    document.getElementById('edit_domaine').value = formationDomaine;
+    document.getElementById('edit_supplier').value = formationSupplier;
+
+    // Afficher le formulaire d'édition et masquer l'ajout
+    editSection.style.display = 'block';
+    addSection.style.display = 'none';
+    window.scrollTo({ top: editSection.offsetTop - 80, behavior: 'smooth' });
+  }
+
+  // Fonction pour afficher le formulaire d'ajout
+  window.showAddForm = function(){
+    const editSection = document.getElementById('edit-formation');
+    const addSection = document.getElementById('add-formation');
+    
+    editSection.style.display = 'none';
+    addSection.style.display = 'block';
+    window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+  }
+  
+  // Modal de suppression
+  const modalDeleteFormation = document.getElementById('modalDeleteFormation');
+  if (modalDeleteFormation) {
+    modalDeleteFormation.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const formationCode = button.getAttribute('data-formation-code');
+      const formationTitre = button.getAttribute('data-formation-titre');
+      document.getElementById('delete_formation_code').value = formationCode;
+      document.getElementById('delete_formation_titre').textContent = formationTitre;
+    });
+  }
+});
+
+// Recherche instantanée AJAX
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('search-title');
+  const formationsTable = document.getElementById('formations-table');
+  let searchTimeout = null;
+  let lastQuery = searchInput.value;
+  let controller = null;
+
+  if (searchInput && formationsTable) {
+    // Fonction pour effectuer la recherche
+    function performSearch(query) {
+      // Annule la requête précédente si elle existe
+      if (controller) {
+        controller.abort();
+      }
+      
+      controller = new AbortController();
+      
+      // Afficher un indicateur de chargement
+      formationsTable.innerHTML = '<tr><td colspan="10" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</td></tr>';
+      
+      const searchUrl = '/fm/?q=' + encodeURIComponent(query);
+      
+      fetch(searchUrl, {
+        headers: { 
+          'X-Requested-With': 'XMLHttpRequest',
+          'Cache-Control': 'no-cache'
+        },
+        signal: controller.signal
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Erreur réseau: ' + response.status);
+        return response.text();
+      })
+      .then(html => {
+        formationsTable.innerHTML = html;
+      })
+      .catch(error => {
+        if (error.name !== 'AbortError') {
+          formationsTable.innerHTML = '<tr><td colspan="10" class="text-center text-danger">Erreur lors de la recherche: ' + error.message + '</td></tr>';
+        }
+      });
+    }
+
+    // Écouter les changements dans le champ de recherche
+    searchInput.addEventListener('input', function() {
+      const query = searchInput.value.trim();
+      
+      // Annuler le timeout précédent
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      // Si la requête est la même, ne rien faire
+      if (query === lastQuery) return;
+      
+      lastQuery = query;
+      
+      // Attendre 300ms après que l'utilisateur arrête de taper
+      searchTimeout = setTimeout(() => {
+        performSearch(query);
+      }, 300);
+    });
+
+    // Écouter la touche Entrée pour une recherche immédiate
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+        performSearch(searchInput.value.trim());
+      }
+    });
+
+    // Validation côté client pour les formulaires
+    const forms = document.querySelectorAll('form[id$="FormationForm"]');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const requiredFields = this.querySelectorAll('[required]');
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Veuillez remplir tous les champs obligatoires.');
+            }
+        });
+    });
+  }
+});
+
+</script>
+
+{% endblock %}

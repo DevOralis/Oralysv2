@@ -1,0 +1,1783 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Oralys - Configuration{% endblock %}
+
+{% block menu %}
+  {% include 'hr_menu.html' %}
+{% endblock %}
+
+
+{% block extra_scripts %}
+  <link rel="stylesheet" href="{% static 'css/hr-capitalize.css' %}">
+  <!-- Add Bootstrap first to ensure it's loaded before our script -->
+  <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+  
+  <!-- Load our scripts -->
+  <script src="{% static 'js/bootstrap-patch.js' %}"></script>
+  <script src="{% static 'js/script.js' %}"></script>
+  <script src="{% static 'js/configuration.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="content hr-capitalize">
+  <div class="card">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-cog me-2"></i>Liste des configurations
+    </div>
+    <div class="card-body p-3">
+      <ul class="nav nav-tabs flex-wrap mb-3" id="configTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active border-bottom-0" id="position-tab" data-bs-toggle="tab" data-bs-target="#position" type="button" role="tab">Poste</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link border-bottom-0" id="department-tab" data-bs-toggle="tab" data-bs-target="#department" type="button" role="tab">Département</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link border-bottom-0" id="contract-type-tab" data-bs-toggle="tab" data-bs-target="#contract_type" type="button" role="tab">Type contrat</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link border-bottom-0" id="leave-type-tab" data-bs-toggle="tab" data-bs-target="#leave_type" type="button" role="tab">Type congé</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link border-bottom-0" id="prime-tab" data-bs-toggle="tab" data-bs-target="#prime" type="button" role="tab">Prime</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link border-bottom-0" id="social-contributions-tab" data-bs-toggle="tab" data-bs-target="#social_contributions" type="button" role="tab">Cotisations Sociales</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link border-bottom-0" id="speciality-tab" data-bs-toggle="tab" data-bs-target="#speciality" type="button" role="tab">Spécialité</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link border-bottom-0" id="model-calcul-tab" data-bs-toggle="tab" data-bs-target="#model-calcul" type="button" role="tab">Model de Calcul</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link border-bottom-0" id="service-tab" data-bs-toggle="tab" data-bs-target="#service" type="button" role="tab">Service</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link border-bottom-0" id="holiday-tab" data-bs-toggle="tab" data-bs-target="#holiday" type="button" role="tab">Jours fériés</button>
+      </li>
+    </ul>
+    <div class="tab-content mt-3" id="configTabsContent">
+      <!-- Position -->
+      <div class="tab-pane fade show active" id="position" role="tabpanel" aria-labelledby="position-tab">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-position">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchPosition" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn-position">
+                  <i class="fas fa-file-import" id="export-import-icon-position"></i>
+                  <span class="ms-1" id="export-import-text-position">Importer</span>
+                </button>
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2 btn-add add-btn" data-entity="position">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-inline ms-1">Ajouter poste</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="position">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllPosition">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for position in positions %}
+                <tr>
+                  <td data-label="Sélection" class="d-none d-md-table-cell"><input type="checkbox" class="row-check"></td>
+                  <td data-label="Libellé">{{ position.name }}</td>
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="position" 
+                         data-id="{{ position.id|stringformat:'d' }}" 
+                         data-name="{{ position.name }}" 
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="position" 
+                         data-id="{{ position.id|stringformat:'d' }}" 
+                         data-name="{{ position.name }}" 
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="position-no-results"><td colspan="3" class="text-center">Aucun poste</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="positionPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <!-- Department -->
+      <div class="tab-pane fade" id="department" role="tabpanel">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-department">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchDepartment" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn-department">
+                  <i class="fas fa-file-import" id="export-import-icon-department"></i>
+                  <span class="ms-1" id="export-import-text-department">Importer</span>
+                </button>
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2 btn-add add-btn" data-entity="department">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-inline ms-1">Ajouter département</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="department">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllDepartment">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="d-none d-lg-table-cell">
+                  <div class="d-flex align-items-center">
+                    <span>Département Parent</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for department in departments %}
+                <tr>
+                  <td data-label="Sélection" class="d-none d-md-table-cell"><input type="checkbox" class="row-check"></td>
+                  <td data-label="Libellé">{{ department.name }}</td>
+                  <td data-label="Département Parent" class="d-none d-lg-table-cell">{% if department.parent %}{{ department.parent.name }}{% else %}—{% endif %}</td>
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="department" 
+                         data-id="{{ department.id|stringformat:'d' }}" 
+                         data-name="{{ department.name }}" 
+                         {% if department.parent %}data-parent-id="{{ department.parent.id }}"{% endif %}
+                         data-description="{{ department.description|default:'' }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="department" 
+                         data-id="{{ department.id|stringformat:'d' }}" 
+                         data-name="{{ department.name }}" 
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="department-no-results"><td colspan="4" class="text-center">Aucun département</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="departmentPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <!-- Contract Type -->
+      <div class="tab-pane fade" id="contract_type" role="tabpanel">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-contract">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchContractType" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn-contract-type">
+                  <i class="fas fa-file-import" id="export-import-icon-contract-type"></i>
+                  <span class="ms-1" id="export-import-text-contract-type">Importer</span>
+                </button>
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2 btn-add add-btn" data-entity="contract_type">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-inline ms-1">Ajouter type de contrat</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="contract_type">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllContractType">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for contract_type in contract_types %}
+                <tr>
+                  <td data-label="Sélection" class="d-none d-md-table-cell"><input type="checkbox" class="row-check"></td>
+                  <td data-label="Libellé">{{ contract_type.name }}</td>
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="contract_type" 
+                         data-id="{{ contract_type.id|stringformat:'d' }}" 
+                         data-name="{{ contract_type.name }}" 
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="contract_type" 
+                         data-id="{{ contract_type.id|stringformat:'d' }}" 
+                         data-name="{{ contract_type.name }}" 
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="contract-type-no-results"><td colspan="3" class="text-center">Aucun type de contrat</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="contract_typePagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <!-- Leave Type -->
+      <div class="tab-pane fade" id="leave_type" role="tabpanel">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-leave-type">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchLeaveType" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn-leave-type">
+                  <i class="fas fa-file-import" id="export-import-icon-leave-type"></i>
+                  <span class="ms-1" id="export-import-text-leave-type">Importer</span>
+                </button>
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2 btn-add add-btn" data-entity="leave_type">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-inline ms-1">Ajouter type de congé</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="leave_type">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllLeaveType">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for leave_type in leave_types %}
+                <tr>
+                  <td data-label="Sélection" class="d-none d-md-table-cell"><input type="checkbox" class="row-check"></td>
+                  <td data-label="Libellé">{{ leave_type.name }}</td>
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="leave_type" 
+                         data-id="{{ leave_type.type_id|stringformat:'d' }}" 
+                         data-name="{{ leave_type.name }}" 
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="leave_type" 
+                         data-id="{{ leave_type.type_id|stringformat:'d' }}" 
+                         data-name="{{ leave_type.name }}" 
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="leave-type-no-results"><td colspan="3" class="text-center">Aucun type de congé</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="leave_typePagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <!-- Prime -->
+      <div class="tab-pane fade" id="prime" role="tabpanel">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-prime">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchPrime" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn-prime">
+                  <i class="fas fa-file-import" id="export-import-icon-prime"></i>
+                  <span class="ms-1" id="export-import-text-prime">Importer</span>
+                </button>
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2 btn-add add-btn" data-entity="prime">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-inline ms-1">Ajouter prime</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="prime">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllPrime">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Taux (%)</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Montant</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for prime in primes %}
+                <tr>
+                  <td data-label="Sélection" class="d-none d-md-table-cell"><input type="checkbox" class="row-check"></td>
+                  <td data-label="Libellé">{{ prime.libelle }}</td>
+                  <td data-label="Taux (%)">{{ prime.rate|default:"-" }}</td>
+                  <td data-label="Montant">{{ prime.amount|default:"-" }}</td>
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="prime" 
+                         data-id="{{ prime.id }}" 
+                         data-name="{{ prime.libelle }}" 
+                         data-rate="{{ prime.rate|stringformat:'f'|cut:','|default_if_none:'' }}" 
+                         data-amount="{{ prime.amount|stringformat:'f'|cut:','|default_if_none:'' }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="prime" 
+                         data-id="{{ prime.id }}" 
+                         data-name="{{ prime.libelle }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="prime-no-results"><td colspan="5" class="text-center">Aucune prime</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="primePagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <!-- Social Contributions -->
+      <div class="tab-pane fade" id="social_contributions" role="tabpanel">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-social-contributions">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchSocialContributions" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn-social-contributions">
+                  <i class="fas fa-file-import" id="export-import-icon-social-contributions"></i>
+                  <span class="ms-1" id="export-import-text-social-contributions">Importer</span>
+                </button>
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2 btn-add add-btn" data-entity="social_contribution">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-inline ms-1">Ajouter cotisation sociale</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="social_contribution">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllSocialContributions">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Pourcentage (%)</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Plafond</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in social_contributions %}
+                <tr>
+                  <td data-label="Sélection" class="d-none d-md-table-cell"><input type="checkbox" class="row-check"></td>
+                  <td data-label="Libellé">{{ c.label }}</td>
+                  <td data-label="Pourcentage (%)">{{ c.rate }}</td>
+                  <td data-label="Plafond">{% if c.ceiling %}{{ c.ceiling }}{% else %}—{% endif %}</td>
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="social_contribution" 
+                         data-id="{{ c.id|stringformat:'d' }}" 
+                         data-name="{{ c.label }}" 
+                         data-rate="{{ c.rate|stringformat:'f'|cut:',' }}" 
+                         data-ceiling="{% if c.ceiling %}{{ c.ceiling|stringformat:'f'|cut:',' }}{% endif %}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="social_contribution" 
+                         data-id="{{ c.id|stringformat:'d' }}" 
+                         data-name="{{ c.label }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="social_contribution-no-results"><td colspan="5" class="text-center">Aucune cotisation sociale</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="social_contributionPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <!-- Model de Calcul -->
+      <div class="tab-pane fade" id="model-calcul" role="tabpanel">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-model-calcul">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchModelCalcul" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn-model-calcul">
+                  <i class="fas fa-file-import" id="export-import-icon-model-calcul"></i>
+                  <span class="ms-1" id="export-import-text-model-calcul">Importer</span>
+                </button>
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2 btn-add add-btn" data-entity="model_calcul">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-inline ms-1">Ajouter model de calcul</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="modelCalcul">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllModelCalcul">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Primes</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Cotisations sociales</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for calcul in model_calculs %}
+                <tr>
+                  <td data-label="Sélection" class="d-none d-md-table-cell"><input type="checkbox" class="row-check"></td>
+                  <td data-label="Libellé">{{ calcul.libelle }}</td>
+                  <td data-label="Primes">{% for p in calcul.primes.all %}{{ p.libelle }}{% if not forloop.last %} / {% endif %}{% endfor %}</td>
+                  <td data-label="Cotisations sociales">{% for sc in calcul.social_contributions.all %}{{ sc.label }}{% if not forloop.last %} / {% endif %}{% endfor %}</td>
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn"
+                         data-entity="model_calcul"
+                         data-id="{{ calcul.id }}"
+                         data-name="{{ calcul.libelle }}"
+                         data-social-contributions="{% for sc in calcul.social_contributions.all %}{{ sc.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                         data-primes="{% for p in calcul.primes.all %}{{ p.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn"
+                         data-entity="model_calcul"
+                         data-id="{{ calcul.id }}"
+                         data-name="{{ calcul.libelle }}"
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="model-calcul-no-results"><td colspan="5" class="text-center">Aucun model de calcul</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="modelCalculPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <!-- Spécialité -->
+      <div class="tab-pane fade" id="speciality" role="tabpanel">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-speciality">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchSpeciality" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn-speciality">
+                  <i class="fas fa-file-import" id="export-import-icon-speciality"></i>
+                  <span class="ms-1" id="export-import-text-speciality">Importer</span>
+                </button>
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2 btn-add add-btn" data-entity="speciality">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-inline ms-1">Ajouter spécialité</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="speciality">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllSpeciality">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for speciality in specialities %}
+                <tr>
+                  <td data-label="Sélection" class="d-none d-md-table-cell"><input type="checkbox" class="row-check"></td>
+                  <td data-label="Libellé">{{ speciality.name }}</td>
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="speciality" 
+                         data-id="{{ speciality.id|stringformat:'d' }}" 
+                         data-name="{{ speciality.name }}" 
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="speciality" 
+                         data-id="{{ speciality.id|stringformat:'d' }}" 
+                         data-name="{{ speciality.name }}" 
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="speciality-no-results"><td colspan="3" class="text-center">Aucune spécialité</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="specialityPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <!-- Service -->
+      <div class="tab-pane fade" id="service" role="tabpanel">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-service">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchService" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn-service">
+                  <i class="fas fa-file-import" id="export-import-icon-service"></i>
+                  <span class="ms-1" id="export-import-text-service">Importer</span>
+                </button>
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2 btn-add add-btn" data-entity="service">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-inline ms-1">Ajouter Acte</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="service">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllService">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Libellé</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Prix</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for acte in actes %}
+                <tr>
+                  <td data-label="Sélection" class="d-none d-md-table-cell"><input type="checkbox" class="row-check"></td>
+                  <td data-label="Libellé">{{ acte.libelle }}</td>
+                  <td data-label="Prix">{{ acte.price|floatformat:2 }} DH</td>
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="acte" 
+                         data-id="{{ acte.id|stringformat:'d' }}" 
+                         data-name="{{ acte.libelle }}" 
+                         data-price="{{ acte.price|stringformat:'f'|cut:','|default_if_none:'' }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="acte" 
+                         data-id="{{ acte.id|stringformat:'d' }}" 
+                         data-name="{{ acte.libelle }}" 
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="acte-no-results"><td colspan="4" class="text-center">Aucun acte</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="servicePagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <!-- Jours fériés -->
+      <div class="tab-pane fade" id="holiday" role="tabpanel">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form-holiday">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchHoliday" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn-holiday">
+                  <i class="fas fa-file-import" id="export-import-icon-holiday"></i>
+                  <span class="ms-1" id="export-import-text-holiday">Importer</span>
+                </button>
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2 btn-add add-btn" data-entity="holiday">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-inline ms-1">Ajouter jour férié</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="holiday">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllHoliday">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Date</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Nom du jour</span>
+                    <i class="fas fa-sort sort-icon ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for holiday in holidays %}
+                <tr>
+                  <td data-label="Sélection" class="d-none d-md-table-cell"><input type="checkbox" class="row-check"></td>
+                  <td data-label="Date">{{ holiday.date|date:'j F' }}</td>
+                  <td data-label="Nom du jour">{{ holiday.name }}</td>
+                  <td data-label="Actions" class="actions-cell">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark edit-btn" 
+                         data-entity="holiday" 
+                         data-id="{{ holiday.id|stringformat:'d' }}" 
+                         data-name="{{ holiday.name }}" 
+                         data-date="{{ holiday.date }}"
+                         data-day="{{ holiday.date|date:'d' }}"
+                         data-month="{{ holiday.date|date:'m' }}"
+                         title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger delete-btn" 
+                         data-entity="holiday" 
+                         data-id="{{ holiday.id|stringformat:'d' }}" 
+                         data-name="{{ holiday.name }}" 
+                         title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="holiday-no-results"><td colspan="4" class="text-center">Aucun jour férié</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap" id="holidayPagination">
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Précédent">
+                Préc
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item d-none d-sm-block">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#" aria-label="Suivant">
+                Suiv
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+  <!-- Formulaire d'ajout/modification -->
+  <div id="editFormContainer" class="card mt-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2" id="formIcon"></i>
+      <span id="formTitle">Ajouter</span>
+    </div>
+    <div class="card-body p-3">
+      <form id="editForm" method="post" action="{% url 'hr_configuration' %}">
+      {% csrf_token %}
+      <input type="hidden" name="entity" id="entityInput">
+      <input type="hidden" name="pk" id="pkInput">
+      <input type="hidden" name="action" id="actionInput">
+      
+      <!-- Champs communs -->
+      
+      <!-- Champ Libellé commun pour poste, département, type de contrat, type de congé -->
+      <div class="mb-3 common-label-field">
+        <label for="commonLabelInput" class="form-label">Libellé</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-tag"></i>
+          </span>
+          <input type="text" class="form-control border-primary" id="commonLabelInput" name="name" required>
+        </div>
+      </div>
+      
+      <!-- Champs spécifiques aux départements -->
+      <div class="mb-3 department-field">
+        <label for="parentInput" class="form-label">Département parent</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-building"></i>
+          </span>
+          <select class="form-control border-primary" id="parentInput" name="parent">
+            <option value="">-- Aucun parent --</option>
+            {% for dep in departments %}
+            <option value="{{ dep.id|stringformat:'d' }}">{{ dep.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      
+      <!-- Champs spécifiques aux types de congé -->
+      <div class="mb-3 leave_type-field">
+        <label for="daysInput" class="form-label">Jours par défaut</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-calendar-day"></i>
+          </span>
+          <input type="text" 
+                 class="form-control border-primary" 
+                 id="daysInput" 
+                 name="default_days" 
+                 pattern="^[0-9]+([,.][0-9]{0,2})?$" 
+                 title="Entrez un nombre avec jusqu'à 2 décimales (utilisez une virgule ou un point)"
+                 inputmode="decimal">
+        </div>
+        <small class="form-text text-muted">Laissez vide si le nombre de jours n'est pas défini par défaut</small>
+      </div>
+      
+      <div class="mb-3 leave_type-field">
+        <label for="methodInput" class="form-label">Méthode d'accumulation</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-cogs"></i>
+          </span>
+          <select class="form-control border-primary" id="methodInput" name="accrual_method" required>
+            <option value="">Choisir une méthode</option>
+            <option value="annual">Annuel</option>
+            <option value="monthly">Mensuel</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="mb-3 leave_type-field">
+        <label for="yearInput" class="form-label">Année</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-calendar-alt"></i>
+          </span>
+          <input type="number" class="form-control border-primary" id="yearInput" name="year" min="2000" max="2100">
+        </div>
+        <small class="form-text text-muted">Laissez vide si le type de congé n'est pas lié à une année spécifique</small>
+      </div>
+      <div class="mb-3 leave_type-field">
+        <div class="form-check form-switch">
+          <input type="checkbox" class="form-check-input" id="activeInput" name="active" checked>
+          <label class="form-check-label" for="activeInput">Actif</label>
+        </div>
+      </div>
+      
+      <div class="mb-3 leave_type-field">
+        <label class="form-label">Jours de travail</label>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="mondayInput" name="monday" checked>
+          <label class="form-check-label" for="mondayInput">Lundi</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="tuesdayInput" name="tuesday" checked>
+          <label class="form-check-label" for="tuesdayInput">Mardi</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="wednesdayInput" name="wednesday" checked>
+          <label class="form-check-label" for="wednesdayInput">Mercredi</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="thursdayInput" name="thursday" checked>
+          <label class="form-check-label" for="thursdayInput">Jeudi</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="fridayInput" name="friday" checked>
+          <label class="form-check-label" for="fridayInput">Vendredi</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="saturdayInput" name="saturday">
+          <label class="form-check-label" for="saturdayInput">Samedi</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="sundayInput" name="sunday">
+          <label class="form-check-label" for="sundayInput">Dimanche</label>
+        </div>
+        <small class="form-text text-muted">Sélectionnez les jours qui seront comptés dans le calcul des congés</small>
+      </div>
+      
+      <div class="mb-3 leave_type-field">
+        <label for="descriptionInput" class="form-label">Description</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-align-left"></i>
+          </span>
+          <textarea class="form-control border-primary" id="descriptionInput" name="description" rows="3"></textarea>
+        </div>
+      </div>
+      
+      <!-- Champs spécifiques aux cotisations sociales -->
+      <div class="mb-3 social_contribution-field">
+        <label for="socialLabelInput" class="form-label">Libellé</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-tag"></i>
+          </span>
+          <input type="text" class="form-control border-primary" id="socialLabelInput" name="label" required>
+        </div>
+      </div>
+      <div class="mb-3 social_contribution-field">
+        <label for="rateInput" class="form-label">Pourcentage (%)</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-percentage"></i>
+          </span>
+          <input type="number" class="form-control border-primary" id="rateInput" name="rate" min="0" max="100" step="0.01" required>
+        </div>
+      </div>
+      <div class="mb-3 social_contribution-field">
+        <label for="ceilingInput" class="form-label">Plafond</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-euro-sign"></i>
+          </span>
+          <input type="number" class="form-control border-primary" id="ceilingInput" name="ceiling" min="0" step="0.01">
+        </div>
+      </div>
+      
+      <!-- Champs spécifiques aux primes -->
+      <div class="mb-3 prime-field">
+        <label for="primeLibelleInput" class="form-label">Libellé</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-gift"></i>
+          </span>
+          <input type="text" class="form-control border-primary" id="primeLibelleInput" name="libelle" required>
+        </div>
+      </div>
+      <div class="mb-3 prime-field">
+        <label for="primeRateInput" class="form-label">Taux (%)</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-percentage"></i>
+          </span>
+          <input type="number" class="form-control border-primary" id="primeRateInput" name="rate" min="0" max="100" step="0.01">
+        </div>
+      </div>
+      <div class="mb-3 prime-field">
+        <label for="primeAmountInput" class="form-label">Montant</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-euro-sign"></i>
+          </span>
+          <input type="number" class="form-control border-primary" id="primeAmountInput" name="amount" min="0" step="0.01">
+        </div>
+      </div>
+
+      <div class="mb-3 model_calcul-field">
+        <label for="modelCalculLibelleInput" class="form-label">Libellé</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-calculator"></i>
+          </span>
+          <input type="text" class="form-control border-primary" id="modelCalculLibelleInput" name="libelle" required>
+        </div>
+      </div>
+      <div class="mb-3 model_calcul-field">
+        <label class="form-label">Cotisations Sociales</label>
+        <div>
+          {% for sc in social_contributions %}
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="scCheckbox{{ sc.id }}" name="social_contributions" value="{{ sc.id }}">
+              <label class="form-check-label" for="scCheckbox{{ sc.id }}">{{ sc.label }}</label>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      <!-- Primes (checkboxes) -->
+      <div class="mb-3 model_calcul-field">
+        <label class="form-label">Primes</label>
+        <div>
+          {% for p in primes %}
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="primeCheckbox{{ p.id }}" name="primes" value="{{ p.id }}">
+              <label class="form-check-label" for="primeCheckbox{{ p.id }}">{{ p.libelle }}</label>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      
+      <!-- Champs spécifiques aux actes -->
+      <div class="mb-3 acte-field">
+        <label for="acteLibelleInput" class="form-label">Libellé</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-concierge-bell"></i>
+          </span>
+          <input type="text" class="form-control border-primary" id="acteLibelleInput" name="libelle" required>
+        </div>
+      </div>
+      <div class="mb-3 acte-field">
+        <label for="actePriceInput" class="form-label">Prix (DH)</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-coins"></i>
+          </span>
+          <input type="number" class="form-control border-primary" id="actePriceInput" name="price" min="0" step="0.01" required>
+        </div>
+      </div>
+
+      <!-- Champs spécifiques aux jours fériés -->
+      <div class="mb-3 holiday-field">
+        <label class="form-label">Date (jour/mois)</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-calendar"></i>
+          </span>
+          <select class="form-control border-primary" id="holidayDayInput" name="day" required>
+            <option value="">Jour</option>
+            <option value="01">01</option>
+            <option value="02">02</option>
+            <option value="03">03</option>
+            <option value="04">04</option>
+            <option value="05">05</option>
+            <option value="06">06</option>
+            <option value="07">07</option>
+            <option value="08">08</option>
+            <option value="09">09</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+            <option value="16">16</option>
+            <option value="17">17</option>
+            <option value="18">18</option>
+            <option value="19">19</option>
+            <option value="20">20</option>
+            <option value="21">21</option>
+            <option value="22">22</option>
+            <option value="23">23</option>
+            <option value="24">24</option>
+            <option value="25">25</option>
+            <option value="26">26</option>
+            <option value="27">27</option>
+            <option value="28">28</option>
+            <option value="29">29</option>
+            <option value="30">30</option>
+            <option value="31">31</option>
+          </select>
+          <select class="form-control border-primary" id="holidayMonthInput" name="month" required>
+            <option value="">Mois</option>
+            <option value="01">janvier</option>
+            <option value="02">février</option>
+            <option value="03">mars</option>
+            <option value="04">avril</option>
+            <option value="05">mai</option>
+            <option value="06">juin</option>
+            <option value="07">juillet</option>
+            <option value="08">août</option>
+            <option value="09">septembre</option>
+            <option value="10">octobre</option>
+            <option value="11">novembre</option>
+            <option value="12">décembre</option>
+          </select>
+        </div>
+      </div>
+      <div class="mb-3 holiday-field">
+        <label for="holidayNameInput" class="form-label">Nom du jour</label>
+        <div class="input-group">
+          <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+            <i class="fas fa-tag"></i>
+          </span>
+          <input type="text" class="form-control border-primary" id="holidayNameInput" name="name" placeholder="Ex: Nouvel An" required>
+        </div>
+      </div>
+
+      <div class="text-end">
+        <button type="button" class="btn btn-secondary me-2 cancel-btn" id="cancelBtn">
+          <i class="fas fa-times"></i> 
+          <span class="d-none d-sm-inline">Annuler</span>
+        </button>
+        <button type="submit" class="btn btn-primary" id="saveBtn">
+          <i class="fas fa-save" id="saveBtnIcon"></i> 
+          <span id="saveBtnText" class="d-none d-sm-inline">Sauvegarder</span>
+        </button>
+      </div>
+    </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour les types de congés -->
+<div class="modal fade" id="leave_typeModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="leave_typeForm" data-entity="leave_type">
+          {% csrf_token %}
+          <input type="hidden" name="entity" value="leave_type">
+          <input type="hidden" name="action" value="add">
+          <input type="hidden" name="pk" value="">
+          
+          <div class="mb-3">
+            <label for="nameInput" class="form-label">Nom</label>
+            <input type="text" class="form-control" id="nameInput" name="name" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="daysInput" class="form-label">Jours par défaut</label>
+            <input type="text" class="form-control" id="daysInput" name="default_days" pattern="[0-9]+([,.][0-9]+)?" placeholder="Ex: 20 ou 20,5">
+          </div>
+          
+          <div class="mb-3">
+            <label for="accrualMethodInput" class="form-label">Méthode d'acquisition</label>
+            <select class="form-select" id="accrualMethodInput" name="accrual_method" required>
+              <option value="annual">Annuel</option>
+              <option value="monthly">Mensuel</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="yearInput" class="form-label">Année</label>
+            <input type="number" class="form-control" id="yearInput" name="year" min="2000" max="2100">
+          </div>
+          
+          <div class="mb-3">
+            <label for="descriptionInput" class="form-label">Description</label>
+            <textarea class="form-control" id="descriptionInput" name="description" rows="3"></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <div class="form-check form-switch">
+              <input type="checkbox" class="form-check-input" id="activeInput" name="active" checked>
+              <label class="form-check-label" for="activeInput">Actif</label>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Jours de travail</label>
+            <div class="d-flex flex-wrap gap-3">
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="mondayInput" name="monday" checked>
+                <label class="form-check-label" for="mondayInput">Lundi</label>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="tuesdayInput" name="tuesday" checked>
+                <label class="form-check-label" for="tuesdayInput">Mardi</label>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="wednesdayInput" name="wednesday" checked>
+                <label class="form-check-label" for="wednesdayInput">Mercredi</label>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="thursdayInput" name="thursday" checked>
+                <label class="form-check-label" for="thursdayInput">Jeudi</label>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="fridayInput" name="friday" checked>
+                <label class="form-check-label" for="fridayInput">Vendredi</label>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="saturdayInput" name="saturday">
+                <label class="form-check-label" for="saturdayInput">Samedi</label>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="sundayInput" name="sunday">
+                <label class="form-check-label" for="sundayInput">Dimanche</label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary cancel-btn">Annuler</button>
+        <button type="submit" form="leave_typeForm" class="btn btn-primary">Sauvegarder</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour ajouter/modifier un département -->
+<div class="modal fade" id="departmentModal" tabindex="-1" aria-labelledby="departmentModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="departmentModalLabel">Ajouter un département</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <form id="departmentForm">
+        <div class="modal-body">
+          <input type="hidden" name="entity" value="department">
+          <input type="hidden" name="action" value="add">
+          <input type="hidden" name="id" value="">
+          
+          <div class="mb-3">
+            <label for="departmentName" class="form-label">Nom du département</label>
+            <input type="text" class="form-control" id="departmentName" name="name" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="departmentParent" class="form-label">Département parent (optionnel)</label>
+            <select class="form-select" id="departmentParent" name="parent">
+              <option value="">Aucun (département principal)</option>
+              {% for dept in departments %}
+                <option value="{{ dept.id }}">{{ dept.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="departmentDescription" class="form-label">Description (optionnel)</label>
+            <textarea class="form-control" id="departmentDescription" name="description" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fonction de tri des tableaux
+    function sortTable(table, columnIndex, ascending = true) {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.id.includes('no-results'));
+        
+        rows.sort((a, b) => {
+            const aText = a.cells[columnIndex].textContent.trim();
+            const bText = b.cells[columnIndex].textContent.trim();
+            
+            // Gestion des nombres
+            const aNum = parseFloat(aText.replace(/[^\d.-]/g, ''));
+            const bNum = parseFloat(bText.replace(/[^\d.-]/g, ''));
+            
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+                return ascending ? aNum - bNum : bNum - aNum;
+            }
+            
+            // Gestion du texte
+            return ascending ? aText.localeCompare(bText) : bText.localeCompare(aText);
+        });
+        
+        // Réorganiser les lignes
+        rows.forEach(row => tbody.appendChild(row));
+    }
+    
+    // Ajouter les événements de clic sur les icônes de tri
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.style.cursor = 'pointer';
+        icon.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const th = this.closest('th');
+            const table = this.closest('table');
+            const columnIndex = Array.from(th.parentNode.children).indexOf(th);
+            
+            // Réinitialiser toutes les autres icônes
+            table.querySelectorAll('.sort-icon').forEach(otherIcon => {
+                if (otherIcon !== this) {
+                    otherIcon.className = 'fas fa-sort sort-icon ms-1 text-muted';
+                }
+            });
+            
+            // Déterminer la direction du tri
+            let ascending = true;
+            if (this.classList.contains('fa-sort-up')) {
+                ascending = false;
+                this.className = 'fas fa-sort-down sort-icon ms-1 text-primary';
+            } else {
+                ascending = true;
+                this.className = 'fas fa-sort-up sort-icon ms-1 text-primary';
+            }
+            
+            // Effectuer le tri
+            sortTable(table, columnIndex, ascending);
+        });
+    });
+    
+    // Fonction pour initialiser la pagination pour chaque table
+    function initializePagination() {
+        const tables = ['position', 'department', 'contract_type', 'leave_type', 'prime', 'social_contribution', 'modelCalcul', 'speciality', 'service', 'holiday'];
+        
+        tables.forEach(tableId => {
+            const table = document.getElementById(tableId);
+            const paginationId = tableId === 'contract_type' ? 'contract_typePagination' : 
+                                 tableId === 'leave_type' ? 'leave_typePagination' :
+                                 tableId === 'social_contribution' ? 'social_contributionPagination' :
+                                 tableId === 'modelCalcul' ? 'modelCalculPagination' :
+                                 tableId + 'Pagination';
+            
+            const pagination = document.getElementById(paginationId);
+            
+            if (table && pagination) {
+                setupTablePagination(table, pagination);
+            }
+        });
+    }
+    
+    // Fonction pour configurer la pagination d'une table
+    function setupTablePagination(table, pagination) {
+        const itemsPerPage = 10;
+        let currentPage = 1;
+        
+        function displayRows() {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.id.includes('no-results'));
+            
+            // Masquer toutes les lignes
+            rows.forEach(row => row.style.display = 'none');
+            
+            // Afficher les lignes de la page courante
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            
+            for (let i = startIndex; i < endIndex && i < rows.length; i++) {
+                rows[i].style.display = '';
+            }
+            
+            updatePagination();
+        }
+        
+        function updatePagination() {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.id.includes('no-results'));
+            const totalPages = Math.ceil(rows.length / itemsPerPage);
+            
+            // Vider la pagination
+            pagination.innerHTML = '';
+            
+            // Bouton Précédent
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = '<a class="page-link" href="#" aria-label="Précédent">Préc</a>';
+            if (currentPage > 1) {
+                prevLi.querySelector('a').onclick = (e) => {
+                    e.preventDefault();
+                    currentPage--;
+                    displayRows();
+                };
+            }
+            pagination.appendChild(prevLi);
+            
+            // Numéros de page
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                li.querySelector('a').onclick = (e) => {
+                    e.preventDefault();
+                    currentPage = i;
+                    displayRows();
+                };
+                pagination.appendChild(li);
+            }
+            
+            // Bouton Suivant
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}`;
+            nextLi.innerHTML = '<a class="page-link" href="#" aria-label="Suivant">Suiv</a>';
+            if (currentPage < totalPages) {
+                nextLi.querySelector('a').onclick = (e) => {
+                    e.preventDefault();
+                    currentPage++;
+                    displayRows();
+                };
+            }
+            pagination.appendChild(nextLi);
+        }
+        
+        // Initialiser l'affichage
+        displayRows();
+    }
+    
+    // Initialiser la pagination après un court délai
+    setTimeout(initializePagination, 100);
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Commandes d'Achat{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'purchases/css/supplier.css' %}">
+  <script src="{% static 'purchases/js/scroll-to-form.js' %}"></script>
+{% endblock %}
+
+{% block menu %}
+  {% include 'purchases_menu.html' %}
+{% endblock %}
+
+{% block content %}
+  {% include 'orders_list.html' %}
+  {% include 'new_order.html' %}
+{% endblock %}

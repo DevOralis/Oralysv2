@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block menu %}
+    {% include 'dashboard/dashboard_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+        <h1 class="h3">Menu Dashboard - Applications</h1>
+    </div>
+
+    <div class="text-center py-5">
+        <p class="lead text-muted">Sélectionnez une application dans le menu à gauche pour commencer.</p>
+    </div>
+</div>
+{% endblock %}

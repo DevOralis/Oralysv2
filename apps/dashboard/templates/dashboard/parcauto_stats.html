@@ -1,0 +1,725 @@
+{% extends "base.html" %}
+{% block title %}Statistiques des Véhicules{% endblock %}
+{% block menu %}
+{% include "dashboard/dashboard_menu.html" %}
+{% endblock %}
+{% block content %}
+<div class="content">
+  
+  
+  <!-- Cartes de statistiques principales -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Statistiques Principales</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-3">
+          <div class="kpi-card text-white h-100" style="background-color: #1e90ff;">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+            <i class="fas fa-car fa-2x "></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ total_vehicles }}</h3>
+                <p class="mb-0">Total Véhicules</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card bg-success text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+              <i class="fas fa-tachometer-alt fa-2x"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ average_kilometers|floatformat:"0" }} km</h3>
+                <p class="mb-0">Kilométrage Moyen</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card bg-warning text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+              <i class="fas fa-users fa-2x"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ active_assignments }}</h3>
+                <p class="mb-0">Affectations Actives</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card bg-info text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+              <i class="fas fa-tools fa-2x"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ maintenance_this_month }}</h3>
+                <p class="mb-0">Maintenance ce Mois</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Graphiques de répartition des véhicules -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold" style="color: #1e90ff;">Répartition Par Statut</h6>
+        </div>
+        <div class="card-body">
+          <canvas id="vehicleStatusChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold" style="color: #1e90ff;">Répartition Par Type</h6>
+        </div>
+        <div class="card-body">
+          <canvas id="vehicleTypeChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Statistiques par Modèle -->
+  <div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+      <h6 class="m-0 font-weight-bold" style="color: #1e90ff;">Statistiques Par Modèle</h6>
+      <div class="dropdown no-arrow">
+        <select class="form-control form-control-sm" id="modelFilter">
+          <option value="">Tous Modèles</option>
+          {% for model in models %}
+          <option value="{{ model.id }}">{{ model.marque.nom }} {{ model.nom }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    
+    <!-- Indicateur de chargement -->
+    <div id="loadingIndicator" class="text-center p-4" style="display: none;">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Chargement...</span>
+      </div>
+    </div>
+    
+    <div class="card-body" id="modelContent">
+      <ul class="nav nav-tabs" id="modelTabs" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link active" id="overview-tab" data-toggle="tab" href="#overview" role="tab" aria-controls="overview" aria-selected="true">
+            Vue d'ensemble
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="maintenance-tab" data-toggle="tab" href="#maintenance" role="tab" aria-controls="maintenance" aria-selected="false">
+            Maintenance
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="assignments-tab" data-toggle="tab" href="#assignments" role="tab" aria-controls="assignments" aria-selected="false">
+            Affectations
+          </a>
+        </li>
+      </ul>
+      
+      <div class="tab-content mt-3" id="modelTabsContent">
+        <!-- Onglet Vue d'ensemble -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-4">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                  <h6 class="card-title mb-0">Répartition Par Statut</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="modelStatusChart" height="250"></canvas>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                  <h6 class="card-title mb-0">Kilométrage</h6>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-bordered">
+                      <tbody>
+                        <tr>
+                          <td>Kilométrage Moyen</td>
+                          <td class="font-weight-bold" id="avgKm">{{ model_stats.average_kilometers|floatformat:"0" }} km</td>
+                        </tr>
+                        <tr>
+                          <td>Kilométrage Max</td>
+                          <td class="font-weight-bold" id="maxKm">{{ model_stats.max_kilometers|floatformat:"0" }} km</td>
+                        </tr>
+                        <tr>
+                          <td>Kilométrage Min</td>
+                          <td class="font-weight-bold" id="minKm">{{ model_stats.min_kilometers|floatformat:"0" }} km</td>
+                        </tr>
+                        <tr>
+                          <td>Kilométrage Total</td>
+                          <td class="font-weight-bold" id="totalKm">{{ model_stats.total_kilometers|floatformat:"0" }} km</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header bg-info text-white">
+              <h6 class="card-title mb-0">Informations Modèle</h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4">
+                  <p><strong>Marque:</strong> <span id="marque">{{ model_stats.marque }}</span></p>
+                  <p><strong>Modèle:</strong> <span id="modele">{{ model_stats.nom }}</span></p>
+                  <p><strong>Véhicules:</strong> <span id="vehicleCount">{{ model_stats.vehicle_count }}</span></p>
+                </div>
+                <div class="col-md-4">
+                  <p><strong>Année Moyenne:</strong> <span id="avgYear">{{ model_stats.average_year }}</span></p>
+                  <p><strong>Âge Moyen:</strong> <span id="avgAge">{{ model_stats.average_age|floatformat:"1" }}</span> ans</p>
+                </div>
+                <div class="col-md-4">
+                  <p><strong>Dernier Achat:</strong> <span id="lastPurchase">{{ model_stats.last_purchase|date:"d/m/Y"|default:"N/A" }}</span></p>
+                  <p><strong>Premier Achat:</strong> <span id="firstPurchase">{{ model_stats.first_purchase|date:"d/m/Y"|default:"N/A" }}</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Onglet Maintenance -->
+        <div class="tab-pane fade" id="maintenance" role="tabpanel" aria-labelledby="maintenance-tab">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                  <h6 class="card-title mb-0">Types Maintenance</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="maintenanceTypeChart" height="250"></canvas>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                  <h6 class="card-title mb-0">Statut Maintenances</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="maintenanceStatusChart" height="250"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header bg-secondary text-white">
+              <h6 class="card-title mb-0">Détails Maintenances</h6>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Total</th>
+                      <th>Planifiées</th>
+                      <th>Terminées</th>
+                      <th>En Retard</th>
+                    </tr>
+                  </thead>
+                  <tbody id="maintenanceDetailsTable">
+                    {% for type in model_stats.maintenance_by_type %}
+                    <tr>
+                      <td>{{ type.type_entretien__nom|default:"N/A" }}</td>
+                      <td>{{ type.total }}</td>
+                      <td>{{ type.planned }}</td>
+                      <td>{{ type.completed }}</td>
+                      <td>{{ type.overdue }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="5" class="text-center">Aucune Maintenance Trouvée</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Onglet Affectations -->
+        <div class="tab-pane fade" id="assignments" role="tabpanel" aria-labelledby="assignments-tab">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-4">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                  <h6 class="card-title mb-0">Affectations Actuelles</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="currentAssignmentsChart" height="250"></canvas>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                  <h6 class="card-title mb-0">Historique Affectations</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="assignmentHistoryChart" height="250"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header bg-info text-white">
+              <h6 class="card-title mb-0">Statistiques Affectations</h6>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                  <thead>
+                    <tr>
+                      <th>Statistique</th>
+                      <th>Valeur</th>
+                    </tr>
+                  </thead>
+                  <tbody id="assignmentStatsTable">
+                    <tr>
+                      <td>Total Affectations</td>
+                      <td id="totalAssignments">{{ model_stats.total_assignments }}</td>
+                    </tr>
+                    <tr>
+                      <td>Affectations Actives</td>
+                      <td id="activeAssignments">{{ model_stats.active_assignments }}</td>
+                    </tr>
+                    <tr>
+                      <td>Durée Moyenne</td>
+                      <td id="avgDuration">{{ model_stats.avg_assignment_duration|floatformat:"1" }} jours</td>
+                    </tr>
+                    <tr>
+                      <td>Km Moyen Par Affectation</td>
+                      <td id="avgAssignmentKm">{{ model_stats.avg_assignment_kilometers|floatformat:"0" }} km</td>
+                    </tr>
+                    <tr>
+                      <td>Conducteurs Uniques</td>
+                      <td id="uniqueDrivers">{{ model_stats.unique_drivers }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+  // Rendre les données Django disponibles en JavaScript
+  const vehicle_status_labels = {{ vehicle_status_labels|safe }};
+  const vehicle_status_data = {{ vehicle_status_data|safe }};
+  const vehicle_type_labels = {{ vehicle_type_labels|safe }};
+  const vehicle_type_data = {{ vehicle_type_data|safe }};
+  const model_charts_data = {{ model_charts_data|safe }};
+
+  // Instances des graphiques
+  const chartInstances = {};
+
+  // Initialiser un graphique
+  function initChart(id, type, labels, data, colors) {
+    const ctx = document.getElementById(id);
+    if (!ctx) {
+      console.warn(`Élément canvas avec l'ID '${id}' non trouvé`);
+      return null;
+    }
+    return new Chart(ctx.getContext('2d'), {
+      type: type,
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: type === 'bar' ? 'top' : 'right'
+          }
+        },
+        scales: type === 'bar' ? {
+          y: { beginAtZero: true }
+        } : {}
+      }
+    });
+  }
+
+  // Initialiser un graphique linéaire (pour l'historique des affectations)
+  function initLineChart(id, labels, data, label) {
+    const ctx = document.getElementById(id);
+    if (!ctx) {
+      console.warn(`Élément canvas avec l'ID '${id}' non trouvé`);
+      return null;
+    }
+    return new Chart(ctx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: label,
+          data: data,
+          borderColor: '#1e90ff',
+          backgroundColor: 'rgba(30, 144, 255, 0.05)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true }
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top'
+          }
+        }
+      }
+    });
+  }
+
+  // Mettre à jour les données d'un tableau
+  function updateTable(tableId, data, columns) {
+    const tbody = document.getElementById(tableId);
+    if (!tbody) {
+      console.warn(`Corps de tableau avec l'ID '${tableId}' non trouvé`);
+      return;
+    }
+    tbody.innerHTML = '';
+    if (!data || data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="${columns.length}" class="text-center">Aucune donnée trouvée</td></tr>`;
+      return;
+    }
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      columns.forEach(col => {
+        const td = document.createElement('td');
+        let value = row[col];
+        if (value === null || value === undefined) {
+          value = 'N/A';
+        }
+        td.textContent = value;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Mettre à jour les statistiques du modèle
+  function updateModelStats(stats) {
+    console.log('Mise à jour des stats du modèle:', stats);
+    
+    function safeUpdateText(id, value) {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = value;
+      } else {
+        console.warn(`Élément avec l'ID '${id}' non trouvé`);
+      }
+    }
+
+    // Onglet Vue d'ensemble - Section Kilométrage
+    safeUpdateText('avgKm', Math.round(stats.average_kilometers || 0) + ' km');
+    safeUpdateText('maxKm', Math.round(stats.max_kilometers || 0) + ' km');
+    safeUpdateText('minKm', Math.round(stats.min_kilometers || 0) + ' km');
+    safeUpdateText('totalKm', Math.round(stats.total_kilometers || 0) + ' km');
+    
+    // Onglet Vue d'ensemble - Informations Modèle
+    safeUpdateText('marque', stats.marque || 'N/A');
+    safeUpdateText('modele', stats.nom || 'N/A');
+    safeUpdateText('vehicleCount', stats.vehicle_count || 0);
+    safeUpdateText('avgYear', stats.average_year || 'N/A');
+    safeUpdateText('avgAge', (stats.average_age || 0).toFixed(1) + ' ans');
+    
+    const formatDate = (dateStr) => {
+      if (!dateStr) return 'N/A';
+      try {
+        return new Date(dateStr).toLocaleDateString();
+      } catch (e) {
+        return 'N/A';
+      }
+    };
+    
+    safeUpdateText('lastPurchase', formatDate(stats.last_purchase));
+    safeUpdateText('firstPurchase', formatDate(stats.first_purchase));
+    
+    // Onglet Maintenance - Tableau des détails
+    updateTable('maintenanceDetailsTable', stats.maintenance_by_type || [],
+      ['type_entretien__nom', 'total', 'planned', 'completed', 'overdue']);
+    
+    // Onglet Affectations - Statistiques
+    safeUpdateText('totalAssignments', stats.total_assignments || 0);
+    safeUpdateText('activeAssignments', stats.active_assignments || 0);
+    safeUpdateText('avgDuration', (stats.avg_assignment_duration || 0).toFixed(1) + ' jours');
+    safeUpdateText('avgAssignmentKm', Math.round(stats.avg_assignment_kilometers || 0) + ' km');
+    safeUpdateText('uniqueDrivers', stats.unique_drivers || 0);
+  }
+
+  // Mettre à jour les graphiques avec de nouvelles données
+  function updateCharts(chartData) {
+    console.log('Mise à jour des graphiques avec données:', chartData);
+    
+    // Détruire les anciens graphiques spécifiques au modèle s'ils existent
+    const modelCharts = ['modelStatus', 'maintenanceType', 'maintenanceStatus', 'currentAssignments', 'assignmentHistory'];
+    modelCharts.forEach(chartName => {
+      if (chartInstances[chartName]) {
+        chartInstances[chartName].destroy();
+        delete chartInstances[chartName];
+      }
+    });
+
+    try {
+      // Graphique Statut Modèle
+      if (chartData.model_status_labels && chartData.model_status_labels.length > 0) {
+        chartInstances.modelStatus = initChart(
+          'modelStatusChart', 'doughnut',
+          chartData.model_status_labels,
+          chartData.model_status_data || [],
+          ['#1e90ff', '#1cc88a', '#f6c23e', '#e74a3b', '#858796']
+        );
+      }
+      
+      // Graphique Type de Maintenance
+      if (chartData.maintenance_type_labels && chartData.maintenance_type_labels.length > 0) {
+        chartInstances.maintenanceType = initChart(
+          'maintenanceTypeChart', 'bar',
+          chartData.maintenance_type_labels,
+          chartData.maintenance_type_data || [],
+          ['#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#1cc88a']
+        );
+      }
+      
+      // Graphique Statut Maintenance
+      if (chartData.maintenance_status_labels && chartData.maintenance_status_labels.length > 0) {
+        chartInstances.maintenanceStatus = initChart(
+          'maintenanceStatusChart', 'pie',
+          chartData.maintenance_status_labels,
+          chartData.maintenance_status_data || [],
+          ['#1e90ff', '#1cc88a', '#e74a3b']
+        );
+      }
+      
+      // Graphique Affectations Actuelles
+      if (chartData.assignment_labels && chartData.assignment_labels.length > 0) {
+        chartInstances.currentAssignments = initChart(
+          'currentAssignmentsChart', 'doughnut',
+          chartData.assignment_labels,
+          chartData.assignment_data || [],
+          ['#1e90ff', '#1cc88a']
+        );
+      }
+      
+      // Graphique Historique des Affectations (graphique linéaire)
+      if (chartData.assignment_history_labels && chartData.assignment_history_labels.length > 0) {
+        chartInstances.assignmentHistory = initLineChart(
+          'assignmentHistoryChart',
+          chartData.assignment_history_labels,
+          chartData.assignment_history_data || [],
+          'Affectations'
+        );
+      }
+    } catch (error) {
+      console.error('Erreur lors de la création des graphiques:', error);
+    }
+  }
+
+  // Charger les données du modèle via AJAX
+  function loadModelData(modelId) {
+    if (!modelId) {
+      console.log('Aucun ID de modèle fourni, annulation du chargement');
+      return;
+    }
+    
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const modelContent = document.getElementById('modelContent');
+    
+    if (loadingIndicator) loadingIndicator.style.display = 'block';
+    if (modelContent) modelContent.style.opacity = '0.5';
+    
+    fetch(`/pa/model-data/${modelId}/`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP! statut: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Données reçues:', data);
+        if (data.success) {
+          updateModelStats(data.model_stats);
+          updateCharts(data.charts_data);
+          console.log('Données du modèle mises à jour avec succès');
+        } else {
+          throw new Error(data.error || 'Erreur serveur inconnue');
+        }
+      })
+      .catch(error => {
+        console.error('Erreur lors du chargement des données du modèle:', error);
+        alert('Échec du chargement des données du modèle: ' + error.message);
+      })
+      .finally(() => {
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        if (modelContent) modelContent.style.opacity = '1';
+      });
+  }
+
+  // Gestion des onglets via l'URL Hash
+  function activateTabFromHash() {
+      const hash = window.location.hash;
+      if (hash) {
+          const tabTriggerEl = document.querySelector(`.nav-link[href="${hash}"]`);
+          if (tabTriggerEl) {
+              const tab = new bootstrap.Tab(tabTriggerEl);
+              tab.show();
+              console.log(`Onglet activé via hash: ${hash}`);
+          } else {
+              console.warn(`Déclencheur d'onglet pour le hash '${hash}' non trouvé.`);
+          }
+      } else {
+          console.log("Pas de hash dans l'URL, l'onglet par défaut reste actif.");
+      }
+  }
+
+  // Initialiser la page lorsque le DOM est chargé
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initialisation de la page de statistiques...');
+    try {
+      // Initialiser les graphiques principaux de répartition des véhicules
+      if (vehicle_status_labels && vehicle_status_data) {
+        chartInstances.vehicleStatus = initChart(
+          'vehicleStatusChart', 'doughnut',
+          vehicle_status_labels,
+          vehicle_status_data,
+          ['#1e90ff', '#1cc88a', '#f6c23e']
+        );
+      }
+      
+      if (vehicle_type_labels && vehicle_type_data) {
+        chartInstances.vehicleType = initChart(
+          'vehicleTypeChart', 'pie',
+          vehicle_type_labels,
+          vehicle_type_data,
+          ['#1e90ff', '#1cc88a', '#f6c23e', '#e74a3b']
+        );
+      }
+      
+      // Initialiser les graphiques du modèle avec les données par défaut
+      if (model_charts_data) {
+        updateCharts(model_charts_data);
+      }
+      
+      // Configurer le gestionnaire du filtre de modèle
+      const modelFilter = document.getElementById('modelFilter');
+      if (modelFilter) {
+        modelFilter.addEventListener('change', function() {
+          console.log('Filtre de modèle changé pour:', this.value);
+          if (this.value) {
+            loadModelData(this.value);
+          } else {
+            console.log('Tous les modèles sélectionnés - réinitialisation');
+            updateModelStats({
+              marque: 'N/A',
+              nom: 'Sélectionnez un modèle',
+              vehicle_count: 0,
+              average_kilometers: 0,
+              max_kilometers: 0,
+              min_kilometers: 0,
+              total_kilometers: 0,
+              average_year: 0,
+              average_age: 0,
+              first_purchase: null,
+              last_purchase: null,
+              maintenance_by_type: [],
+              total_assignments: 0,
+              active_assignments: 0,
+              avg_assignment_duration: 0,
+              avg_assignment_kilometers: 0,
+              unique_drivers: 0,
+            });
+            updateCharts({
+              model_status_labels: [],
+              model_status_data: [],
+              maintenance_type_labels: [],
+              maintenance_type_data: [],
+              maintenance_status_labels: [],
+              maintenance_status_data: [],
+              assignment_labels: ['Active', 'Terminée'],
+              assignment_data: [0, 0],
+              assignment_history_labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'],
+              assignment_history_data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            });
+          }
+        });
+      } else {
+        console.warn('Élément de filtre de modèle non trouvé');
+      }
+
+      // Gestion des onglets via l'URL Hash
+      activateTabFromHash();
+
+      const tabEls = document.querySelectorAll('#modelTabs a[data-toggle="tab"]');
+      tabEls.forEach(function(tabEl) {
+          tabEl.addEventListener('shown.bs.tab', function (event) {
+              const targetHash = event.target.getAttribute('href');
+              if (targetHash) {
+                  history.pushState(null, null, targetHash);
+                  console.log(`Hash URL mis à jour vers: ${targetHash}`);
+              }
+          });
+      });
+
+      window.addEventListener('popstate', function(event) {
+          console.log("Événement popstate détecté.");
+          activateTabFromHash();
+      });
+
+      console.log('Page de statistiques initialisée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation de la page de statistiques:', error);
+    }
+  });
+  </script>
+
+</div>
+
+{% endblock %}

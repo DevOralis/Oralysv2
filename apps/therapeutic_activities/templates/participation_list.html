@@ -1,0 +1,934 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block menu %}
+  {% include 'therapeutic_activities_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-users text-primary me-2"></i>
+    Participations
+  </h3>
+  <div class="card">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <div>
+        <i class="fas fa-user-check me-2"></i>
+        Liste des participations aux sessions
+      </div>
+    </div>
+    
+    <div class="card-body">
+      <!-- Search and Filter Form -->
+      <form id="search-form">
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-1">
+            <div class="input-group">
+              <span class="input-group-text input-group-text-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" class="form-control search-input-primary"
+                     placeholder="Recherche par patient, session, activité..." 
+                     id="searchInput">
+            </div>
+          </div>
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-2">
+            <select class="form-select" title="Filtrer par session" id="filterSession">
+              <option value="">Toutes les sessions</option>
+              {% for session in sessions %}
+                <option value="{{ session.id }}">
+                  {{ session.activity.title }} - {{ session.date }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-3">
+            <select class="form-select" title="Filtrer par statut" id="filterStatus">
+              <option value="">Tous les statuts</option>
+              <option value="present">Présent</option>
+              <option value="absent">Absent</option>
+              <option value="excused">Excusé</option>
+            </select>
+          </div>
+          {% if request.session.user.permissions.therapeutic_activities.write %}
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-4">
+            <button type="button" class="btn btn-primary w-100 text-nowrap px-2" 
+                    data-bs-toggle="collapse" data-bs-target="#participationFormCollapse" 
+                    title="Nouvelle participation">
+              <i class="fas fa-plus"></i>
+              <span class="d-lg-inline ms-1">Nouvelle participation</span>
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </form>
+
+      <!-- Table des participations -->
+        <table class="table table-striped table-hover table-responsive" id="participations-table">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="sortable" data-sort="patient" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Patient</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="session" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Session</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="date" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Date & Heure</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="location" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Salle</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center sortable" data-sort="status" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Statut</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="notes" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Notes</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center action-column no-sort">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="participations-tbody">
+            {% for participation in participations %}
+            <tr>
+              <td data-label="Patient">
+                <div class="d-flex align-items-center">
+                  <!-- <div class="avatar-sm bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center">
+                    <i class="fas fa-user"></i>
+                  </div> -->
+                  <div>
+                    <strong>{{ participation.patient.get_full_name }}</strong>
+                    {% if participation.patient.phone %}
+                      <br><small class="text-muted">{{ participation.patient.phone }}</small>
+                    {% endif %}
+                  </div>
+                </div>
+              </td>
+              <td data-label="Session">
+                <div>
+                  <strong>{{ participation.session.activity.title }}</strong>
+                  <br><small class="text-muted">{{ participation.session.activity.type.name }}</small>
+                </div>
+              </td>
+              <td data-label="Date & Heure">
+                <div>
+                  <strong>{{ participation.session.date|date:"d/m/Y" }}</strong>
+                  <br><small class="text-muted">{{ participation.session.start_time }} - {{ participation.session.end_time }}</small>
+                </div>
+              </td>
+              <td data-label="Salle">{{ participation.session.location.name }}</td>
+              <td data-label="Statut" class="text-center">
+                <span class="badge 
+                  {% if participation.status == 'present' %}bg-success
+                  {% elif participation.status == 'absent' %}bg-danger
+                  {% elif participation.status == 'excused' %}bg-warning
+                  {% else %}bg-secondary{% endif %}">
+                  {% if participation.status == 'present' %}Présent
+                  {% elif participation.status == 'absent' %}Absent
+                  {% elif participation.status == 'excused' %}Excusé
+                  {% else %}{{ participation.status }}{% endif %}
+                </span>
+              </td>
+              <td data-label="Notes">
+                {% if participation.notes %}
+                  {{ participation.notes|truncatechars:50 }}
+                {% else %}
+                  <span class="text-muted">Aucune note</span>
+                {% endif %}
+              </td>
+              <td data-label="Actions" class="text-end">
+                <div class="btn-group btn-group-sm">
+                  {% if request.session.user.permissions.therapeutic_activities.update %}
+                  <button type="button" class="btn btn-sm btn-light border text-dark edit-btn" title="Modifier"
+                          data-id="{{ participation.id }}" 
+                          data-patient="{{ participation.patient.id }}"
+                          data-session="{{ participation.session.id }}"
+                          data-status="{{ participation.status }}"
+                          data-notes="{{ participation.notes|escapejs }}">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  {% endif %}
+                  {% if request.session.user.permissions.therapeutic_activities.delete %}
+                  <button class="btn btn-sm btn-light border text-danger" 
+                          onclick="confirmDelete('{{ participation.id }}', '{{ participation.patient.get_full_name|escapejs }}')"
+                          title="Supprimer">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4">
+                <i class="fas fa-users fa-3x mb-3"></i>
+                <br>Aucune participation trouvée.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+      <!-- Pagination dynamique -->
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center mb-0" id="participation-pagination-controls">
+          <!-- Pagination générée dynamiquement -->
+        </ul>
+      </nav>
+    </div>
+  </div>
+
+  {% if request.session.user.permissions.therapeutic_activities.write %}
+  <!-- Formulaire de création de participation (collapsible) -->
+  <div class="collapse mt-3" id="participationFormCollapse">
+    <div class="card">
+      <div class="card-header text-white d-flex align-items-center" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+        Ajouter une nouvelle participation
+      </div>
+      <div class="card-body">
+        <form id="participationForm" method="post" action="{% url 'therapeutic_activities:participation_create' %}">
+          {% csrf_token %}
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_patient" class="form-label">Patient : <span class="text-danger">*</span></label>
+                <select name="patient" class="form-select" id="id_patient" required>
+                  <option value="">Sélectionner un patient</option>
+                  {% for patient in patients %}
+                    <option value="{{ patient.id }}">{{ patient.get_full_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_session" class="form-label">Session : <span class="text-danger">*</span></label>
+                <select name="session" class="form-select" id="id_session" required>
+                  <option value="">Sélectionner une session</option>
+                  {% for session in sessions %}
+                    <option value="{{ session.id }}">{{ session.title }} - {{ session.date }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_status" class="form-label">Statut : <span class="text-danger">*</span></label>
+                <select name="status" class="form-select" id="id_status" required>
+                  <option value="">Sélectionner un statut</option>
+                  <option value="present">Présent</option>
+                  <option value="absent">Absent</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="id_notes" class="form-label">Notes : </label>
+                <textarea name="notes" class="form-control" id="id_notes" rows="3" placeholder="Notes optionnelles..."></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="collapse" data-bs-target="#participationFormCollapse">
+              <i class="fas fa-times"></i><span class="d-none d-sm-inline ms-1">Annuler</span>
+            </button>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if request.session.user.permissions.therapeutic_activities.update %}
+  <!-- Formulaire d'édition de participation (collapsible) -->
+  <div class="collapse mt-3" id="participationEditFormCollapse">
+    <div class="card">
+      <div class="card-header text-white d-flex align-items-center" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+        Modifier la participation
+      </div>
+      <div class="card-body">
+        <form id="participationEditForm" method="post" action="">
+          {% csrf_token %}
+          <input type="hidden" name="participation_id" id="edit_participation_id">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="edit_patient" class="form-label">Patient : <span class="text-danger">*</span></label>
+                <select name="patient" class="form-select" id="edit_patient" required>
+                  <option value="">Sélectionner un patient</option>
+                  {% for patient in patients %}
+                    <option value="{{ patient.id }}">{{ patient.get_full_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="edit_session" class="form-label">Session : <span class="text-danger">*</span></label>
+                <select name="session" class="form-select" id="edit_session" required>
+                  <option value="">Sélectionner une session</option>
+                  {% for session in sessions %}
+                    <option value="{{ session.id }}">{{ session.title }} - {{ session.date }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="edit_status" class="form-label">Statut : <span class="text-danger">*</span></label>
+                <select name="status" class="form-select" id="edit_status" required>
+                  <option value="">Sélectionner un statut</option>
+                  <option value="present">Présent</option>
+                  <option value="absent">Absent</option>
+                  <option value="excused">Excusé</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="edit_notes" class="form-label">Notes :</label>
+                <textarea name="notes" class="form-control" id="edit_notes" rows="3" placeholder="Notes optionnelles..."></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="collapse" data-bs-target="#participationEditFormCollapse">
+              <i class="fas fa-times me-1"></i><span class="d-none d-sm-inline ms-1">Annuler</span>
+            </button>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-save me-1"></i><span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+.btn-xs {
+  padding: 0.15rem 0.3rem;
+  font-size: 0.75rem;
+}
+</style>
+
+<script>
+// Variables globales pour la pagination
+let allParticipations = [];
+let filteredParticipations = [];
+let currentParticipationPage = 1;
+let participationsPerPage = 5;
+let totalParticipationPages = 0;
+
+// Charger les données des participations
+function loadAllParticipations() {
+    const participationRows = document.querySelectorAll('#participations-tbody tr');
+    console.log('Nombre de lignes trouvées:', participationRows.length);
+    
+    allParticipations = Array.from(participationRows).map(row => {
+        // Ignorer la ligne "aucune participation trouvée"
+        if (row.cells.length > 1 && !row.textContent.includes('Aucune participation trouvée')) {
+            console.log('Traitement ligne:', row.textContent.substring(0, 100));
+            return {
+                element: row,
+                patient: row.cells[0].textContent.toLowerCase().trim(),
+                session: row.cells[1].textContent.toLowerCase().trim(),
+                date: row.cells[2].textContent.toLowerCase().trim(),
+                location: row.cells[3].textContent.toLowerCase().trim(),
+                status: row.cells[4].textContent.toLowerCase().trim(),
+                notes: row.cells[5].textContent.toLowerCase().trim(),
+                sessionId: row.querySelector('.edit-btn') ? row.querySelector('.edit-btn').dataset.session : '',
+                participationStatus: row.querySelector('.edit-btn') ? row.querySelector('.edit-btn').dataset.status : ''
+            };
+        }
+        return null;
+    }).filter(item => item !== null);
+    
+    console.log('Participations chargées:', allParticipations.length);
+    return allParticipations;
+}
+
+loadAllParticipations();
+
+// Fonction de tri pour les participations
+function setupParticipationSorting() {
+    const sortableHeaders = document.querySelectorAll('#participations-table .sortable');
+    
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const sortField = this.dataset.sort;
+            const currentDirection = this.dataset.direction || 'asc';
+            const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            
+            // Mettre à jour l'icône de tri
+            updateParticipationSortIcons(this, newDirection);
+            
+            // Trier le tableau
+            sortParticipationTable(sortField, newDirection);
+            
+            // Réappliquer la pagination
+            showParticipationPage(1);
+            currentParticipationPage = 1;
+            
+            // Sauvegarder la direction
+            this.dataset.direction = newDirection;
+        });
+    });
+}
+
+function sortParticipationTable(sortField, direction) {
+    allParticipations.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch(sortField) {
+            case 'patient':
+                aValue = a.patient;
+                bValue = b.patient;
+                break;
+            case 'session':
+                aValue = a.session;
+                bValue = b.session;
+                break;
+            case 'date':
+                // Extraire la date pour tri correct
+                aValue = a.date.split('\n')[0] || a.date;
+                bValue = b.date.split('\n')[0] || b.date;
+                // Convertir dd/mm/yyyy en yyyy-mm-dd pour tri
+                if (aValue.includes('/')) {
+                    const [day, month, year] = aValue.trim().split('/');
+                    aValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+                if (bValue.includes('/')) {
+                    const [day, month, year] = bValue.trim().split('/');
+                    bValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+                break;
+            case 'location':
+                aValue = a.location;
+                bValue = b.location;
+                break;
+            case 'status':
+                aValue = a.status;
+                bValue = b.status;
+                break;
+            case 'notes':
+                aValue = a.notes;
+                bValue = b.notes;
+                break;
+            default:
+                return 0;
+        }
+        
+        const comparison = aValue.localeCompare(bValue, 'fr', { numeric: true });
+        return direction === 'asc' ? comparison : -comparison;
+    });
+    
+    // Recharger la liste filtrée avec le nouvel ordre
+    filterParticipations();
+}
+
+function updateParticipationSortIcons(activeHeader, direction) {
+    // Réinitialiser toutes les icônes
+    document.querySelectorAll('#participations-table .sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon text-muted';
+    });
+    
+    // Mettre à jour l'icône active
+    const activeIcon = activeHeader.querySelector('.sort-icon');
+    if (activeIcon) {
+        if (direction === 'asc') {
+            activeIcon.className = 'fas fa-sort-up sort-icon text-primary';
+        } else {
+            activeIcon.className = 'fas fa-sort-down sort-icon text-primary';
+        }
+    }
+}
+
+// Fonction de filtrage des participations
+function filterParticipations() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+    const sessionFilter = document.getElementById('filterSession').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+    
+    console.log('Filtrage - Terme recherche:', searchTerm, 'Session:', sessionFilter, 'Statut:', statusFilter);
+    console.log('Total participations disponibles:', allParticipations.length);
+    
+    filteredParticipations = allParticipations.filter(participation => {
+        const matchesSearch = !searchTerm || 
+            participation.patient.includes(searchTerm) ||
+            participation.session.includes(searchTerm) ||
+            participation.date.includes(searchTerm) ||
+            participation.location.includes(searchTerm) ||
+            participation.notes.includes(searchTerm);
+        
+        const matchesSession = !sessionFilter || participation.sessionId === sessionFilter;
+        const matchesStatus = !statusFilter || participation.participationStatus === statusFilter;
+        
+        const matches = matchesSearch && matchesSession && matchesStatus;
+        
+        if (!matches) {
+            console.log('Participation filtrée:', participation.patient, 'matchesSearch:', matchesSearch, 'matchesSession:', matchesSession, 'matchesStatus:', matchesStatus);
+        }
+        
+        return matches;
+    });
+    
+    console.log('Participations après filtrage:', filteredParticipations.length);
+    
+    totalParticipationPages = Math.ceil(filteredParticipations.length / participationsPerPage);
+    if (totalParticipationPages === 0) totalParticipationPages = 1;
+    
+    if (currentParticipationPage > totalParticipationPages) {
+        currentParticipationPage = 1;
+    }
+    
+    showParticipationPage(currentParticipationPage);
+}
+
+// Fonction d'affichage d'une page de participations
+function showParticipationPage(page) {
+    const tbody = document.getElementById('participations-tbody');
+    const startIndex = (page - 1) * participationsPerPage;
+    const endIndex = startIndex + participationsPerPage;
+    
+    console.log(`Affichage page ${page}, indices ${startIndex}-${endIndex}, total filtré: ${filteredParticipations.length}`);
+    
+    // Cacher toutes les lignes de participations
+    allParticipations.forEach(participation => {
+        participation.element.style.display = 'none';
+    });
+    
+    // Afficher les lignes filtrées pour la page courante
+    const pageParticipations = filteredParticipations.slice(startIndex, endIndex);
+    console.log('Participations à afficher:', pageParticipations.length);
+    
+    pageParticipations.forEach(participation => {
+        console.log('Affichage participation:', participation.patient);
+        participation.element.style.display = '';
+    });
+    
+    // Gérer le message "Aucune participation trouvée"
+    const noDataRow = tbody.querySelector('tr td[colspan="7"]');
+    if (noDataRow) {
+        if (filteredParticipations.length === 0) {
+            noDataRow.parentElement.style.display = '';
+            console.log('Affichage message "aucune participation"');
+        } else {
+            noDataRow.parentElement.style.display = 'none';
+            console.log('Masquage message "aucune participation"');
+        }
+    }
+    
+    // Mettre à jour les contrôles de pagination
+    updateParticipationPaginationControls();
+}
+
+
+// Mettre à jour les contrôles de pagination
+function updateParticipationPaginationControls() {
+    const paginationControls = document.getElementById('participation-pagination-controls');
+    paginationControls.innerHTML = '';
+    
+    if (totalParticipationPages <= 1) return;
+    
+    // Bouton Précédent
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentParticipationPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<button class="page-link" ${currentParticipationPage === 1 ? 'disabled' : ''}>Préc</button>`;
+    if (currentParticipationPage > 1) {
+        prevLi.querySelector('button').onclick = () => {
+            currentParticipationPage--;
+            showParticipationPage(currentParticipationPage);
+        };
+    }
+    paginationControls.appendChild(prevLi);
+    
+    // Boutons de page
+    for (let i = 1; i <= totalParticipationPages; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === currentParticipationPage ? 'active' : ''}`;
+        pageLi.innerHTML = `<button class="page-link">${i}</button>`;
+        pageLi.querySelector('button').onclick = () => {
+            currentParticipationPage = i;
+            showParticipationPage(currentParticipationPage);
+        };
+        paginationControls.appendChild(pageLi);
+    }
+    
+    // Bouton Suivant
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentParticipationPage === totalParticipationPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<button class="page-link" ${currentParticipationPage === totalParticipationPages ? 'disabled' : ''}>Suiv</button>`;
+    if (currentParticipationPage < totalParticipationPages) {
+        nextLi.querySelector('button').onclick = () => {
+            currentParticipationPage++;
+            showParticipationPage(currentParticipationPage);
+        };
+    }
+    paginationControls.appendChild(nextLi);
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM chargé, initialisation...');
+    
+    // Recharger les participations au cas où elles ont été ajoutées après le premier chargement
+    loadAllParticipations();
+    
+    // Event listeners pour les filtres
+    document.getElementById('searchInput').addEventListener('input', function() {
+        currentParticipationPage = 1;
+        filterParticipations();
+    });
+    
+    document.getElementById('filterSession').addEventListener('change', function() {
+        currentParticipationPage = 1;
+        filterParticipations();
+    });
+    
+    document.getElementById('filterStatus').addEventListener('change', function() {
+        currentParticipationPage = 1;
+        filterParticipations();
+    });
+    
+    // Initialiser le tri
+    setupParticipationSorting();
+    
+    // Initialiser l'affichage
+    filterParticipations(); // Utiliser filterParticipations au lieu de showParticipationPage
+});
+
+function confirmDelete(participationId, patientName) {
+  Swal.fire({
+    title: 'Supprimer la participation',
+    text: `Voulez-vous supprimer la participation de ${patientName} ?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Oui, supprimer',
+    cancelButtonText: 'Annuler',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Afficher un loader pendant la suppression
+      Swal.fire({
+        title: 'Suppression en cours...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Effectuer la suppression via fetch
+      fetch(`/therapeutic_activities/participations/${participationId}/delete/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      })
+      .then(response => {
+        if (response.ok) {
+          // Suppression réussie
+          Swal.fire({
+            title: 'Supprimé!',
+            text: 'La participation a été supprimée avec succès.',
+            icon: 'success',
+            confirmButtonColor: '#28a745',
+            timer: 2000,
+            timerProgressBar: true
+          }).then(() => {
+            // Recharger la page pour mettre à jour la liste
+            window.location.reload();
+          });
+        } else {
+          // Erreur lors de la suppression
+          Swal.fire({
+            title: 'Erreur',
+            text: 'Une erreur est survenue lors de la suppression.',
+            icon: 'error',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+      })
+      .catch(error => {
+        // Erreur réseau
+        Swal.fire({
+          title: 'Erreur',
+          text: 'Erreur de connexion. Veuillez réessayer.',
+          icon: 'error',
+          confirmButtonColor: '#dc3545'
+        });
+      });
+    }
+  });
+}
+
+// Fonction pour éditer une participation
+function editParticipation(id, patientId, sessionId, status, notes) {
+  // Remplir le formulaire d'édition
+  document.getElementById('edit_participation_id').value = id;
+  document.getElementById('edit_patient').value = patientId;
+  document.getElementById('edit_session').value = sessionId;
+  document.getElementById('edit_status').value = status;
+  document.getElementById('edit_notes').value = notes;
+  
+  // Mettre à jour l'action du formulaire
+  document.getElementById('participationEditForm').action = `/therapeutic_activities/participations/${id}/edit/`;
+  
+  // Fermer le formulaire de création s'il est ouvert
+  const createForm = document.getElementById('participationFormCollapse');
+  if (createForm.classList.contains('show')) {
+    const createCollapse = bootstrap.Collapse.getInstance(createForm) || new bootstrap.Collapse(createForm);
+    createCollapse.hide();
+  }
+  
+  // Afficher le formulaire d'édition
+  const editForm = document.getElementById('participationEditFormCollapse');
+  const editCollapse = bootstrap.Collapse.getInstance(editForm) || new bootstrap.Collapse(editForm);
+  editCollapse.show();
+  
+  // Scroll vers le formulaire
+  editForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Fonction pour basculer entre les formulaires
+document.addEventListener('DOMContentLoaded', function() {
+  const editButtons = document.querySelectorAll('.edit-btn');
+  
+  // Gestionnaire pour les boutons d'édition
+  editButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const id = this.dataset.id;
+      const patientId = this.dataset.patient;
+      const sessionId = this.dataset.session;
+      const status = this.dataset.status;
+      const notes = this.dataset.notes;
+      
+      // Remplir le formulaire d'édition
+      document.getElementById('edit_participation_id').value = id;
+      document.getElementById('edit_patient').value = patientId;
+      document.getElementById('edit_session').value = sessionId;
+      document.getElementById('edit_status').value = status;
+      document.getElementById('edit_notes').value = notes;
+      
+      // Mettre à jour l'action du formulaire
+      document.getElementById('participationEditForm').action = `/therapeutic_activities/participations/${id}/edit/`;
+      
+      // Fermer le formulaire de création
+      const createForm = document.getElementById('participationFormCollapse');
+      if (createForm.classList.contains('show')) {
+        const createCollapse = bootstrap.Collapse.getInstance(createForm) || new bootstrap.Collapse(createForm);
+        createCollapse.hide();
+      }
+      
+      // Afficher le formulaire d'édition
+      const editForm = document.getElementById('participationEditFormCollapse');
+      const editCollapse = bootstrap.Collapse.getInstance(editForm) || new bootstrap.Collapse(editForm);
+      editCollapse.show();
+      
+      // Scroll vers le formulaire
+      editForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+  
+  // Gestionnaire pour le bouton de création
+  const createBtn = document.querySelector('[data-bs-target="#participationFormCollapse"]');
+  if (createBtn) {
+    createBtn.addEventListener('click', function() {
+      // Fermer le formulaire d'édition s'il est ouvert
+      const editForm = document.getElementById('participationEditFormCollapse');
+      if (editForm.classList.contains('show')) {
+        const editCollapse = bootstrap.Collapse.getInstance(editForm) || new bootstrap.Collapse(editForm);
+        editCollapse.hide();
+      }
+      
+      // Afficher le formulaire de création
+      const createForm = document.getElementById('participationFormCollapse');
+      const createCollapse = bootstrap.Collapse.getInstance(createForm) || new bootstrap.Collapse(createForm);
+      createCollapse.show();
+    });
+  }
+});
+
+// AJAX form submission for participation creation
+document.addEventListener('DOMContentLoaded', function() {
+    const participationForm = document.getElementById('participationForm');
+    if (participationForm) {
+        participationForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            
+            // Disable submit button during request
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enregistrement...';
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Succès!',
+                        text: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        // Reload page to show new participation
+                        window.location.reload();
+                    });
+                } else {
+                    let errorMessage = 'Une erreur est survenue lors de l\'enregistrement.';
+                    if (data.errors && Object.keys(data.errors).length > 0) {
+                        const errorList = Object.entries(data.errors)
+                            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+                            .join('\n');
+                        errorMessage = `Erreurs de validation:\n${errorList}`;
+                    } else if (data.message) {
+                        errorMessage = data.message;
+                    }
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur!',
+                        text: errorMessage,
+                        confirmButtonText: 'OK'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur!',
+                    text: 'Une erreur est survenue lors de la communication avec le serveur.',
+                    confirmButtonText: 'OK'
+                });
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            });
+        });
+    }
+
+    // Gestionnaire pour la soumission du formulaire d'édition
+    const editForm = document.getElementById('participationEditForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            
+            // Afficher un loader sur le bouton
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Modification...';
+            
+            // Préparer les données du formulaire
+            const formData = new FormData(this);
+            
+            // Effectuer la requête AJAX
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Modification réussie
+                    Swal.fire({
+                        title: 'Modifié!',
+                        text: 'La participation a été modifiée avec succès.',
+                        icon: 'success',
+                        confirmButtonColor: '#28a745',
+                        timer: 2000,
+                        timerProgressBar: true
+                    }).then(() => {
+                        // Fermer le formulaire d'édition
+                        const editFormCollapse = document.getElementById('participationEditFormCollapse');
+                        const editCollapse = bootstrap.Collapse.getInstance(editFormCollapse);
+                        if (editCollapse) editCollapse.hide();
+                        
+                        // Recharger la page pour mettre à jour la liste
+                        window.location.reload();
+                    });
+                } else {
+                    // Erreur lors de la modification
+                    Swal.fire({
+                        title: 'Erreur',
+                        text: 'Une erreur est survenue lors de la modification.',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            })
+            .catch(error => {
+                // Erreur réseau
+                Swal.fire({
+                    title: 'Erreur',
+                    text: 'Erreur de connexion. Veuillez réessayer.',
+                    icon: 'error',
+                    confirmButtonColor: '#dc3545'
+                });
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            });
+        });
+    }
+});
+</script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% endblock %}

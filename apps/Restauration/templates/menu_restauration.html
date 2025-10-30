@@ -1,0 +1,87 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    
+    <div class="menu-items">
+      <a href="{% url 'dashboard_restauration' %}" class="menu-item">
+        <i class="fas fa-home"></i>
+        <span class="menu-text">Accueil</span>
+      </a>
+  
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-utensils"></i>
+          <span class="menu-text">Gestion des Plats</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'restauration_home' %}"><i class="fas fa-list"></i>Liste des plats</a></li>
+        </ul>
+      </div>
+      
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-calendar-alt"></i>
+          <span class="menu-text">Menus</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'menu_standard_list' %}"><i class="fas fa-utensils"></i>Menus standards</a></li>
+          <li><a href="{% url 'menu_personnalise_list' %}"><i class="fas fa-plus-circle"></i>Menus personnalisés</a></li>
+          <li><a href="{% url 'menu_supplementaire_list' %}"><i class="fas fa-plus"></i>Plats supplémentaires</a></li>
+        </ul>
+      </div>
+      
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-chart-line"></i>
+          <span class="menu-text">Suivi Consommation</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'suivi_consommation_clients' %}"><i class="fas fa-search"></i>Rechercher et suivre</a></li>
+       
+        </ul>
+      </div>
+     
+      
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-tasks"></i>
+          <span class="menu-text">Programmes</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'programme_list' %}"><i class="fas fa-list"></i>Liste des programmes</a></li>
+          
+        </ul>
+      </div>
+
+
+           <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-box"></i>
+          <span class="menu-text">Stock</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href=""><i class="fas fa-truck"></i>Suivi des demandes</a></li>
+          <li><a href=""><i class="fas fa-history"></i>Historique des demandes</a></li>
+          
+        </ul>
+      </div>
+
+
+    </div>
+  </nav>
+</div> 

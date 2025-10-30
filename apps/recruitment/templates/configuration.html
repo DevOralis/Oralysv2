@@ -1,0 +1,905 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Configuration{% endblock %}
+{% block menu %}
+{% include "menu_recruitment.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+
+  <ul class="nav nav-tabs flex-column flex-sm-row mb-3" id="configTabs">
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'departments' %}active{% endif %}" href="?tab=departments">Départements</a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'employees' %}active{% endif %}" href="?tab=employees">Employés</a>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- Bloc de gestion des départements -->
+    <div class="tab-pane fade {% if tab == 'departments' %}show active{% endif %}" id="departements">
+      {% if messages %}
+        {% for message in messages %}
+          {% with tag=message.tags %}
+          <div class="alert alert-{% if tag == 'error' %}danger{% elif tag %}{{ tag }}{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas {% if tag == 'success' %}fa-check-circle{% elif tag == 'error' or tag == 'danger' %}fa-times-circle{% elif tag == 'warning' %}fa-exclamation-triangle{% elif tag == 'info' %}fa-info-circle{% else %}fa-bell{% endif %} me-2 fw-bold"></i>
+            <div>{{ message }}</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endwith %}
+        {% endfor %}
+      {% endif %}
+      <!-- Actions et recherche pour les départements -->
+      <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-building me-2"></i>
+          Départements
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-6">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control border-primary" id="search-department" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="d-flex gap-1 justify-content-end">
+                <button type="button" class="btn text-white text-nowrap px-2" style="background-color: #1e90ff;" onclick="showAddDepartmentForm()">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead class="table-light borderless">
+                <tr>
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAllDepartments">
+                  </th>
+                  <th>Nom</th>
+                  <th>Description</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="departments-table">
+                {% for dep in departments %}
+                <tr>
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check-departments">
+                  </td>
+                  <td>{{ dep.name }}</td>
+                  <td>{{ dep.description|default:'-' }}</td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark" 
+                              onclick="showEditDepartmentForm(this)"
+                              data-department-id="{{ dep.id }}"
+                              data-department-name="{{ dep.name }}"
+                              data-department-description="{{ dep.description|default:'' }}"
+                              title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteDepartement{{ dep.id }}" title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour les départements -->
+          {% if departments %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if departments.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ departments.previous_page_number }}&tab=departments{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Précédent">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">&laquo; Prc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">&laquo; Prc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% if departments.has_other_pages %}
+                {% for num in departments.paginator.page_range %}
+                  {% if departments.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > departments.number|add:'-3' and num < departments.number|add:'3' %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ num }}&tab=departments{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <li class="page-item active">
+                  <span class="page-link">1</span>
+                </li>
+              {% endif %}
+
+              {% if departments.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ departments.next_page_number }}&tab=departments{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Suivant">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+          
+          
+        </div>
+      </div>
+      <!-- Modals département déplacés sous le tableau pour conserver le contenu -->
+      {% for dep in departments %}
+      <div class="modal fade" id="modalEditDepartement{{ dep.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="edit_department">
+              <input type="hidden" name="department_id" value="{{ dep.id }}">
+              <div class="modal-header text-white" style="background-color: #1e90ff;"><h5 class="modal-title">Modifier Département</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+              <div class="modal-body">
+                <div class="mb-3"><label class="form-label">Nom</label><input type="text" class="form-control" name="name" value="{{ dep.name }}" required></div>
+                <div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" name="description">{{ dep.description }}</textarea></div>
+              </div>
+              <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn text-white" style="background-color: #1e90ff;" type="submit">Enregistrer</button></div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="modal fade" id="modalDeleteDepartement{{ dep.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="delete_department">
+              <input type="hidden" name="department_id" value="{{ dep.id }}">
+              <div class="modal-header"><h5 class="modal-title">Supprimer Département</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+              <div class="modal-body">Confirmer la suppression du département <strong>{{ dep.name }}</strong> ?</div>
+              <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn btn-danger" type="submit">Supprimer</button></div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <!-- Bloc de gestion des employés -->
+    <div class="tab-pane fade {% if tab == 'employees' %}show active{% endif %}" id="employes">
+      {% if messages %}
+        {% for message in messages %}
+          {% with tag=message.tags %}
+          <div class="alert alert-{% if tag == 'error' %}danger{% elif tag %}{{ tag }}{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas {% if tag == 'success' %}fa-check-circle{% elif tag == 'error' or tag == 'danger' %}fa-times-circle{% elif tag == 'warning' %}fa-exclamation-triangle{% elif tag == 'info' %}fa-info-circle{% else %}fa-bell{% endif %} me-2 fw-bold"></i>
+            <div>{{ message }}</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endwith %}
+        {% endfor %}
+      {% endif %}
+      <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-user me-2"></i>
+          Employés
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-6">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control border-primary" id="search-employee" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="d-flex gap-1 justify-content-end">
+                <button type="button" class="btn text-white text-nowrap px-2" style="background-color: #1e90ff;" onclick="showAddEmployeeForm()">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead class="table-light borderless">
+            <tr>
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAllEmployees">
+              </th>
+              <th>Matricule</th><th>Nom complet</th><th>Date naissance</th><th>Sexe</th><th>Email</th><th>Tél. Perso</th><th>Département</th><th>Statut</th><th class="text-end">Actions</th>
+            </tr>
+              </thead>
+              <tbody id="employees-table">
+            {% for emp in employees %}
+            <tr>
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check-employees">
+              </td>
+              <td>{{ emp.employee_id }}</td>
+              <td>{{ emp.full_name }}</td>
+              <td>{{ emp.birth_date }}</td>
+              <td>{{ emp.get_gender_display }}</td>
+              <td>{{ emp.email }}</td>
+              <td>{{ emp.personal_phone }}</td>
+              <td>{% if emp.department %}{{ emp.department.name }}{% else %}-{% endif %}</td>
+              <td>
+                {% if emp.status == 'A' %}
+                  <span class="badge bg-success">Active</span>
+                {% elif emp.status == 'I' %}
+                  <span class="badge bg-danger">Inactive</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ emp.get_status_display }}</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="d-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-dark" 
+                          onclick="showEditEmployeeForm(this)"
+                          data-employee-id="{{ emp.id }}"
+                          data-employee-employee-id="{{ emp.employee_id }}"
+                          data-employee-full-name="{{ emp.full_name }}"
+                          data-employee-birth-date="{{ emp.birth_date|date:'Y-m-d' }}"
+                          data-employee-marital-status="{{ emp.marital_status }}"
+                          data-employee-gender="{{ emp.gender }}"
+                          data-employee-email="{{ emp.email }}"
+                          data-employee-personal-phone="{{ emp.personal_phone }}"
+                          data-employee-work-phone="{{ emp.work_phone }}"
+                          data-employee-base-salary="{{ emp.base_salary }}"
+                          data-employee-department="{{ emp.department.id|default:'' }}"
+                          data-employee-status="{{ emp.status }}"
+                          title="Modifier">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteEmploye{{ emp.id }}" title="Supprimer">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <!-- Modal d'édition d'employé -->
+            <div class="modal fade" id="modalEditEmploye{{ emp.id }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_employee">
+                    <input type="hidden" name="emp_id" value="{{ emp.id }}">
+                    <div class="modal-header text-white" style="background-color: #1e90ff;"><h5 class="modal-title">Modifier Employé</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                      <div class="mb-3"><label class="form-label">Matricule</label><input type="text" class="form-control" name="employee_id" value="{{ emp.employee_id }}" required></div>
+                      <div class="mb-3"><label class="form-label">Nom complet</label><input type="text" class="form-control" name="full_name" value="{{ emp.full_name }}" required></div>
+                      <div class="mb-3"><label class="form-label">Date naissance</label><input type="date" class="form-control" name="birth_date" value="{{ emp.birth_date|date:'Y-m-d' }}"></div>
+                      <div class="mb-3"><label class="form-label">Etat civil</label><select class="form-select" name="marital_status">{% for val, label in marital_status_choices %}<option value="{{ val }}" {% if emp.marital_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                      <div class="mb-3"><label class="form-label">Sexe</label><select class="form-select" name="gender">{% for val, label in gender_choices %}<option value="{{ val }}" {% if emp.gender == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                      <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" name="email" value="{{ emp.email }}"></div>
+                      <div class="mb-3"><label class="form-label">Tél. Perso</label><input type="text" class="form-control" name="personal_phone" value="{{ emp.personal_phone }}"></div>
+                      <div class="mb-3"><label class="form-label">Tél. Pro</label><input type="text" class="form-control" name="work_phone" value="{{ emp.work_phone }}" required></div>
+                      <div class="mb-3"><label class="form-label">Salaire de base</label><input type="number" step="0.01" class="form-control" name="base_salary" value="{{ emp.base_salary }}" required></div>
+                      <div class="mb-3"><label class="form-label">Département</label><select class="form-select" name="department"><option value="">-</option>{% for dep in departments %}<option value="{{ dep.id }}" {% if emp.department and emp.department.id == dep.id %}selected{% endif %}>{{ dep.name }}</option>{% endfor %}</select></div>
+                      <div class="mb-3"><label class="form-label">Statut</label><select class="form-select" name="status">{% for val, label in status_choices %}<option value="{{ val }}" {% if emp.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                    </div>
+                    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn text-white" style="background-color: #1e90ff;" type="submit">Enregistrer</button></div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            <!-- Modal de suppression d'employé -->
+            <div class="modal fade" id="modalDeleteEmploye{{ emp.id }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_employee">
+                    <input type="hidden" name="emp_id" value="{{ emp.id }}">
+                    <div class="modal-header"><h5 class="modal-title">Supprimer Employé</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">Confirmer la suppression de l'employé <strong>{{ emp.full_name }}</strong> ?</div>
+                    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn btn-danger" type="submit">Supprimer</button></div>
+                  </form>
+      </div>
+    </div>
+      </div>
+            {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour les employés -->
+          {% if employees %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if employees.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ employees.previous_page_number }}&tab=employees{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Précédent">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">&laquo; Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">&laquo; Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% if employees.has_other_pages %}
+                {% for num in employees.paginator.page_range %}
+                  {% if employees.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > employees.number|add:'-3' and num < employees.number|add:'3' %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ num }}&tab=employees{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <li class="page-item active">
+                  <span class="page-link">1</span>
+                </li>
+              {% endif %}
+
+              {% if employees.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ employees.next_page_number }}&tab=employees{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Suivant">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+          
+          
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout de département -->
+  <div class="card mb-4" id="add-department-form" style="display: block;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2"></i>
+      Nouveau Département
+    </div>
+    <div class="card-body">
+      <form method="post" id="departmentFormBottom">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_department">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Nom <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="name" id="id_name_bottom" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" name="description" id="id_description_bottom" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="button" class="btn btn-secondary" onclick="hideAddDepartmentForm()">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i>Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de département -->
+  <div class="card mb-4" id="edit-department-form" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier Département
+    </div>
+    <div class="card-body">
+      <form method="post" id="editDepartmentFormBottom">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit_department">
+        <input type="hidden" name="department_id" id="edit_department_id_bottom">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Nom <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="name" id="edit_name_bottom" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" name="description" id="edit_description_bottom" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="button" class="btn btn-secondary" onclick="hideEditDepartmentForm()">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i>Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout d'employé -->
+  <div class="card mb-4" id="add-employee-form" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2"></i>
+      Nouvel Employé
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" id="employeeFormBottom">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_employee">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Matricule <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="employee_id" id="id_employee_id_bottom" required>
+          </div>
+                    <div class="col-md-6">
+            <label class="form-label">Nom complet <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="full_name" id="id_full_name_bottom" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Date naissance</label>
+                        <input type="date" class="form-control" name="birth_date" id="id_birth_date_bottom">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Etat civil</label>
+                        <select class="form-select" name="marital_status" id="id_marital_status_bottom">
+                          {% for val, label in marital_status_choices %}
+                            <option value="{{ val }}">{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sexe</label>
+                        <select class="form-select" name="gender" id="id_gender_bottom">
+                          {% for val, label in gender_choices %}
+                            <option value="{{ val }}">{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" id="id_email_bottom">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tél. Perso</label>
+                        <input type="text" class="form-control" name="personal_phone" id="id_personal_phone_bottom">
+                    </div>
+                    <div class="col-md-6">
+            <label class="form-label">Tél. Pro <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="work_phone" id="id_work_phone_bottom" required>
+                    </div>
+                    <div class="col-md-6">
+            <label class="form-label">Salaire de base <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" name="base_salary" id="id_base_salary_bottom" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Département</label>
+                        <select class="form-select" name="department" id="id_department_bottom">
+                          <option value="">-</option>
+                          {% for dep in departments %}
+                            <option value="{{ dep.id }}">{{ dep.name }}</option>
+                          {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Statut</label>
+                        <select class="form-select" name="status" id="id_status_bottom">
+                          {% for val, label in status_choices %}
+                            <option value="{{ val }}">{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                    </div>
+        <div class="mt-4 text-end">
+                    <button type="button" class="btn btn-secondary" onclick="hideAddEmployeeForm()">
+                      <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+                      <i class="fas fa-save me-1"></i>Enregistrer
+                    </button>
+                  </div>
+                </form>
+            </div>
+          </div>
+          
+  <!-- Formulaire de modification d'employé -->
+  <div class="card mb-4" id="edit-employee-form" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier Employé
+              </div>
+              <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="editEmployeeFormBottom">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="edit_employee">
+                  <input type="hidden" name="emp_id" id="edit_emp_id_bottom">
+        <div class="row g-3">
+                    <div class="col-md-6">
+            <label class="form-label">Matricule <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="employee_id" id="edit_employee_id_bottom" required>
+                    </div>
+                    <div class="col-md-6">
+            <label class="form-label">Nom complet <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="full_name" id="edit_full_name_bottom" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Date naissance</label>
+                        <input type="date" class="form-control" name="birth_date" id="edit_birth_date_bottom">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Etat civil</label>
+                        <select class="form-select" name="marital_status" id="edit_marital_status_bottom">
+                          {% for val, label in marital_status_choices %}
+                            <option value="{{ val }}">{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sexe</label>
+                        <select class="form-select" name="gender" id="edit_gender_bottom">
+                          {% for val, label in gender_choices %}
+                            <option value="{{ val }}">{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" id="edit_email_bottom">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tél. Perso</label>
+                        <input type="text" class="form-control" name="personal_phone" id="edit_personal_phone_bottom">
+                    </div>
+                    <div class="col-md-6">
+            <label class="form-label">Tél. Pro <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="work_phone" id="edit_work_phone_bottom" required>
+                    </div>
+                    <div class="col-md-6">
+            <label class="form-label">Salaire de base <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" name="base_salary" id="edit_base_salary_bottom" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Département</label>
+                        <select class="form-select" name="department" id="edit_department_bottom">
+                          <option value="">-</option>
+                          {% for dep in departments %}
+                            <option value="{{ dep.id }}">{{ dep.name }}</option>
+                          {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Statut</label>
+                        <select class="form-select" name="status" id="edit_status_bottom">
+                          {% for val, label in status_choices %}
+                            <option value="{{ val }}">{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                    </div>
+        <div class="mt-4 text-end">
+                    <button type="button" class="btn btn-secondary" onclick="hideEditEmployeeForm()">
+                      <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+                      <i class="fas fa-save me-1"></i>Enregistrer
+                    </button>
+                  </div>
+                </form>
+    </div>
+  </div>
+
+  <!-- Modal d'ajout de département -->
+  <div class="modal fade" id="modalDepartement" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add_department">
+        <div class="modal-header text-white" style="background-color: #1e90ff;"><h5 class="modal-title">Nouveau Département</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <div class="mb-3"><label class="form-label">Nom</label><input type="text" class="form-control" name="name" required></div>
+            <div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" name="description"></textarea></div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn text-white" style="background-color: #1e90ff;" type="submit">Enregistrer</button></div>
+          </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'ajout d'employé -->
+  <div class="modal fade" id="modalEmploye" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add_employee">
+          <div class="modal-header text-white" style="background-color: #1e90ff;"><h5 class="modal-title">Nouvel Employé</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <div class="mb-3"><label class="form-label">Matricule</label><input type="text" class="form-control" name="employee_id" required></div>
+            <div class="mb-3"><label class="form-label">Nom complet</label><input type="text" class="form-control" name="full_name" required></div>
+            <div class="mb-3"><label class="form-label">Date naissance</label><input type="date" class="form-control" name="birth_date"></div>
+            <div class="mb-3"><label class="form-label">Etat civil</label><select class="form-select" name="marital_status">{% for val, label in marital_status_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select></div>
+            <div class="mb-3"><label class="form-label">Sexe</label><select class="form-select" name="gender">{% for val, label in gender_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select></div>
+            <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" name="email"></div>
+            <div class="mb-3"><label class="form-label">Tél. Perso</label><input type="text" class="form-control" name="personal_phone"></div>
+            <div class="mb-3"><label class="form-label">Tél. Pro</label><input type="text" class="form-control" name="work_phone" required></div>
+            <div class="mb-3"><label class="form-label">Salaire de base</label><input type="number" step="0.01" class="form-control" name="base_salary" required></div>
+            <div class="mb-3"><label class="form-label">Département</label><select class="form-select" name="department"><option value="">-</option>{% for dep in departments %}<option value="{{ dep.id }}">{{ dep.name }}</option>{% endfor %}</select></div>
+            <div class="mb-3"><label class="form-label">Statut</label><select class="form-select" name="status">{% for val, label in status_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select></div>
+        </div>
+          <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn text-white" style="background-color: #1e90ff;" type="submit">Enregistrer</button></div>
+          </form>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    // Gestion de l'affichage des formulaires selon l'onglet actif
+    document.addEventListener('DOMContentLoaded', function() {
+      // Fonction pour gérer le changement d'onglet
+      function handleTabChange() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeTab = urlParams.get('tab') || 'departments';
+        
+        if (activeTab === 'departments') {
+          // Afficher le formulaire d'ajout de département
+          document.getElementById('add-department-form').style.display = 'block';
+          document.getElementById('edit-department-form').style.display = 'none';
+          // Masquer les formulaires d'employé
+          document.getElementById('add-employee-form').style.display = 'none';
+          document.getElementById('edit-employee-form').style.display = 'none';
+        } else if (activeTab === 'employees') {
+          // Afficher le formulaire d'ajout d'employé
+          document.getElementById('add-employee-form').style.display = 'block';
+          document.getElementById('edit-employee-form').style.display = 'none';
+          // Masquer les formulaires de département
+          document.getElementById('add-department-form').style.display = 'none';
+          document.getElementById('edit-department-form').style.display = 'none';
+        }
+      }
+      
+      // Appeler la fonction au chargement de la page
+      handleTabChange();
+      
+      // écouter les changements d'onglet
+      const tabLinks = document.querySelectorAll('#configTabs .nav-link');
+      tabLinks.forEach(link => {
+        link.addEventListener('click', function() {
+          // Délai pour laisser le temps la page de se charger
+          setTimeout(handleTabChange, 100);
+        });
+      });
+    });
+
+    // Recherche instantanée AJAX pour Départements
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchDepartmentInput = document.getElementById('search-department');
+      const departmentsTable = document.getElementById('departments-table');
+      let searchTimeoutDep = null;
+      let lastQueryDep = searchDepartmentInput ? searchDepartmentInput.value : '';
+      let controllerDep = null;
+      if (searchDepartmentInput && departmentsTable) {
+        function performSearchDepartment(query) {
+          if (controllerDep) controllerDep.abort();
+          controllerDep = new AbortController();
+          departmentsTable.innerHTML = '<tr><td colspan="3" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche...</td></tr>';
+          const url = window.location.pathname + '?q=' + encodeURIComponent(query) + '&tab=departments';
+          console.log('Recherche département URL:', url);
+          fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-cache' },
+            signal: controllerDep.signal
+          })
+          .then(response => { if (!response.ok) throw new Error('Erreur réseau: ' + response.status); return response.text(); })
+          .then(html => { departmentsTable.innerHTML = html; })
+          .catch(error => { if (error.name !== 'AbortError') departmentsTable.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erreur: ' + error.message + '</td></tr>'; });
+        }
+        searchDepartmentInput.addEventListener('input', function() {
+          const query = searchDepartmentInput.value.trim();
+          if (searchTimeoutDep) clearTimeout(searchTimeoutDep);
+          if (query === lastQueryDep) return;
+          lastQueryDep = query;
+          searchTimeoutDep = setTimeout(() => { performSearchDepartment(query); }, 300);
+        });
+        searchDepartmentInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') { e.preventDefault(); if (searchTimeoutDep) clearTimeout(searchTimeoutDep); performSearchDepartment(searchDepartmentInput.value.trim()); }
+        });
+      }
+    
+      // Recherche instantanée AJAX pour Employés
+      const searchEmployeeInput = document.getElementById('search-employee');
+      const employeesTable = document.getElementById('employees-table');
+      let searchTimeoutEmp = null;
+      let lastQueryEmp = searchEmployeeInput ? searchEmployeeInput.value : '';
+      let controllerEmp = null;
+      if (searchEmployeeInput && employeesTable) {
+        function performSearchEmployee(query) {
+          if (controllerEmp) controllerEmp.abort();
+          controllerEmp = new AbortController();
+          employeesTable.innerHTML = '<tr><td colspan="9" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche...</td></tr>';
+          const url = window.location.pathname + '?q=' + encodeURIComponent(query) + '&tab=employees';
+          console.log('Recherche employé URL:', url);
+          fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-cache' },
+            signal: controllerEmp.signal
+          })
+          .then(response => { if (!response.ok) throw new Error('Erreur réseau: ' + response.status); return response.text(); })
+          .then(html => { employeesTable.innerHTML = html; })
+          .catch(error => { if (error.name !== 'AbortError') employeesTable.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erreur: ' + error.message + '</td></tr>'; });
+        }
+        searchEmployeeInput.addEventListener('input', function() {
+          const query = searchEmployeeInput.value.trim();
+          if (searchTimeoutEmp) clearTimeout(searchTimeoutEmp);
+          if (query === lastQueryEmp) return;
+          lastQueryEmp = query;
+          searchTimeoutEmp = setTimeout(() => { performSearchEmployee(query); }, 300);
+        });
+        searchEmployeeInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') { e.preventDefault(); if (searchTimeoutEmp) clearTimeout(searchTimeoutEmp); performSearchEmployee(searchEmployeeInput.value.trim()); }
+        });
+      }
+    });
+
+    // Fonctions pour gérer l'affichage des formulaires de départements
+    function showAddDepartmentForm() {
+      // Masquer le formulaire d'édition s'il est ouvert
+      document.getElementById('edit-department-form').style.display = 'none';
+      // Masquer tous les formulaires d'employé
+      document.getElementById('add-employee-form').style.display = 'none';
+      document.getElementById('edit-employee-form').style.display = 'none';
+      // Afficher le formulaire d'ajout de département
+      document.getElementById('add-department-form').style.display = 'block';
+      // Faire défiler vers le formulaire
+      document.getElementById('add-department-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function hideAddDepartmentForm() {
+      document.getElementById('add-department-form').style.display = 'none';
+      // Réinitialiser le formulaire
+      document.getElementById('departmentFormBottom').reset();
+    }
+
+    function showEditDepartmentForm(button) {
+      // Masquer le formulaire d'ajout s'il est ouvert
+      document.getElementById('add-department-form').style.display = 'none';
+      // Masquer tous les formulaires d'employé
+      document.getElementById('add-employee-form').style.display = 'none';
+      document.getElementById('edit-employee-form').style.display = 'none';
+      // Afficher le formulaire d'édition
+      document.getElementById('edit-department-form').style.display = 'block';
+      
+      // Récuprer les données depuis les data attributes
+      const departmentId = button.getAttribute('data-department-id');
+      const departmentName = button.getAttribute('data-department-name');
+      const departmentDescription = button.getAttribute('data-department-description');
+      
+      // Remplir le formulaire d'édition avec les données
+      document.getElementById('edit_department_id_bottom').value = departmentId;
+      document.getElementById('edit_name_bottom').value = departmentName;
+      document.getElementById('edit_description_bottom').value = departmentDescription;
+      
+      // Faire défiler vers le formulaire
+      document.getElementById('edit-department-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function hideEditDepartmentForm() {
+      document.getElementById('edit-department-form').style.display = 'none';
+      // Réinitialiser le formulaire
+      document.getElementById('editDepartmentFormBottom').reset();
+    }
+
+    // Fonctions pour gérer l'affichage des formulaires d'employés
+    function showAddEmployeeForm() {
+      // Masquer le formulaire d'édition s'il est ouvert
+      document.getElementById('edit-employee-form').style.display = 'none';
+      // Masquer tous les formulaires de département
+      document.getElementById('add-department-form').style.display = 'none';
+      document.getElementById('edit-department-form').style.display = 'none';
+      // Afficher le formulaire d'ajout d'employé
+      document.getElementById('add-employee-form').style.display = 'block';
+      // Faire défiler vers le formulaire
+      document.getElementById('add-employee-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function hideAddEmployeeForm() {
+      document.getElementById('add-employee-form').style.display = 'none';
+      // Réinitialiser le formulaire
+      document.getElementById('employeeFormBottom').reset();
+    }
+
+    function showEditEmployeeForm(button) {
+      // Masquer le formulaire d'ajout s'il est ouvert
+      document.getElementById('add-employee-form').style.display = 'none';
+      // Masquer tous les formulaires de département
+      document.getElementById('add-department-form').style.display = 'none';
+      document.getElementById('edit-department-form').style.display = 'none';
+      // Afficher le formulaire d'édition
+      document.getElementById('edit-employee-form').style.display = 'block';
+      
+      // Récuprer les données depuis les data attributes
+      const employeeId = button.getAttribute('data-employee-id');
+      const employeeEmployeeId = button.getAttribute('data-employee-employee-id');
+      const employeeFullName = button.getAttribute('data-employee-full-name');
+      const employeeBirthDate = button.getAttribute('data-employee-birth-date');
+      const employeeMaritalStatus = button.getAttribute('data-employee-marital-status');
+      const employeeGender = button.getAttribute('data-employee-gender');
+      const employeeEmail = button.getAttribute('data-employee-email');
+      const employeePersonalPhone = button.getAttribute('data-employee-personal-phone');
+      const employeeWorkPhone = button.getAttribute('data-employee-work-phone');
+      const employeeBaseSalary = button.getAttribute('data-employee-base-salary');
+      const employeeDepartment = button.getAttribute('data-employee-department');
+      const employeeStatus = button.getAttribute('data-employee-status');
+      
+      // Remplir le formulaire d'édition avec les données
+      document.getElementById('edit_emp_id_bottom').value = employeeId;
+      document.getElementById('edit_employee_id_bottom').value = employeeEmployeeId;
+      document.getElementById('edit_full_name_bottom').value = employeeFullName;
+      document.getElementById('edit_birth_date_bottom').value = employeeBirthDate;
+      document.getElementById('edit_marital_status_bottom').value = employeeMaritalStatus;
+      document.getElementById('edit_gender_bottom').value = employeeGender;
+      document.getElementById('edit_email_bottom').value = employeeEmail;
+      document.getElementById('edit_personal_phone_bottom').value = employeePersonalPhone;
+      document.getElementById('edit_work_phone_bottom').value = employeeWorkPhone;
+      document.getElementById('edit_base_salary_bottom').value = employeeBaseSalary;
+      document.getElementById('edit_department_bottom').value = employeeDepartment;
+      document.getElementById('edit_status_bottom').value = employeeStatus;
+      
+      // Faire défiler vers le formulaire
+      document.getElementById('edit-employee-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function hideEditEmployeeForm() {
+      document.getElementById('edit-employee-form').style.display = 'none';
+      // Réinitialiser le formulaire
+      document.getElementById('editEmployeeFormBottom').reset();
+    }
+  </script>
+
+</div>
+    
+{% endblock %}
+

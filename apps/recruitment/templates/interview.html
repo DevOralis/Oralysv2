@@ -1,0 +1,2972 @@
+{% extends 'base.html' %}
+{% block menu %}
+{% include "menu_recruitment.html" %}
+{% endblock %}
+{% block content %}
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+<style>
+  :root {
+    --main-green: #4b78a2;
+    --dark-green: #72b7d2;
+    --brand-blue: #3bb2d6;
+    --brand-bg: #f8f9fa;
+    --brand-shadow: 0 8px 40px rgba(46, 162, 204, 0.13), 0 2px 12px rgba(52,73,94,0.08);
+  }
+  #calendar-wrapper {
+    background: rgba(255,255,255,0.98);
+    border-radius: 32px;
+    box-shadow: var(--brand-shadow);
+    padding: 36px 10px 18px 10px;
+    margin-bottom: 0;
+    min-width: 0;
+    min-height: 600px;
+    backdrop-filter: blur(7px);
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    transition: box-shadow 0.3s;
+  }
+  #calendar {
+    background: #fff;
+    border-radius: 28px;
+    box-shadow: 0 2px 24px rgba(46,204,113,0.10);
+    border: 1.5px solid var(--main-green);
+    padding: 8px 4px 4px 4px;
+    min-width: 0;
+    min-height: 540px;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  }
+  .fc-toolbar-title {
+    color: var(--main-green);
+    font-weight: 700;
+    font-size: 1.7em;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 0 #fff, 0 2px 8px rgba(46,204,113,0.08);
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    margin-bottom: 0.2em;
+  }
+  .fc .fc-button, .fc .fc-button-primary, .fc .fc-today-button {
+    font-size: 1em;
+    padding: 0.28em 0.9em;
+    border-radius: 50px;
+    min-width: 38px;
+    min-height: 38px;
+    height: 38px;
+    line-height: 1.1;
+    box-shadow: 0 2px 8px rgba(52,73,94,0.09);
+    margin-right: 0.18em;
+    margin-left: 0.18em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background: #fff;
+    color: var(--main-green);
+    border: 1.5px solid var(--main-green);
+    transition: background 0.18s, color 0.18s, border 0.18s, box-shadow 0.18s, transform 0.12s;
+    font-weight: 600;
+    gap: 0.3em;
+  }
+  .fc .fc-button-primary:not(:disabled), .fc .fc-today-button:not(:disabled) {
+    background: linear-gradient(90deg, var(--main-green) 60%, var(--brand-blue) 100%);
+    color: #fff;
+    border: 1.5px solid var(--main-green);
+    box-shadow: 0 2px 12px rgba(46,204,113,0.13);
+  }
+  .fc .fc-button:active {
+    transform: scale(0.97);
+    box-shadow: 0 1px 2px rgba(52,73,94,0.10);
+  }
+  .fc .fc-button:not(.fc-button-primary):not(.fc-today-button):hover {
+    background: #e3eafc;
+    color: var(--main-green);
+    border: 1.5px solid var(--brand-blue);
+    box-shadow: 0 2px 8px rgba(59,178,214,0.10);
+  }
+  .fc .fc-toolbar {
+    min-height: 56px;
+    align-items: center;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    position: sticky;
+    top: 0;
+    background: rgba(255,255,255,0.98);
+    z-index: 10;
+    border-radius: 28px 28px 0 0;
+  }
+  .fc .fc-toolbar-chunk {
+    display: flex;
+    align-items: center;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 1.45em;
+    margin: 0 0.5em;
+    line-height: 1.1;
+    color: var(--main-green);
+    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  }
+  .fc .fc-col-header-cell-cushion {
+    color: #34495e !important;
+    font-weight: 700;
+    font-size: 1.08em;
+    text-decoration: none !important;
+    background: none !important;
+    border: none !important;
+    cursor: default;
+    padding: 0;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    letter-spacing: 0.5px;
+    transition: color 0.18s;
+  }
+  .fc-col-header-cell {
+    background: rgba(255,255,255,0.92);
+    border-bottom: 2px solid var(--main-green);
+    box-shadow: none;
+  }
+  .fc-col-header-cell.fc-day-today {
+    background: rgba(255,255,255,0.92) !important;
+    color: var(--main-green) !important;
+    position: relative;
+    z-index: 2;
+  }
+  .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion {
+    background: linear-gradient(135deg, var(--main-green) 60%, var(--brand-blue) 100%);
+    color: #fff !important;
+    border-radius: 50%;
+    padding: 7px 15px;
+    font-size: 1.13em;
+    font-weight: 700;
+    box-shadow: 0 2px 12px rgba(46,204,113,0.13);
+    display: inline-block;
+    border: 2.5px solid #fff;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    letter-spacing: 0.5px;
+    transition: background 0.18s, color 0.18s;
+  }
+  .fc .fc-scrollgrid-section-header > th {
+    border-right: 1.5px solid var(--main-green);
+  }
+  .fc .fc-scrollgrid-section-header > th:last-child {
+    border-right: none;
+  }
+  .fc .fc-timegrid-axis {
+    background: #f8fafc;
+    color: var(--main-green);
+    font-weight: 500;
+    border-right: 2px solid var(--main-green);
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  }
+  .fc .fc-timegrid-col {
+    background: rgba(255,255,255,0.98);
+    border-right: 1.5px solid var(--main-green);
+    transition: background 0.18s;
+  }
+  .fc .fc-timegrid-col:last-child {
+    border-right: none;
+  }
+  .fc .fc-timegrid-col:hover {
+    background: #f0f4fa;
+  }
+  .fc .fc-timegrid-col.fc-day-today {
+    background: linear-gradient(120deg, #e9f7ef 80%, #e3f6fb 100%) !important;
+    box-shadow: 0 0 0 2px #2ecc7133;
+  }
+  .fc .fc-timegrid-slot {
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .fc .fc-timegrid-slot-label {
+    color: #b0b0b0;
+    font-size: 0.98em;
+    font-weight: 500;
+  }
+  .fc .fc-daygrid-event, .fc .fc-timegrid-event {
+    background-color: #fff !important;
+    border: 2.5px solid var(--main-green) !important;
+    color: var(--main-green) !important;
+    border-radius: 22px !important;
+    font-size: 1em;
+    padding: 8px 16px 8px 36px !important;
+    box-shadow: 0 2px 12px rgba(46,204,113,0.10);
+    margin-bottom: 2px;
+    position: relative;
+    transition: box-shadow 0.2s, filter 0.2s, background 0.2s, min-height 0.2s;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    overflow: visible;
+    min-height: 38px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    animation: fadeInEvent 0.3s;
+  }
+  @keyframes fadeInEvent {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fc .fc-daygrid-event::before, .fc .fc-timegrid-event::before {
+    content: '\f073';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    color: var(--brand-blue);
+    font-size: 1.05em;
+    position: absolute;
+    left: 12px;
+    top: 13px;
+    opacity: 0.85;
+    pointer-events: none;
+    transition: color 0.2s;
+  }
+  .fc-event-title {
+    font-weight: 700;
+    font-size: 1.12em;
+    color: var(--main-green) !important;
+    margin-bottom: 0;
+    letter-spacing: 0.5px;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+    transition: color 0.2s;
+  }
+  .fc-event-location {
+    display: block;
+    font-size: 0.97em;
+    color: #888;
+    margin-top: 1px;
+    font-style: italic;
+  }
+  .fc-event-details {
+    display: none;
+    font-size: 0.97em;
+    color: #888;
+    margin-top: 2px;
+    line-height: 1.2;
+    font-style: italic;
+    animation: fadeInDetails 0.18s;
+    pointer-events: none;
+  }
+  @keyframes fadeInDetails {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fc-daygrid-event:hover, .fc-timegrid-event:hover {
+    box-shadow: 0 10px 32px rgba(59,178,214,0.13);
+    filter: brightness(1.04);
+    z-index: 10;
+    background: #f0f4fa !important;
+    border-color: var(--brand-blue) !important;
+    min-height: 60px;
+    cursor: pointer;
+  }
+  .fc-daygrid-event:hover .fc-event-details,
+  .fc-timegrid-event:hover .fc-event-details {
+    display: block;
+    pointer-events: auto;
+  }
+  .fc-event[data-result="positive"] {
+    background: linear-gradient(90deg, #84b5b9 60%, #b6f0d3 100%) !important;
+    border-color: var(--main-green) !important;
+  }
+  .fc-event[data-result="negative"] {
+    background: linear-gradient(90deg, #ffe0e0 60%, #ffd6d6 100%) !important;
+    border-color: #ff6b6b !important;
+  }
+  .fc-event[data-result="pending"] {
+    background: linear-gradient(90deg, #fffbe0 60%, #fff6b6 100%) !important;
+    border-color: #ffe066 !important;
+  }
+  .fc .fc-timegrid-now-indicator-arrow {
+    border-top: 3px solid var(--brand-blue);
+  }
+  .fc .fc-timegrid-now-indicator-line {
+    border-top: 3px solid var(--brand-blue);
+  }
+  @media (max-width: 900px) {
+    #calendar-wrapper {
+      padding: 10px 5px;
+      border-radius: 20px;
+    }
+    #calendar {
+      min-height: 400px;
+    }
+    .fc-toolbar-title {
+      font-size: 1.2em;
+      text-align: center;
+    }
+    .calendar-days,
+    .calendar-dates {
+      grid-template-columns: repeat(4, 1fr); /* 4 colonnes au lieu de 7 */
+    }
+  }
+  /* Modern Calendar Styles */
+  .calendar-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 20px 30px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+  }
+
+  .calendar-title {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .calendar-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--main-green) 0%, var(--dark-green) 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+  }
+
+  .calendar-title h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .weather-widget {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: #f0fdf4;
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--main-green);
+    flex: 0 1 auto;
+  }
+
+  .view-controls {
+    display: flex;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 4px;
+    gap: 2px;
+    flex: 1 1 260px;
+    justify-content: flex-end;
+  }
+
+  .view-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .view-btn.active {
+    background: var(--main-green);
+    color: white;
+  }
+
+  .view-btn:hover:not(.active) {
+    background: #e2e8f0;
+  }
+
+  .calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 20px 30px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+  }
+
+  .nav-btn {
+    background: #f8fafc;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    min-width: 40px;
+    min-height: 40px;
+    width: auto;
+    height: auto;
+  }
+
+  .nav-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: left 0.5s;
+  }
+
+  .nav-btn:hover::before {
+    left: 100%;
+  }
+
+  .nav-btn:hover {
+    background: var(--main-green);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+  }
+
+  .nav-btn:active {
+    transform: translateY(0);
+  }
+
+  .today-btn {
+    background: var(--main-green) !important;
+    color: white !important;
+    font-weight: 600;
+    font-size: 0.9em;
+    padding: 8px 24px; /* plus large */
+    border-radius: 20px; /* arrondi doux, pas rond */
+    transition: all 0.2s ease;
+    min-width: unset;
+    width: auto;
+    height: auto;
+    white-space: nowrap;
+  }
+
+  .today-btn:hover {
+    background: var(--dark-green) !important;
+    transform: scale(1.05);
+  }
+
+  .month-year {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .calendar-grid {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+  }
+
+  .calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .day-header {
+    padding: 16px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .calendar-dates {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .date-cell {
+    min-height: 120px;
+    padding: 16px;
+    border-right: 1px solid #f3f4f6;
+    border-bottom: 1px solid #f3f4f6;
+    position: relative;
+    background: white;
+    transition: background-color 0.2s ease;
+  }
+
+  .date-cell:hover {
+    background: #f0fdf4;
+  }
+
+  .date-cell:nth-child(7n) {
+    border-right: none;
+  }
+
+  .date-number {
+    font-weight: 600;
+    font-size: 16px;
+    color: #1f2937;
+    margin-bottom: 8px;
+  }
+
+  .date-cell.other-month .date-number {
+    color: #9ca3af;
+  }
+
+  .date-cell.today {
+    background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+  }
+
+  .date-cell.today .date-number {
+    color: var(--main-green);
+    font-weight: 700;
+  }
+
+  .event {
+    background: linear-gradient(135deg, var(--main-green) 0%, var(--dark-green) 100%);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  .event:hover {
+    transform: translateY(-1px);
+  }
+
+  .event.meeting {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  }
+
+  .event.design {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  }
+
+  .event.course {
+    background: linear-gradient(135deg, var(--brand-blue) 0%, #0891b2 100%);
+  }
+
+  .event.placeholder {
+    background: #e5e7eb;
+    color: #6b7280;
+    border: 2px dashed #d1d5db;
+    text-align: center;
+    font-style: italic;
+  }
+
+  .event.pending {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border: 2px solid #f59e0b;
+  }
+
+  .event.positive {
+    background: linear-gradient(135deg, var(--main-green) 0%, var(--dark-green) 100%);
+    color: white;
+  }
+
+  .event.negative {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+  }
+
+  .add-event-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--main-green) 0%, var(--dark-green) 100%);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(46, 204, 113, 0.4);
+    transition: all 0.3s ease;
+  }
+
+  .add-event-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 30px rgba(46, 204, 113, 0.6);
+  }
+
+  .search-bar {
+    position: relative;
+    max-width: 300px;
+    flex: 1 1 260px;
+    min-width: 220px;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 10px 40px 10px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: var(--main-green);
+  }
+
+  .search-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7280;
+  }
+
+  /* Pour mobiles (jusqu'à 600px) */
+@media (max-width: 600px) {
+    .calendar-header,
+    .calendar-nav {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 15px;
+    }
+    .header-actions {
+      width: 100%;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .header-actions > * {
+      width: 100%;
+    }
+    .calendar-days,
+    .calendar-dates {
+      grid-template-columns: repeat(2, 1fr); /* 2 colonnes sur petit écran */
+    }
+    .date-cell {
+      min-height: 60px;
+      padding: 5px;
+    }
+    .event {
+      font-size: 10px;
+      padding: 2px 4px;
+    }
+  }
+
+  /* Tablettes et écrans moyens */
+  @media (max-width: 992px) {
+    .calendar-header {
+      align-items: flex-start;
+    }
+    .header-actions {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+
+  /* Pour très petits écrans (< 400px) */
+  @media (max-width: 400px) {
+    .calendar-days,
+    .calendar-dates {
+      grid-template-columns: 1fr; /* Affiche les jours en pile */
+    }
+    .date-cell {
+      min-height: auto;
+    }
+  }
+  /* 📱 Responsive */
+  @media (max-width: 768px) {
+    .header-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .search-bar,
+    .weather-widget,
+    .view-controls {
+      justify-content: center;
+      width: 100%;
+    }
+
+    .view-controls {
+      flex-wrap: wrap;
+    }
+    .header-actions > * {
+      width: 100%;
+    }
+    .search-bar {
+      max-width: 100%;
+      min-width: 0;
+      flex: 1 1 100%;
+    }
+  }
+
+  /* Styles pour les vues semaine et jour */
+  .week-view-cell {
+    min-height: 200px !important;
+    border-right: 2px solid var(--main-green);
+  }
+
+  .day-view-cell {
+    min-height: 400px !important;
+    grid-column: 1 / -1;
+    border: 2px solid var(--main-green);
+    border-radius: 12px;
+    margin: 10px;
+  }
+
+  /* Ajuster la grille pour les vues semaine et jour */
+  .calendar-dates.week-view {
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .calendar-dates.day-view {
+    grid-template-columns: 1fr;
+  }
+
+  /* Animations pour les toasts */
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  .modern-archive-header {
+    background: #f8fafc;
+    border-bottom: 2.5px solid #2ecc71;
+    box-shadow: 0 2px 12px rgba(46,204,113,0.08);
+  }
+  .archive-title {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  }
+  .archive-icon {
+    background: linear-gradient(135deg, #2ecc71 60%, #3bb2d6 100%);
+    color: #fff;
+    border-radius: 10px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(46,204,113,0.13);
+  }
+  #show-kanban-btn:hover {
+    background-color: #17a589 !important;
+    border-color: #17a589 !important;
+    transition: background 0.2s, border 0.2s;
+  }
+  #show-calendar-btn:hover {
+    background-color: #f8c471 !important;
+    border-color: #f8c471 !important;
+    transition: background 0.2s, border 0.2s;
+  }
+  #show-archive-btn:hover {
+    background-color: #e74c3c !important;
+    border-color: #e74c3c !important;
+    transition: background 0.2s, border 0.2s;
+  }
+</style>
+<div class="content">
+
+  {% if messages %}
+  {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-clipboard-list me-2"></i>
+      Liste des Entretiens
+  </div>
+    <div class="card-body">
+      <form method="get" id="search-form">
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-md-6">
+            <div class="input-group">
+              <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" class="form-control" name="q" id="search-interview" placeholder="Rechercher par sujet, lieu..." value="{{ query|default:'' }}" style="border-color: #1e90ff;">
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="d-flex gap-1 justify-content-md-end">
+              <button id="show-kanban-btn" class="btn btn-light border text-nowrap px-2" type="button" title="Tableau Kanban" onclick="toggleKanbanBoard()">
+              <i class="fas fa-columns"></i>
+                <!-- <span class="d-none d-lg-inline ms-1">Kanban</span> -->
+            </button>
+              <button id="show-calendar-btn" class="btn btn-light border text-nowrap px-2" type="button" title="Calendrier" onclick="toggleCalendarView()">
+              <i class="fas fa-calendar-alt"></i>
+                <!-- <span class="d-none d-lg-inline ms-1">Calendrier</span> -->
+            </button>
+              <button id="show-archive-btn" class="btn btn-light border text-nowrap px-2" type="button" title="Entretiens archivés" onclick="toggleArchivedInterviews()">
+              <i class="fas fa-archive"></i>
+                <!-- <span class="d-none d-lg-inline ms-1">Archivés</span> -->
+              </button>
+              <button class="btn text-white text-nowrap px-2" type="button" onclick="showAddInterviewForm()" style="background-color: #1e90ff; border-color: #1e90ff;">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+            </button>
+          </div>
+        </div>
+        </div>
+      </form>
+        <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-light borderless">
+              <tr>
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAll">
+                </th>
+                <th>Candidature</th>
+                <th>Début</th>
+                <th class="d-none d-md-table-cell">Fin</th>
+                <th class="d-none d-md-table-cell">Durée</th>
+                <th class="d-none d-md-table-cell">Lieu</th>
+                <th class="d-none d-md-table-cell">Organisateur</th>
+                <th class="d-none d-md-table-cell">Description</th>
+                <th class="d-none d-md-table-cell">Notes</th>
+                <th>Résultat</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="interviews-table">
+              {% for interview in page_obj %}
+              <tr class="main-row">
+                <td class="d-none d-md-table-cell">
+                  <input type="checkbox" class="row-check">
+                </td>
+                <td>{{ interview.application.candidate }} - {{ interview.application.offer }}</td>
+                <td>{{ interview.start|date:"d/m/Y H:i" }}</td>
+                <td class="d-none d-md-table-cell">{{ interview.end|date:"d/m/Y H:i" }}</td>
+                <td class="d-none d-md-table-cell">{{ interview.duration }}</td>
+                <td class="d-none d-md-table-cell">{{ interview.location|default:"-" }}</td>
+                <td class="d-none d-md-table-cell">{{ interview.organizer|default:"-" }}</td>
+                <td class="d-none d-md-table-cell">{{ interview.description|truncatechars:50|default:"-" }}</td>
+                <td class="d-none d-md-table-cell">{{ interview.notes|truncatechars:50|default:"-" }}</td>
+                <td>
+                  {% if interview.display_result == 'positive' %}
+                    <span class="badge bg-success">Positif</span>
+                  {% elif interview.display_result == 'negative' %}
+                    <span class="badge bg-danger">Négatif</span>
+                  {% elif interview.display_result == 'pending' or not interview.display_result %}
+                    <span class="badge bg-warning text-dark">En attente</span>
+                  {% else %}
+                    <span class="badge bg-secondary">{{ interview.display_result }}</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ interview.id }}">
+                    Voir détails
+                  </button>
+                  <div class="d-none d-md-flex gap-1 justify-content-end">
+                    <button class="btn btn-sm btn-light border text-dark" onclick="showEditInterviewForm('{{ interview.id }}')" title="Modifier cet entretien">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteInterview" data-interview-id="{{ interview.id }}" title="Supprimer cet entretien">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                  <span class="d-none" data-interview-id="{{ interview.id }}"></span>
+                </td>
+              </tr>
+              <tr class="collapse bg-light" id="details-{{ interview.id }}">
+                <td colspan="11" class="p-3">
+                  <div class="row">
+                    <div class="col-12 col-md-6">
+                      <p class="mb-2"><strong>Début:</strong> {{ interview.start|date:"d/m/Y H:i" }}</p>
+                      <p class="mb-2"><strong>Fin:</strong> {{ interview.end|date:"d/m/Y H:i" }}</p>
+                      <p class="mb-2"><strong>Durée:</strong> {{ interview.duration|default:"-" }}</p>
+                      <p class="mb-2"><strong>Lieu:</strong> {{ interview.location|default:"-" }}</p>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <p class="mb-2"><strong>Organisateur:</strong> {{ interview.organizer|default:"-" }}</p>
+                      <p class="mb-2"><strong>Description:</strong> {{ interview.description|default:"-" }}</p>
+                      <p class="mb-2"><strong>Notes:</strong> {{ interview.notes|default:"-" }}</p>
+                      <p class="mb-2"><strong>Résultat:</strong>
+                        {% if interview.display_result == 'positive' %}
+                          <span class="badge bg-success">Positif</span>
+                        {% elif interview.display_result == 'negative' %}
+                          <span class="badge bg-danger">Négatif</span>
+                        {% elif interview.display_result == 'pending' or not interview.display_result %}
+                          <span class="badge bg-warning text-dark">En attente</span>
+                        {% else %}
+                          <span class="badge bg-secondary">{{ interview.display_result }}</span>
+                        {% endif %}
+                      </p>
+                    </div>
+                    <div class="col-12 mt-2 d-flex gap-2 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark" onclick="showEditInterviewForm('{{ interview.id }}')">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                      </button>
+                      <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteInterview" data-interview-id="{{ interview.id }}">
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="11" class="text-center">Aucun entretien trouvé.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      <!-- Pagination Component -->
+      {% if page_obj.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+          {% endif %}
+              {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+              <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item"><a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}">{{ num }}</a></li>
+                {% endif %}
+              {% endfor %}
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+          </nav>
+      {% endif %}
+
+
+
+        </div>
+      </div>
+    </div>
+
+  <!-- Formulaire d'ajout d'entretien -->
+  <div class="card mb-4" id="add-interview-form" style="display: block; margin-left: 1rem; margin-right: 1rem;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2"></i>
+      Nouvel Entretien
+    </div>
+    <div class="card-body">
+      <form id="addInterviewFormBottom" method="post" action="{% url 'recruitment_interviews' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="add_application_bottom">Candidature *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-user"></i>
+              </span>
+            <select class="form-select" id="add_application_bottom" name="application" required>
+              <option value="">Sélectionner...</option>
+              {% for app in applications %}
+                <option value="{{ app.id }}">
+                  {{ app.candidate }} - {{ app.offer }}
+                </option>
+              {% endfor %}
+            </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="add_start_bottom">Début *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-calendar"></i>
+              </span>
+            <input type="datetime-local" class="form-control" id="add_start_bottom" name="start" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="add_end_bottom">Fin *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-calendar"></i>
+              </span>
+            <input type="datetime-local" class="form-control" id="add_end_bottom" name="end" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="add_duration_bottom">Durée (hh:mm)</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-clock"></i>
+              </span>
+            <input type="text" class="form-control" id="add_duration_bottom" name="duration" placeholder="01:00">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="add_location_bottom">Lieu</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-map-marker-alt"></i>
+              </span>
+            <input type="text" class="form-control" id="add_location_bottom" name="location">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="add_videcall_url_bottom">URL Visio</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-video"></i>
+              </span>
+            <input type="url" class="form-control" id="add_videcall_url_bottom" name="videcall_url">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="add_organizer_bottom">Organisateur</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-user-tie"></i>
+              </span>
+            <select class="form-select" id="add_organizer_bottom" name="organizer">
+              <option value="">Sélectionner...</option>
+              {% for emp in employees %}
+                <option value="{{ emp.id }}">{{ emp.full_name }}</option>
+              {% endfor %}
+            </select>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="add_description_bottom">Description</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-align-left"></i>
+              </span>
+            <textarea class="form-control" id="add_description_bottom" name="description" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="add_notes_bottom">Notes</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-sticky-note"></i>
+              </span>
+            <textarea class="form-control" id="add_notes_bottom" name="notes" rows="3"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 d-flex justify-content-end">
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i>Enregistrer
+          </button>
+          <button type="button" class="btn btn-secondary ms-2" onclick="hideAddInterviewForm()">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification d'entretien -->
+  <div class="card mb-4" id="edit-interview-form" style="display: none; margin-left: 1rem; margin-right: 1rem;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier l'Entretien
+    </div>
+    <div class="card-body">
+      <form id="editInterviewFormBottom" method="post" action="{% url 'recruitment_interviews' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="interview_id" id="edit_interview_id_bottom">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="edit_application_bottom">Candidature *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-user"></i>
+              </span>
+            <select class="form-select" id="edit_application_bottom" name="application" required>
+              <option value="">Sélectionner...</option>
+              {% for app in applications %}
+                <option value="{{ app.id }}">
+                  {{ app.candidate }} - {{ app.offer }}
+                </option>
+              {% endfor %}
+            </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_start_bottom">Début *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-calendar"></i>
+              </span>
+            <input type="datetime-local" class="form-control" id="edit_start_bottom" name="start" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_end_bottom">Fin *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-calendar"></i>
+              </span>
+            <input type="datetime-local" class="form-control" id="edit_end_bottom" name="end" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_duration_bottom">Durée (hh:mm)</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-clock"></i>
+              </span>
+            <input type="text" class="form-control" id="edit_duration_bottom" name="duration" placeholder="01:00">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_location_bottom">Lieu</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-map-marker-alt"></i>
+              </span>
+            <input type="text" class="form-control" id="edit_location_bottom" name="location">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_videcall_url_bottom">URL Visio</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-video"></i>
+              </span>
+            <input type="url" class="form-control" id="edit_videcall_url_bottom" name="videcall_url">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_organizer_bottom">Organisateur</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-user-tie"></i>
+              </span>
+            <select class="form-select" id="edit_organizer_bottom" name="organizer">
+              <option value="">Sélectionner...</option>
+              {% for emp in employees %}
+                <option value="{{ emp.id }}">{{ emp.full_name }}</option>
+              {% endfor %}
+            </select>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="edit_description_bottom">Description</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-align-left"></i>
+              </span>
+            <textarea class="form-control" id="edit_description_bottom" name="description" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="edit_notes_bottom">Notes</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-sticky-note"></i>
+              </span>
+            <textarea class="form-control" id="edit_notes_bottom" name="notes" rows="3"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 d-flex justify-content-end">
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i>Modifier
+          </button>
+          <button type="button" class="btn btn-secondary ms-2" onclick="hideEditInterviewForm()">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tableau Kanban des entretiens -->
+  <div id="kanban-board-section" class="card mb-4" style="display: none; margin-left: 1rem; margin-right: 1rem;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <h6 class="mb-0">
+        <i class="fas fa-columns me-2"></i>
+        Tableau Kanban des Entretiens
+      </h6>
+    </div>
+    <div class="card-body">
+      <!-- Kanban Board Start -->
+      <div class="kanban-board d-flex flex-row gap-3">
+        <!-- Réception de l'offre -->
+        <div class="kanban-column flex-fill p-2 rounded-4" style="background: #fff7ed;">
+          <div class="kanban-header d-flex justify-content-between align-items-center px-3 py-2 rounded-top-4 mb-3" style="background: #f1c490e6;">
+            <span class="fw-bold text-white">Réception de l'offre</span>
+            <span class="badge bg-white text-danger">{{ kanban_data.reception|length }}</span>
+          </div>
+          <div class="kanban-cards" id="kanban-reception">
+            {% for interview in kanban_data.reception %}
+              <div class="kanban-card bg-white rounded-4 shadow-sm p-3 mb-3" data-id="{{ interview.id }}">
+                <div class="fw-bold mb-1">{{ interview.application.candidate }} - {{ interview.application.offer }}</div>
+                <div class="small text-muted mb-1">Début : {{ interview.start|date:"d/m/Y H:i" }}</div>
+                <div class="small text-muted">Fin : {{ interview.end|date:"d/m/Y H:i" }}</div>
+                <div class="mt-2"><span class="badge bg-warning text-dark">En attente</span></div>
+              </div>
+            {% empty %}
+              <div class="text-muted text-center">Aucun entretien</div>
+            {% endfor %}
+          </div>
+        </div>
+        <!-- Entretien A -->
+        <div class="kanban-column flex-fill p-2 rounded-4" style="background: #e3f6fd;">
+          <div class="kanban-header d-flex justify-content-between align-items-center px-3 py-2 rounded-top-4 mb-3" style="background: #10598ac9;">
+            <span class="fw-bold text-white">Entretien A</span>
+            <span class="badge bg-white text-info">{{ kanban_data.a|length }}</span>
+          </div>
+          <div class="kanban-cards" id="kanban-a">
+            {% for interview in kanban_data.a %}
+              <div class="kanban-card bg-white rounded-4 shadow-sm p-3 mb-3" data-id="{{ interview.id }}">
+                <div class="fw-bold mb-1">{{ interview.application.candidate }} - {{ interview.application.offer }}</div>
+                <div class="small text-muted mb-1">Début : {{ interview.start|date:"d/m/Y H:i" }}</div>
+                <div class="small text-muted">Fin : {{ interview.end|date:"d/m/Y H:i" }}</div>
+                <div class="mt-2"><span class="badge bg-warning text-dark">En attente</span></div>
+              </div>
+            {% empty %}
+              <div class="text-muted text-center">Aucun entretien</div>
+            {% endfor %}
+          </div>
+        </div>
+        <!-- Entretien B -->
+        <div class="kanban-column flex-fill p-2 rounded-4" style="background: #ECFDF5;">
+          <div class="kanban-header d-flex justify-content-between align-items-center px-3 py-2 rounded-top-4 mb-3" style="background: #2aa63fd3;">
+            <span class="fw-bold text-white">Entretien B</span>
+            <span class="badge bg-white text-secondary">{{ kanban_data.b|length }}</span>
+          </div>
+          <div class="kanban-cards" id="kanban-b">
+            {% for interview in kanban_data.b %}
+              <div class="kanban-card bg-white rounded-4 shadow-sm p-3 mb-3 d-flex flex-column align-items-start" data-id="{{ interview.id }}">
+                <div class="fw-bold mb-1">{{ interview.application.candidate }} - {{ interview.application.offer }}</div>
+                <div class="small text-muted mb-1">Début : {{ interview.start|date:"d/m/Y H:i" }}</div>
+                <div class="small text-muted">Fin : {{ interview.end|date:"d/m/Y H:i" }}</div>
+                <div class="mt-2 d-flex gap-2">
+                  <button class="btn btn-sm btn-success btn-validate-interview" title="Valider" data-id="{{ interview.id }}"><i class="fas fa-check"></i></button>
+                  <button class="btn btn-sm btn-danger btn-cancel-interview" title="Annuler" data-id="{{ interview.id }}"><i class="fas fa-times"></i></button>
+                </div>
+              </div>
+            {% empty %}
+              <div class="text-muted text-center">Aucun entretien</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <!-- Kanban Board End -->
+      <div class="mt-3">
+        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="toggleKanbanBoard()">
+          <i class="fas fa-times"></i>
+          <span class="d-none d-lg-inline ms-1">Fermer</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendrier des entretiens -->
+  <div id="calendar-section" class="card mb-4" style="display: none; margin-left: 1rem; margin-right: 1rem;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <h6 class="mb-0">
+        <i class="fas fa-calendar-alt me-2"></i>
+        Calendrier des Entretiens
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <div class="calendar-title">
+            <div class="calendar-icon">📅</div>
+            <h1>Calendrier des Entretiens</h1>
+          </div>
+          <div class="header-actions">
+            <div class="search-bar">
+              <span class="search-icon">🔍</span>
+              <input type="date" class="search-input" id="calendar-date-search" style="padding-right: 16px;">
+            </div>
+            <div class="weather-widget">
+              <span>👥</span>
+              <span id="current-time"></span>
+              <span id="interview-count">0 entretiens</span>
+            </div>
+            <div class="view-controls">
+              <button class="view-btn active" data-view="month">Mois</button>
+              <button class="view-btn" data-view="week">Semaine</button>
+              <button class="view-btn" data-view="day">Jour</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="calendar-nav">
+          <button class="nav-btn" onclick="previousMonth()" title="Précédent">‹</button>
+          <div class="month-year" id="current-month-year">Septembre 2024</div>
+          <button class="nav-btn today-btn" onclick="goToToday()" title="Aller à aujourd'hui">Aujourd'hui</button>
+          <button class="nav-btn" onclick="nextMonth()" title="Suivant">›</button>
+        </div>
+
+        <div class="calendar-grid">
+          <div class="calendar-days">
+            <div class="day-header">Lun</div>
+            <div class="day-header">Mar</div>
+            <div class="day-header">Mer</div>
+            <div class="day-header">Jeu</div>
+            <div class="day-header">Ven</div>
+            <div class="day-header">Sam</div>
+            <div class="day-header">Dim</div>
+          </div>
+
+          <div class="calendar-dates" id="calendar-dates">
+            <!-- Calendar dates will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+      <button class="add-event-btn" onclick="addInterview()">+</button>
+      <div class="mt-3 d-flex gap-2">
+        <button id="download-calendar-pdf" class="btn btn-light border text-nowrap px-2" type="button" title="Télécharger PDF">
+          <i class="fas fa-file-pdf"></i>
+          <span class="d-none d-lg-inline ms-1">PDF</span>
+        </button>
+        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="toggleCalendarView()">
+          <i class="fas fa-times"></i>
+          <span class="d-none d-lg-inline ms-1">Fermer</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des entretiens archivés -->
+  <div id="archived-interviews-section" class="card mb-4" style="display: none; margin-left: 1rem; margin-right: 1rem;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <h6 class="mb-0">
+        <i class="fas fa-archive me-2"></i>
+        Entretiens archivés
+      </h6>
+    </div>
+    <div class="card-body">
+      <!-- Barre de recherche pour les entretiens archivés -->
+      <div class="mb-3">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="input-group">
+              <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+                    <input type="search" 
+                           class="form-control" 
+                           name="archived_interview_q" 
+                           id="archived-interview-search" 
+                           placeholder="Rechercher par candidat ou poste..." 
+                           value="{{ archived_interview_query|default:'' }}"
+                           style="border-color: #1e90ff;">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="toggleArchivedInterviews()">
+              <i class="fas fa-times"></i>
+              <span class="d-none d-lg-inline ms-1">Fermer</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead class="table-light borderless">
+            <tr>
+              <th>Candidat</th>
+              <th>Poste</th>
+              <th>Date</th>
+              <th>Heure</th>
+              <th>Lieu</th>
+              <th>Organisateur</th>
+              <th>Description</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="archived-interviews-table">
+            {% for interview in archived_interviews %}
+            <tr>
+              <td>{{ interview.application.candidate.first_name }} {{ interview.application.candidate.last_name }}</td>
+              <td>{{ interview.application.offer.title }}</td>
+              <td>{{ interview.start|date:"d/m/Y" }}</td>
+              <td>{{ interview.start|date:"H:i" }}</td>
+              <td>{{ interview.location|default:"-" }}</td>
+              <td>{{ interview.organizer.full_name|default:"-" }}</td>
+              <td>{{ interview.description|truncatechars:50|default:"-" }}</td>
+              <td>{{ interview.notes|truncatechars:50|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted">Aucun entretien archivé.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<!-- Modern Calendar JavaScript -->
+<script>
+let currentDate = new Date();
+let currentMonth = currentDate.getMonth();
+let currentYear = currentDate.getFullYear();
+let currentView = 'month'; // 'month', 'week', 'day'
+let currentWeekStart = new Date(); // Date de début de la semaine actuelle
+let currentDay = currentDate.getDate();
+
+// Initialiser la date de début de la semaine actuelle
+function initializeWeekStart() {
+  const today = new Date();
+  currentWeekStart = new Date(today);
+  currentWeekStart.setDate(today.getDate() - today.getDay() + 1); // Lundi
+  currentWeekStart.setHours(0, 0, 0, 0);
+}
+
+function updateCurrentTime() {
+  const now = new Date();
+  const timeString = now.toLocaleTimeString('fr-FR', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+  document.getElementById('current-time').textContent = timeString;
+}
+
+function updateInterviewCount() {
+  const events = Array.from(document.querySelectorAll('.event')).filter(ev => ev.offsetParent !== null);
+  const count = events.length;
+  document.getElementById('interview-count').textContent = `${count} entretien${count > 1 ? 's' : ''}`;
+}
+
+function generateCalendar() {
+  const calendarDates = document.getElementById('calendar-dates');
+  calendarDates.innerHTML = '';
+  
+  const monthYear = document.getElementById('current-month-year');
+  const monthNames = [
+    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+  ];
+  
+  if (currentView === 'month') {
+    generateMonthView(monthYear, monthNames);
+  } else if (currentView === 'week') {
+    generateWeekView(monthYear, monthNames);
+  } else if (currentView === 'day') {
+    generateDayView(monthYear, monthNames);
+  }
+  
+  // Charger les entretiens depuis la base de données
+  loadInterviewsForView();
+}
+
+function generateMonthView(monthYear, monthNames) {
+  const firstDay = new Date(currentYear, currentMonth, 1);
+  const lastDay = new Date(currentYear, currentMonth + 1, 0);
+  const startDate = new Date(firstDay);
+  startDate.setDate(startDate.getDate() - firstDay.getDay() + 1);
+  
+  monthYear.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+  
+  // Appliquer la classe CSS pour la vue mois
+  const calendarDates = document.getElementById('calendar-dates');
+  calendarDates.className = 'calendar-dates';
+  
+  // Générer les cellules du calendrier (6 semaines)
+  for (let i = 0; i < 42; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
+    
+    const dateCell = document.createElement('div');
+    dateCell.className = 'date-cell';
+    
+    if (date.getMonth() !== currentMonth) {
+      dateCell.classList.add('other-month');
+    }
+    
+    if (date.toDateString() === new Date().toDateString()) {
+      dateCell.classList.add('today');
+    }
+    
+    const dateNumber = document.createElement('div');
+    dateNumber.className = 'date-number';
+    dateNumber.textContent = date.getDate();
+    dateCell.appendChild(dateNumber);
+    
+    calendarDates.appendChild(dateCell);
+  }
+}
+
+function generateWeekView(monthYear, monthNames) {
+  // Utiliser currentWeekStart pour la navigation
+  const weekStart = new Date(currentWeekStart);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  
+  // Calculer le numéro de semaine
+  const startOfYear = new Date(weekStart.getFullYear(), 0, 1);
+  const days = Math.floor((weekStart - startOfYear) / (24 * 60 * 60 * 1000));
+  const weekNumber = Math.ceil((days + 1) / 7);
+  
+  monthYear.textContent = `Semaine ${weekNumber} (${weekStart.toLocaleDateString('fr-FR')} - ${weekEnd.toLocaleDateString('fr-FR')})`;
+  
+  // Appliquer la classe CSS pour la vue semaine
+  const calendarDates = document.getElementById('calendar-dates');
+  calendarDates.className = 'calendar-dates week-view';
+  
+  // Générer les cellules pour une semaine
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + i);
+    
+    const dateCell = document.createElement('div');
+    dateCell.className = 'date-cell week-view-cell';
+    
+    if (date.toDateString() === new Date().toDateString()) {
+      dateCell.classList.add('today');
+    }
+    
+    const dateNumber = document.createElement('div');
+    dateNumber.className = 'date-number';
+    dateNumber.textContent = `${date.toLocaleDateString('fr-FR', { weekday: 'short' })} ${date.getDate()}`;
+    dateCell.appendChild(dateNumber);
+    
+    calendarDates.appendChild(dateCell);
+  }
+}
+
+function generateDayView(monthYear, monthNames) {
+  const today = new Date(currentYear, currentMonth, currentDay);
+  
+  monthYear.textContent = `${today.toLocaleDateString('fr-FR', { weekday: 'long' })} ${today.getDate()} ${monthNames[today.getMonth()]} ${today.getFullYear()}`;
+  
+  // Appliquer la classe CSS pour la vue jour
+  const calendarDates = document.getElementById('calendar-dates');
+  calendarDates.className = 'calendar-dates day-view';
+  
+  // Générer une seule cellule pour le jour
+  const dateCell = document.createElement('div');
+  dateCell.className = 'date-cell day-view-cell';
+  
+  if (today.toDateString() === new Date().toDateString()) {
+    dateCell.classList.add('today');
+  }
+  
+  const dateNumber = document.createElement('div');
+  dateNumber.className = 'date-number';
+  dateNumber.textContent = `${today.getDate()} ${monthNames[today.getMonth()]}`;
+  dateCell.appendChild(dateNumber);
+  
+  // Ajouter un message par défaut
+  const defaultMessage = document.createElement('div');
+  defaultMessage.className = 'no-events-message';
+  defaultMessage.innerHTML = '<em>Aucun entretien prévu pour ce jour</em>';
+  defaultMessage.style.cssText = `
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+    margin-top: 20px;
+    padding: 20px;
+  `;
+  dateCell.appendChild(defaultMessage);
+  
+  calendarDates.appendChild(dateCell);
+}
+
+function loadInterviewsForView() {
+  let startDate, endDate;
+  
+  if (currentView === 'month') {
+    startDate = new Date(currentYear, currentMonth, 1);
+    endDate = new Date(currentYear, currentMonth + 1, 0);
+  } else if (currentView === 'week') {
+    startDate = new Date(currentWeekStart);
+    endDate = new Date(currentWeekStart);
+    endDate.setDate(currentWeekStart.getDate() + 6);
+  } else if (currentView === 'day') {
+    // Pour la vue jour, utiliser la même date pour début et fin
+    startDate = new Date(currentYear, currentMonth, currentDay);
+    endDate = new Date(currentYear, currentMonth, currentDay);
+    // S'assurer que endDate inclut toute la journée (23:59:59)
+    endDate.setHours(23, 59, 59, 999);
+  }
+  
+  // Format: YYYY-MM-DD
+  const startDateStr = startDate.toISOString().split('T')[0];
+  const endDateStr = endDate.toISOString().split('T')[0];
+  
+  // Log pour débogage
+  console.log(`Chargement entretiens pour ${currentView}:`, {
+    startDate: startDateStr,
+    endDate: endDateStr,
+    currentYear,
+    currentMonth,
+    currentDay
+  });
+  
+  fetch(`/rc/interview/events/?start=${startDateStr}&end=${endDateStr}`)
+    .then(response => response.json())
+    .then(interviews => {
+      console.log(`Entretiens reçus pour ${currentView}:`, interviews);
+      displayInterviews(interviews);
+      updateInterviewCount();
+    })
+    .catch(error => {
+      console.error('Erreur lors du chargement des entretiens:', error);
+      updateInterviewCount();
+    });
+}
+
+function displayInterviews(interviews) {
+  console.log('Interviews reçus pour affichage:', interviews);
+  const calendarDates = document.getElementById('calendar-dates');
+  const dateCells = calendarDates.querySelectorAll('.date-cell');
+  
+  // Réinitialiser les événements existants et les messages par défaut
+  dateCells.forEach(cell => {
+    const existingEvents = cell.querySelectorAll('.event');
+    existingEvents.forEach(event => event.remove());
+    
+    // Supprimer le message par défaut s'il existe
+    const defaultMessage = cell.querySelector('.no-events-message');
+    if (defaultMessage) {
+      defaultMessage.remove();
+    }
+  });
+  
+  // Si aucun entretien, afficher le message par défaut dans la vue jour
+  if (interviews.length === 0 && currentView === 'day') {
+    const dateCell = dateCells[0];
+    if (dateCell) {
+      const defaultMessage = document.createElement('div');
+      defaultMessage.className = 'no-events-message';
+      defaultMessage.innerHTML = '<em>Aucun entretien prévu pour ce jour</em>';
+      defaultMessage.style.cssText = `
+        text-align: center;
+        color: #6b7280;
+        font-style: italic;
+        margin-top: 20px;
+        padding: 20px;
+      `;
+      dateCell.appendChild(defaultMessage);
+    }
+    return;
+  }
+  
+  interviews.forEach(interview => {
+    if (interview.start) {
+      const interviewDate = new Date(interview.start);
+      
+      // Trouver la cellule correspondante selon la vue
+      let targetCell;
+      
+      if (currentView === 'month') {
+        // Pour la vue mois, chercher par jour du mois
+        const dayOfMonth = interviewDate.getDate();
+        targetCell = Array.from(dateCells).find(cell => {
+          const dateNumber = cell.querySelector('.date-number');
+          return dateNumber && parseInt(dateNumber.textContent) === dayOfMonth;
+        });
+      } else if (currentView === 'week') {
+        // Pour la vue semaine, chercher par jour de la semaine
+        const dayOfWeek = interviewDate.getDay();
+        const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Lundi = 0, Dimanche = 6
+        targetCell = dateCells[adjustedDay];
+      } else if (currentView === 'day') {
+        // Pour la vue jour, vérifier que l'entretien correspond au jour affiché
+        const currentDisplayDate = new Date(currentYear, currentMonth, currentDay);
+        const interviewDay = new Date(interviewDate.getFullYear(), interviewDate.getMonth(), interviewDate.getDate());
+        
+        // Vérifier si les dates correspondent (même jour, mois et année)
+        if (currentDisplayDate.getTime() === interviewDay.getTime()) {
+          targetCell = dateCells[0];
+        } else {
+          // L'entretien ne correspond pas au jour affiché, on l'ignore
+          targetCell = null;
+        }
+      }
+      
+      if (targetCell) {
+        const event = document.createElement('div');
+        event.className = 'event';
+        
+        // Déterminer la classe CSS selon le résultat
+        if (interview.result === 'positive') {
+          event.classList.add('positive');
+        } else if (interview.result === 'negative') {
+          event.classList.add('negative');
+        } else {
+          event.classList.add('pending'); // pending ou null
+        }
+        
+        // Formater l'heure
+        const startTime = new Date(interview.start);
+        const endTime = interview.end ? new Date(interview.end) : null;
+        const timeString = startTime.toLocaleTimeString('fr-FR', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        
+        const endTimeString = endTime ? endTime.toLocaleTimeString('fr-FR', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }) : '';
+        
+        const timeDisplay = endTimeString ? `${timeString}-${endTimeString}` : timeString;
+        
+        // Créer le contenu de l'événement
+        const candidateName = interview.title.split(' - ')[0] || 'Entretien';
+        const offerName = interview.title.split(' - ')[1] || '';
+        
+        if (currentView === 'day') {
+          // Vue jour : afficher plus de détails
+          event.innerHTML = `
+            <strong>${candidateName}</strong><br>
+            <small>${timeDisplay}</small><br>
+            <small>${offerName}</small>
+          `;
+        } else {
+          // Vue mois/semaine : affichage compact
+          event.innerHTML = `${candidateName}<br>${timeDisplay}`;
+          if (offerName) {
+            event.innerHTML += `<br><small>${offerName}</small>`;
+          }
+        }
+        
+        // Ajouter les détails au survol
+        event.title = `${interview.title}\nHeure: ${timeDisplay}\nLieu: ${interview.location || 'Non spécifié'}\nOrganisateur: ${interview.organizer || 'Non spécifié'}`;
+        
+        // Gestionnaire de clic pour afficher les détails
+        event.onclick = () => showEventDetails(interview);
+        
+        targetCell.appendChild(event);
+      }
+    }
+  });
+}
+
+function showEventDetails(interview) {
+  const startTime = new Date(interview.start);
+  const endTime = interview.end ? new Date(interview.end) : null;
+  const timeString = startTime.toLocaleTimeString('fr-FR', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+  const endTimeString = endTime ? endTime.toLocaleTimeString('fr-FR', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  }) : '';
+  
+  const timeDisplay = endTimeString ? `${timeString} - ${endTimeString}` : timeString;
+  const dateDisplay = startTime.toLocaleDateString('fr-FR');
+  
+  let resultText = 'En attente';
+  if (interview.result === 'positive') {
+    resultText = 'Positif';
+  } else if (interview.result === 'negative') {
+    resultText = 'Négatif';
+  }
+  
+  const details = `
+Entretien: ${interview.title}
+Date: ${dateDisplay}
+Heure: ${timeDisplay}
+Lieu: ${interview.location || 'Non spécifié'}
+Organisateur: ${interview.organizer || 'Non spécifié'}
+Résultat: ${resultText}
+${interview.description ? `Description: ${interview.description}` : ''}
+  `.trim();
+  
+  alert(details);
+}
+
+function previousMonth() {
+  if (currentView === 'month') {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+  } else if (currentView === 'week') {
+    // Aller à la semaine précédente
+    currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+  } else if (currentView === 'day') {
+    currentDay--;
+    if (currentDay < 1) {
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      }
+      currentDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+    }
+  }
+  generateCalendar();
+}
+
+function nextMonth() {
+  if (currentView === 'month') {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+  } else if (currentView === 'week') {
+    // Aller à la semaine suivante
+    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+  } else if (currentView === 'day') {
+    currentDay++;
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    if (currentDay > lastDayOfMonth) {
+      currentDay = 1;
+      currentMonth++;
+      if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+    }
+  }
+  generateCalendar();
+}
+
+function addInterview() {
+  // Open the add interview modal
+  const addModal = new bootstrap.Modal(document.getElementById('modalAddInterview'));
+  addModal.show();
+}
+
+function goToToday() {
+  const today = new Date();
+  
+  if (currentView === 'month') {
+    currentYear = today.getFullYear();
+    currentMonth = today.getMonth();
+  } else if (currentView === 'week') {
+    initializeWeekStart();
+  } else if (currentView === 'day') {
+    currentYear = today.getFullYear();
+    currentMonth = today.getMonth();
+    currentDay = today.getDate();
+  }
+  
+  generateCalendar();
+}
+
+// Initialize calendar when section is shown
+function initializeCalendar() {
+    // Initialiser la semaine actuelle
+    initializeWeekStart();
+    generateCalendar();
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 60000); // Update time every minute
+}
+
+// Search functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.querySelector('.search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', function(e) {
+      const searchTerm = e.target.value.toLowerCase();
+      const events = document.querySelectorAll('.event');
+      
+      events.forEach(event => {
+        const eventText = event.textContent.toLowerCase();
+        if (eventText.includes(searchTerm)) {
+          event.style.display = 'block';
+        } else {
+          event.style.display = searchTerm ? 'none' : 'block';
+        }
+      });
+    });
+  }
+  
+  // View switching functionality
+  const viewBtns = document.querySelectorAll('.view-btn');
+  viewBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const view = this.getAttribute('data-view');
+      if (view && view !== currentView) {
+        // Mettre à jour l'état actif des boutons
+        viewBtns.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Changer la vue
+        changeView(view);
+      }
+    });
+  });
+  
+  // Event hover effects
+  document.addEventListener('mouseover', function(e) {
+    if (e.target.classList.contains('event')) {
+      e.target.style.transform = 'translateY(-2px)';
+    }
+  });
+  
+  document.addEventListener('mouseout', function(e) {
+    if (e.target.classList.contains('event')) {
+      e.target.style.transform = 'translateY(0)';
+    }
+  });
+  
+  // Rafraîchir le calendrier après l'ajout/modification d'un entretien
+  const addInterviewForm = document.getElementById('addInterviewForm');
+  if (addInterviewForm) {
+    addInterviewForm.addEventListener('submit', function() {
+      // Attendre que le modal se ferme puis rafraîchir
+      setTimeout(() => {
+        if (document.getElementById('modalCalendarInterview').classList.contains('show')) {
+          generateCalendar();
+        }
+      }, 1000);
+    });
+  }
+  
+  const editInterviewForm = document.getElementById('editInterviewForm');
+  if (editInterviewForm) {
+    editInterviewForm.addEventListener('submit', function() {
+      // Attendre que le modal se ferme puis rafraîchir
+      setTimeout(() => {
+        if (document.getElementById('modalCalendarInterview').classList.contains('show')) {
+          generateCalendar();
+        }
+      }, 1000);
+    });
+  }
+
+  // Remplacer la recherche texte par la recherche par date
+  const dateInput = document.getElementById('calendar-date-search');
+  if (dateInput) {
+    dateInput.addEventListener('change', function(e) {
+      const val = e.target.value;
+      if (val) {
+        const date = new Date(val);
+        currentYear = date.getFullYear();
+        currentMonth = date.getMonth();
+        currentDay = date.getDate();
+        currentView = 'day';
+        // Mettre à jour l'état actif des boutons
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.view-btn[data-view="day"]').classList.add('active');
+        generateCalendar();
+      }
+    });
+  }
+});
+
+function changeView(newView) {
+  currentView = newView;
+  
+  // Réinitialiser les dates selon la vue
+  if (newView === 'month') {
+    // Garder le mois actuel
+  } else if (newView === 'week') {
+    // Aller à la semaine actuelle
+    initializeWeekStart();
+  } else if (newView === 'day') {
+    // Aller au jour actuel
+    const today = new Date();
+    currentYear = today.getFullYear();
+    currentMonth = today.getMonth();
+    currentDay = today.getDate();
+  }
+  
+  // Afficher un message de confirmation
+  const viewNames = { 'month': 'Mois', 'week': 'Semaine', 'day': 'Jour' };
+  const message = `Vue changée vers : ${viewNames[newView]}`;
+  
+  // Créer un toast temporaire
+  showToast(message, 'success');
+  
+  // Régénérer le calendrier
+  generateCalendar();
+}
+
+function showToast(message, type = 'info') {
+  // Créer un élément toast temporaire
+  const toast = document.createElement('div');
+  toast.className = `toast-notification ${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'success' ? 'var(--main-green)' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 9999;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease;
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // Supprimer après 2 secondes
+  setTimeout(() => {
+    toast.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300);
+  }, 2000);
+}
+
+// Fonction pour rafraîchir le calendrier depuis l'extérieur
+function refreshCalendar() {
+  const calendarSection = document.getElementById('calendar-section');
+  if (calendarSection && calendarSection.style.display !== 'none') {
+    generateCalendar();
+  }
+}
+
+// Fonctions pour gérer l'affichage des formulaires
+function showAddInterviewForm() {
+  // Masquer le formulaire d'édition s'il est ouvert
+  document.getElementById('edit-interview-form').style.display = 'none';
+  // Masquer les sections Kanban, Calendar et Archives s'ils sont ouverts
+  document.getElementById('kanban-board-section').style.display = 'none';
+  document.getElementById('calendar-section').style.display = 'none';
+  document.getElementById('archived-interviews-section').style.display = 'none';
+  // Le formulaire d'ajout est déjà affiché par défaut
+  // Faire défiler vers le formulaire
+  window.scrollTo({ top: document.getElementById('add-interview-form').offsetTop - 80, behavior: 'smooth' });
+}
+
+function hideAddInterviewForm() {
+  document.getElementById('add-interview-form').style.display = 'none';
+  // Réinitialiser le formulaire
+  document.getElementById('addInterviewFormBottom').reset();
+}
+
+function showEditInterviewForm(interviewId) {
+  // Masquer le formulaire d'ajout s'il est ouvert
+  document.getElementById('add-interview-form').style.display = 'none';
+  // Masquer les sections Kanban, Calendar et Archives s'ils sont ouverts
+  document.getElementById('kanban-board-section').style.display = 'none';
+  document.getElementById('calendar-section').style.display = 'none';
+  document.getElementById('archived-interviews-section').style.display = 'none';
+  // Afficher le formulaire d'édition
+  document.getElementById('edit-interview-form').style.display = 'block';
+  
+  // Remplir le formulaire d'édition avec les données
+  document.getElementById('edit_interview_id_bottom').value = interviewId;
+  
+  // Récupérer les données de l'entretien via AJAX
+  fetch(`/rc/interview/${interviewId}/json/`)
+    .then(response => {
+      if (!response.ok) {
+        alert('Erreur lors de la récupération des données de l\'entretien.');
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Interview data:', data);
+      if (!data || data.error) {
+        alert('Erreur: Données de l\'entretien non trouvées ou incomplètes.');
+        return;
+      }
+      
+      // Remplir les champs du formulaire
+      if (document.getElementById('edit_application_bottom')) {
+        document.getElementById('edit_application_bottom').value = data.application || '';
+      }
+      if (document.getElementById('edit_start_bottom')) {
+        document.getElementById('edit_start_bottom').value = data.start || '';
+      }
+      if (document.getElementById('edit_end_bottom')) {
+        document.getElementById('edit_end_bottom').value = data.end || '';
+      }
+      if (document.getElementById('edit_duration_bottom')) {
+        document.getElementById('edit_duration_bottom').value = data.duration || '';
+      }
+      if (document.getElementById('edit_location_bottom')) {
+        document.getElementById('edit_location_bottom').value = data.location || '';
+      }
+      if (document.getElementById('edit_videcall_url_bottom')) {
+        document.getElementById('edit_videcall_url_bottom').value = data.videcall_url || '';
+      }
+      
+      // Gestion de l'organisateur
+      const organizerSelect = document.getElementById('edit_organizer_bottom');
+      if (organizerSelect) {
+        console.log('Organizer data:', data.organizer);
+        
+        if (data.organizer) {
+          const organizerValue = String(data.organizer).trim().toLowerCase();
+          let found = false;
+          
+          // Essayer de faire correspondre par valeur (ID)
+          for (let i = 0; i < organizerSelect.options.length; i++) {
+            if (organizerSelect.options[i].value === organizerValue) {
+              organizerSelect.options[i].selected = true;
+              found = true;
+              console.log('Option trouvée par ID:', organizerSelect.options[i].text);
+              break;
+            }
+          }
+          
+          // Si pas trouvé, essayer de faire correspondre par texte (nom)
+          if (!found) {
+            for (let i = 0; i < organizerSelect.options.length; i++) {
+              const optionText = organizerSelect.options[i].text.trim().toLowerCase();
+              if (optionText === organizerValue || organizerValue.includes(optionText) || optionText.includes(organizerValue)) {
+                organizerSelect.options[i].selected = true;
+                found = true;
+                console.log('Option trouvée par texte:', organizerSelect.options[i].text);
+                break;
+              }
+            }
+          }
+          
+          if (!found) {
+            console.warn('Aucune option correspondante trouvée pour l\'organisateur:', data.organizer);
+          }
+        } else {
+          organizerSelect.value = '';
+        }
+      }
+      
+      if (document.getElementById('edit_description_bottom')) {
+        document.getElementById('edit_description_bottom').value = data.description || '';
+      }
+      if (document.getElementById('edit_notes_bottom')) {
+        document.getElementById('edit_notes_bottom').value = data.notes || '';
+      }
+    })
+    .catch(error => {
+      console.error('Erreur AJAX:', error);
+    });
+  
+  // Faire défiler vers le formulaire
+  window.scrollTo({ top: document.getElementById('edit-interview-form').offsetTop - 80, behavior: 'smooth' });
+}
+
+function hideEditInterviewForm() {
+  document.getElementById('edit-interview-form').style.display = 'none';
+  // Réinitialiser le formulaire
+  document.getElementById('editInterviewFormBottom').reset();
+}
+</script>
+<!-- Modal pour ajouter un entretien -->
+<div class="modal fade" id="modalAddInterview" tabindex="-1" aria-labelledby="modalAddInterviewLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalAddInterviewLabel"><i class="fas fa-plus me-2"></i>Nouvel Entretien</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addInterviewForm" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="add_application" class="form-label">Candidature</label>
+              <select class="form-control" name="application" id="add_application" required>
+                <option value="">Sélectionner...</option>
+                {% for app in applications %}
+                  <option value="{{ app.id }}">
+                    {{ app.candidate }} - {{ app.offer }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="add_start" class="form-label">Début</label>
+              <input type="datetime-local" class="form-control" name="start" id="add_start" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="add_end" class="form-label">Fin</label>
+              <input type="datetime-local" class="form-control" name="end" id="add_end" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="add_duration" class="form-label">Durée (hh:mm)</label>
+              <input type="text" class="form-control" name="duration" id="add_duration" placeholder="01:00">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="add_location" class="form-label">Lieu</label>
+              <input type="text" class="form-control" name="location" id="add_location">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="add_videcall_url" class="form-label">URL Visio</label>
+              <input type="url" class="form-control" name="videcall_url" id="add_videcall_url">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="add_organizer" class="form-label">Organisateur</label>
+              <select class="form-control" name="organizer" id="add_organizer">
+                <option value="">Sélectionner...</option>
+                {% for emp in employees %}
+                  <option value="{{ emp.id }}">{{ emp.full_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-12 mb-3">
+              <label for="add_description" class="form-label">Description</label>
+              <textarea class="form-control" name="description" id="add_description"></textarea>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="add_notes" class="form-label">Notes</label>
+              <textarea class="form-control" name="notes" id="add_notes"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i>Annuler</button>
+        <button type="submit" form="addInterviewForm" class="btn btn-primary"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal pour éditer un entretien -->
+<div class="modal fade" id="modalEditInterview" tabindex="-1" aria-labelledby="modalEditInterviewLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title" id="modalEditInterviewLabel"><i class="fas fa-edit me-2"></i>Modifier l'Entretien</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editInterviewForm" method="post" action="{% url 'recruitment_interviews' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="edit">
+          <input type="hidden" name="interview_id" id="edit_interview_id">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="edit_application" class="form-label">Candidature</label>
+              <select class="form-control" name="application" id="edit_application" required>
+                <option value="">Sélectionner...</option>
+                {% for app in applications %}
+                  <option value="{{ app.id }}" 
+                          data-always-available="{{ app.always_available|yesno:'true,false' }}"
+                          data-availability-start="{{ app.availability_start|date:'Y-m-d'|default:'' }}"
+                          data-availability-end="{{ app.availability_end|date:'Y-m-d'|default:'' }}">
+                    {{ app.candidate }} - {{ app.offer }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="edit_start" class="form-label">Début</label>
+              <input type="datetime-local" class="form-control" name="start" id="edit_start" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="edit_end" class="form-label">Fin</label>
+              <input type="datetime-local" class="form-control" name="end" id="edit_end" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="edit_duration" class="form-label">Durée (hh:mm)</label>
+              <input type="text" class="form-control" name="duration" id="edit_duration" placeholder="01:00">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="edit_location" class="form-label">Lieu</label>
+              <input type="text" class="form-control" name="location" id="edit_location">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="edit_videcall_url" class="form-label">URL Visio</label>
+              <input type="url" class="form-control" name="videcall_url" id="edit_videcall_url">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="edit_organizer" class="form-label">Organisateur</label>
+              <select class="form-control" name="organizer" id="edit_organizer">
+                <option value="">Sélectionner...</option>
+                {% for emp in employees %}
+                  <option value="{{ emp.id }}" {% if interview.organizer and emp.id == interview.organizer.id %}selected{% endif %}>{{ emp.full_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-12 mb-3">
+              <label for="edit_description" class="form-label">Description</label>
+              <textarea class="form-control" name="description" id="edit_description"></textarea>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="edit_notes" class="form-label">Notes</label>
+              <textarea class="form-control" name="notes" id="edit_notes"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i>Annuler</button>
+        <button type="submit" form="editInterviewForm" class="btn btn-warning"><i class="fas fa-save me-1"></i>Modifier</button>
+    </div>
+    </div>
+  </div>
+</div>
+<!-- Modal pour supprimer un entretien -->
+<div class="modal fade" id="modalDeleteInterview" tabindex="-1" aria-labelledby="modalDeleteInterviewLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalDeleteInterviewLabel"><i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="deleteInterviewForm" method="post" action="{% url 'recruitment_interviews' %}">
+        <div class="modal-body">
+          <p>Êtes-vous sûr de vouloir supprimer cet entretien ?</p>
+          <p class="text-danger">Cette action est irréversible.</p>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="interview_id" id="delete_interview_id">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i>Annuler</button>
+          <button type="submit" class="btn btn-danger"><i class="fas fa-trash-alt me-1"></i>Supprimer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<!-- SortableJS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<!-- CSRF token meta pour JS -->
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+
+<script>
+let kanbanSortables = {};
+
+function reloadKanbanBoard() {
+  const kanbanSection = document.getElementById('kanban-board-section');
+  if (kanbanSection && kanbanSection.style.display !== 'none') {
+    fetch(window.location.pathname + '?kanban=1', {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const newKanban = doc.querySelector('.kanban-board');
+      if (newKanban) {
+        document.querySelector('.kanban-board').replaceWith(newKanban);
+        initKanbanSortables();
+      }
+    });
+  }
+}
+
+function initKanbanSortables() {
+  const columns = ['reception', 'a', 'b'];
+  columns.forEach(function(stage) {
+    const el = document.getElementById('kanban-' + stage);
+    if (el && !kanbanSortables[stage]) {
+      kanbanSortables[stage] = new Sortable(el, {
+        group: { name: 'kanban-stages', put: true, pull: true },
+        animation: 150,
+        chosenClass: 'sortable-chosen',
+        ghostClass: 'sortable-ghost',
+        onAdd: function (evt) {
+          const interviewId = evt.item.getAttribute('data-id');
+          const newStage = stage;
+          const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+          fetch('/rc/interview/kanban_stage/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({id: interviewId, stage: newStage})
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (!data.success) {
+              alert('Erreur lors du déplacement : ' + (data.error || 'inconnue'));
+              evt.from.appendChild(evt.item);
+            } else {
+              // Mise à jour dynamique du contenu de la carte selon la colonne
+              const card = evt.item;
+              const actionDiv = card.querySelector('.mt-2, .mt-2.d-flex');
+              if (actionDiv) {
+                if (newStage === 'b') {
+                  actionDiv.className = 'mt-2 d-flex gap-2';
+                  actionDiv.innerHTML = `
+                    <button class="btn btn-sm btn-success btn-validate-interview" title="Valider" data-id="${interviewId}"><i class="fas fa-check"></i></button>
+                    <button class="btn btn-sm btn-danger btn-cancel-interview" title="Annuler" data-id="${interviewId}"><i class="fas fa-times"></i></button>
+                  `;
+                } else {
+                  actionDiv.className = 'mt-2';
+                  actionDiv.innerHTML = `<span class="badge bg-warning text-dark">En attente</span>`;
+                }
+              }
+              // Mise à jour du résultat dans le tableau principal
+              const tableRow = document.querySelector(`#interviews-table tr [data-interview-id="${interviewId}"]`)?.closest('tr');
+              if (tableRow) {
+                const resultCell = tableRow.querySelector('td:nth-child(9)');
+                if (resultCell) {
+                  if (newStage === 'b') {
+                    // Ne rien changer ici, le bouton/valeur sera géré par setInterviewResult
+                  } else {
+                    resultCell.innerHTML = '<span class="badge bg-warning text-dark">En attente</span>';
+                  }
+                }
+              }
+            }
+          })
+          .catch(() => {
+            alert('Erreur réseau lors du déplacement.');
+            evt.from.appendChild(evt.item);
+          });
+        }
+      });
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialiser les sortables Kanban au chargement de la page
+  initKanbanSortables();
+
+  // Set interview_id in delete modal
+  var deleteModal = document.getElementById('modalDeleteInterview');
+  if (deleteModal) {
+    deleteModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      var interviewId = button.getAttribute('data-interview-id');
+      var input = deleteModal.querySelector('#delete_interview_id');
+      if (input) input.value = interviewId;
+    });
+  }
+
+  // Pre-fill edit interview modal with interview data
+  var editModal = document.getElementById('modalEditInterview');
+  if (editModal) {
+    editModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      var interviewId = button.getAttribute('data-interview-id');
+      if (!interviewId) return;
+      // Set the hidden input for interview_id
+      var inputId = editModal.querySelector('#edit_interview_id');
+      if (inputId) inputId.value = interviewId;
+      // Fetch interview data via AJAX
+      fetch(`/rc/interview/${interviewId}/json/`)
+        .then(response => {
+          if (!response.ok) {
+            alert('Erreur lors de la récupération des données de l\'entretien.');
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Interview data:', data);
+          if (!data || data.error) {
+            alert('Erreur: Données de l\'entretien non trouvées ou incomplètes.');
+            return;
+          }
+          if (editModal.querySelector('#edit_application')) editModal.querySelector('#edit_application').value = data.application || '';
+          if (editModal.querySelector('#edit_start')) editModal.querySelector('#edit_start').value = data.start || '';
+          if (editModal.querySelector('#edit_end')) editModal.querySelector('#edit_end').value = data.end || '';
+          if (editModal.querySelector('#edit_duration')) editModal.querySelector('#edit_duration').value = data.duration || '';
+          if (editModal.querySelector('#edit_location')) editModal.querySelector('#edit_location').value = data.location || '';
+          if (editModal.querySelector('#edit_videcall_url')) editModal.querySelector('#edit_videcall_url').value = data.videcall_url || '';
+          
+          // Nouvelle correction pour le champ organisateur
+          const organizerSelect = editModal.querySelector('#edit_organizer');
+          if (organizerSelect) {
+            console.log('Organizer data:', data.organizer);
+            
+            if (data.organizer) {
+              // Convertir en texte pour être sûr
+              const organizerValue = String(data.organizer).trim().toLowerCase();
+              let found = false;
+              
+              // 1. Essayer d'abord de faire correspondre par valeur (ID)
+              for (let i = 0; i < organizerSelect.options.length; i++) {
+                if (organizerSelect.options[i].value === organizerValue) {
+                  organizerSelect.options[i].selected = true;
+                  found = true;
+                  console.log('Option trouvée par ID:', organizerSelect.options[i].text);
+                  break;
+                }
+              }
+              
+              // 2. Si pas trouvé, essayer de faire correspondre par texte (nom)
+              if (!found) {
+                for (let i = 0; i < organizerSelect.options.length; i++) {
+                  const optionText = organizerSelect.options[i].text.trim().toLowerCase();
+                  if (optionText === organizerValue || organizerValue.includes(optionText) || optionText.includes(organizerValue)) {
+                    organizerSelect.options[i].selected = true;
+                    found = true;
+                    console.log('Option trouvée par texte:', organizerSelect.options[i].text);
+                    break;
+                  }
+                }
+              }
+              
+              if (!found) {
+                console.warn('Aucune option correspondante trouvée pour l\'organisateur:', data.organizer);
+              }
+            } else {
+              organizerSelect.value = '';
+            }
+          }
+          
+          if (editModal.querySelector('#edit_description')) editModal.querySelector('#edit_description').value = data.description || '';
+          if (editModal.querySelector('#edit_notes')) editModal.querySelector('#edit_notes').value = data.notes || '';
+        })
+        .catch(error => {
+          console.error('Erreur AJAX:', error);
+        });
+    });
+  }
+
+  // Real-time search for interviews
+  var searchInput = document.getElementById('search-interview');
+  var tableBody = document.getElementById('interviews-table');
+  var timer = null;
+  if (searchInput && tableBody) {
+    searchInput.addEventListener('input', function() {
+      clearTimeout(timer);
+      timer = setTimeout(function() {
+        var query = searchInput.value;
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '?q=' + encodeURIComponent(query), true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            tableBody.innerHTML = xhr.responseText;
+          }
+        };
+        xhr.send();
+      }, 300);
+    });
+  }
+
+  // Actions valider/annuler dans Entretien B (kanban)
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-validate-interview')) {
+      const btn = e.target.closest('.btn-validate-interview');
+      const interviewId = btn.getAttribute('data-id');
+      setInterviewResult(interviewId, 'positive', btn);
+    }
+    if (e.target.closest('.btn-cancel-interview')) {
+      const btn = e.target.closest('.btn-cancel-interview');
+      const interviewId = btn.getAttribute('data-id');
+      setInterviewResult(interviewId, 'negative', btn);
+    }
+  });
+
+  function setInterviewResult(interviewId, result, btn) {
+    const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    fetch('/rc/interview/set_result/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+      },
+      body: JSON.stringify({id: interviewId, result: result})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Met à jour dynamiquement la carte dans le kanban
+        const card = btn.closest('.kanban-card');
+        const actionDiv = card.querySelector('.mt-2.d-flex, .mt-2');
+        if (actionDiv) {
+          if (result === 'positive') {
+            // Supprimer la carte du kanban
+            if (card) card.remove();
+            // Rafraîchir le calendrier si ouvert
+            if (typeof refreshCalendar === 'function') refreshCalendar();
+            // Supprimer la ligne de la candidature dans le tableau de candidatures (si présente)
+            fetch(`/rc/interview/${interviewId}/json/`)
+              .then(resp => resp.json())
+              .then(interviewData => {
+                if (interviewData && interviewData.application) {
+                  const appRow = document.querySelector(`#applications-table tr[data-application-id="${interviewData.application}"]`);
+                  if (appRow) appRow.remove();
+                }
+              });
+          } else if (result === 'negative') {
+            actionDiv.innerHTML = `
+              <span class="badge bg-danger">Réfusé</span>
+              <button class="btn btn-sm btn-success btn-validate-interview" title="Valider" data-id="${interviewId}"><i class="fas fa-check"></i></button>
+            `;
+          }
+        }
+        // Met à jour dynamiquement le résultat dans le tableau principal
+        const tableRow = document.querySelector(`#interviews-table tr [data-interview-id="${interviewId}"]`)?.closest('tr');
+        if (tableRow) {
+            if (result === 'positive') {
+            // Supprimer la ligne du tableau principal
+            tableRow.remove();
+            // Rafraîchir le calendrier si ouvert
+            if (typeof refreshCalendar === 'function') refreshCalendar();
+            } else if (result === 'negative') {
+            const resultCell = tableRow.querySelector('td:nth-child(9)');
+            if (resultCell) {
+              resultCell.innerHTML = '<span class="badge bg-danger">Réfusé</span>';
+            }
+          }
+        }
+        // Toujours recharger le tableau d'archive après validation/annulation
+        reloadArchivedInterviewsTable();
+      } else {
+        showCustomAlert(data.error || 'Erreur inconnue lors de la mise à jour du résultat.');
+      }
+    })
+    .catch(() => {
+      showCustomAlert('Erreur réseau lors de la mise à jour du résultat.');
+    });
+  }
+});
+</script>
+<!-- jsPDF & autoTable pour export PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.7.0/jspdf.plugin.autotable.min.js"></script>
+<script>
+const downloadPdfBtn = document.getElementById('download-calendar-pdf');
+if (downloadPdfBtn) {
+  downloadPdfBtn.addEventListener('click', function() {
+    const events = Array.from(document.querySelectorAll('.event')).filter(ev => ev.offsetParent !== null);
+    if (!events.length) {
+      alert('Aucun entretien à exporter');
+      return;
+    }
+    function formatDateFR(dateStr, ev) {
+      // Si déjà au bon format
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
+      // Si format "15 Juillet 2025" ou "15 juillet 2025"
+      const mois = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+      let m = mois.findIndex(mo => dateStr.toLowerCase().includes(mo));
+      let d = dateStr.match(/\d{1,2}/);
+      let y = dateStr.match(/\d{4}/);
+      if (m !== -1 && d && y) {
+        return `${d[0].padStart(2,'0')}/${(m+1).toString().padStart(2,'0')}/${y[0]}`;
+      }
+      // Si format "2025-07-15" ou "2025/07/15"
+      let iso = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+      if (iso) return `${iso[3].padStart(2,'0')}/${iso[2].padStart(2,'0')}/${iso[1]}`;
+      // Si c'est juste un numéro de jour, reconstituer avec currentMonth/currentYear
+      if (/^\d{1,2}$/.test(dateStr)) {
+        // currentMonth/currentYear sont globaux dans le calendrier
+        let month = (typeof currentMonth !== 'undefined') ? currentMonth+1 : (new Date().getMonth()+1);
+        let year = (typeof currentYear !== 'undefined') ? currentYear : (new Date().getFullYear());
+        return `${dateStr.padStart(2,'0')}/${month.toString().padStart(2,'0')}/${year}`;
+      }
+      return dateStr;
+    }
+    const tableData = events.map(ev => {
+      const lines = ev.innerText.split('\n');
+      const candidat = lines[0] || '';
+      const heure = lines[1] || '';
+      const poste = (lines[2] || '').replace(/<.*?>/g, '');
+      let date = '', heureFull = '', lieu = '', orga = '', resultat = '', desc = '';
+      if (ev.title) {
+        const infos = ev.title.split('\n');
+        infos.forEach(l => {
+          if (l.startsWith('Date:')) date = l.replace('Date: ', '');
+          if (l.startsWith('Heure:')) heureFull = l.replace('Heure: ', '');
+          if (l.startsWith('Lieu:')) lieu = l.replace('Lieu: ', '');
+          if (l.startsWith('Organisateur:')) orga = l.replace('Organisateur: ', '');
+          if (l.startsWith('Résultat:')) resultat = l.replace('Résultat: ', '');
+          if (l.startsWith('Description:')) desc = l.replace('Description: ', '');
+        });
+      }
+      if (!resultat) {
+        if (ev.classList.contains('positive')) resultat = 'Positif';
+        else if (ev.classList.contains('negative')) resultat = 'Négatif';
+        else if (ev.classList.contains('pending')) resultat = 'En attente';
+      }
+      if (!date) {
+        const dateCell = ev.closest('.date-cell');
+        if (dateCell) {
+          const dateNumber = dateCell.querySelector('.date-number');
+          if (dateNumber) date = dateNumber.innerText;
+        }
+      }
+      date = formatDateFR(date, ev);
+      return [candidat, poste, date, heure || heureFull, lieu, orga, resultat, desc];
+    });
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(46, 204, 113);
+    doc.text('Calendrier des Entretiens', 105, 18, { align: 'center' });
+    doc.setDrawColor(46, 204, 113);
+    doc.setLineWidth(1.2);
+    doc.line(20, 22, 190, 22);
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    const now = new Date();
+    doc.text(`Généré le : ${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
+      190, 12, { align: 'right' });
+    doc.autoTable({
+      head: [[
+        'Candidat',
+        'Poste',
+        'Date',
+        'Heure',
+        'Lieu',
+        'Organisateur',
+        'Résultat',
+        'Description'
+      ]],
+      body: tableData,
+      startY: 28,
+      styles: {
+        font: 'helvetica',
+        fontSize: 10,
+        cellPadding: 3,
+        valign: 'middle',
+        textColor: [34, 34, 34],
+        lineColor: [220, 220, 220],
+        lineWidth: 0.2,
+      },
+      headStyles: {
+        fillColor: [46, 204, 113],
+        textColor: 255,
+        fontStyle: 'bold',
+        halign: 'center',
+        fontSize: 11,
+        cellPadding: 4,
+      },
+      alternateRowStyles: {
+        fillColor: [245, 255, 250],
+      },
+      margin: { left: 8, right: 8 }
+    });
+    doc.save('entretiens_calendrier.pdf');
+  });
+}
+</script>
+<script>
+// Recherche pour les entretiens archivés
+document.addEventListener('DOMContentLoaded', function() {
+  const archivedInterviewSearchInput = document.getElementById('archived-interview-search');
+  const archivedInterviewsTable = document.getElementById('archived-interviews-table');
+  let archivedSearchTimeout = null;
+  let lastArchivedQuery = archivedInterviewSearchInput ? archivedInterviewSearchInput.value : '';
+  let archivedController = null;
+
+  if (archivedInterviewsTable) {
+    function performArchivedInterviewSearch(query) {
+      if (archivedController) {
+        archivedController.abort();
+      }
+      archivedController = new AbortController();
+      archivedInterviewsTable.innerHTML = '<tr><td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</td></tr>';
+      
+      // Utiliser l'URL courante
+      const searchUrl = window.location.pathname + '?archived_interview_q=' + encodeURIComponent(query);
+      
+      fetch(searchUrl, {
+        headers: { 
+          'X-Requested-With': 'XMLHttpRequest',
+          'Cache-Control': 'no-cache'
+        },
+        signal: archivedController.signal
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Erreur réseau: ' + response.status);
+        return response.text();
+      })
+      .then(html => {
+        // On reçoit directement le contenu du tbody
+        archivedInterviewsTable.innerHTML = html;
+      })
+      .catch(error => {
+        if (error.name !== 'AbortError') {
+          archivedInterviewsTable.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erreur lors de la recherche: ' + error.message + '</td></tr>';
+        }
+      });
+    }
+
+    if (archivedInterviewSearchInput) {
+      archivedInterviewSearchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (archivedSearchTimeout) {
+          clearTimeout(archivedSearchTimeout);
+        }
+        if (query === lastArchivedQuery) return;
+        lastArchivedQuery = query;
+        archivedSearchTimeout = setTimeout(() => {
+          performArchivedInterviewSearch(query);
+        }, 300);
+      });
+
+      archivedInterviewSearchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (archivedSearchTimeout) {
+            clearTimeout(archivedSearchTimeout);
+          }
+          performArchivedInterviewSearch(this.value.trim());
+        }
+      });
+    }
+  }
+});
+
+// Fonction pour afficher/masquer le tableau des entretiens archivés
+function toggleArchivedInterviews() {
+  const archivedSection = document.getElementById('archived-interviews-section');
+  const button = document.getElementById('show-archive-btn');
+  
+  if (archivedSection.style.display === 'none') {
+    // Masquer les formulaires s'ils sont ouverts
+    document.getElementById('add-interview-form').style.display = 'none';
+    document.getElementById('edit-interview-form').style.display = 'none';
+    document.getElementById('kanban-board-section').style.display = 'none';
+    document.getElementById('calendar-section').style.display = 'none';
+    
+    archivedSection.style.display = 'block';
+    button.innerHTML = '<i class="fas fa-times"></i>';
+    button.title = 'Fermer les archives';
+    // Scroll vers le tableau d'archives
+    window.scrollTo({ top: archivedSection.offsetTop - 80, behavior: 'smooth' });
+  } else {
+    archivedSection.style.display = 'none';
+    button.innerHTML = '<i class="fas fa-archive"></i>';
+    button.title = 'Entretiens archivés';
+  }
+}
+
+// Fonction pour afficher/masquer le tableau Kanban
+function toggleKanbanBoard() {
+  const kanbanSection = document.getElementById('kanban-board-section');
+  const button = document.getElementById('show-kanban-btn');
+  
+  if (kanbanSection.style.display === 'none') {
+    // Masquer les formulaires s'ils sont ouverts
+    document.getElementById('add-interview-form').style.display = 'none';
+    document.getElementById('edit-interview-form').style.display = 'none';
+    document.getElementById('calendar-section').style.display = 'none';
+    document.getElementById('archived-interviews-section').style.display = 'none';
+    
+    kanbanSection.style.display = 'block';
+    button.innerHTML = '<i class="fas fa-times"></i>';
+    button.title = 'Fermer le Kanban';
+    // Scroll vers le tableau Kanban
+    window.scrollTo({ top: kanbanSection.offsetTop - 80, behavior: 'smooth' });
+    // Initialiser les sortables si nécessaire
+    if (typeof initKanbanSortables === 'function') {
+      initKanbanSortables();
+    }
+  } else {
+    kanbanSection.style.display = 'none';
+    button.innerHTML = '<i class="fas fa-columns"></i>';
+    button.title = 'Tableau Kanban';
+  }
+}
+
+// Fonction pour afficher/masquer le calendrier
+function toggleCalendarView() {
+  const calendarSection = document.getElementById('calendar-section');
+  const button = document.getElementById('show-calendar-btn');
+  
+  if (calendarSection.style.display === 'none') {
+    // Masquer les formulaires s'ils sont ouverts
+    document.getElementById('add-interview-form').style.display = 'none';
+    document.getElementById('edit-interview-form').style.display = 'none';
+    document.getElementById('kanban-board-section').style.display = 'none';
+    document.getElementById('archived-interviews-section').style.display = 'none';
+    
+    calendarSection.style.display = 'block';
+    button.innerHTML = '<i class="fas fa-times"></i>';
+    button.title = 'Fermer le calendrier';
+    // Scroll vers le calendrier
+    window.scrollTo({ top: calendarSection.offsetTop - 80, behavior: 'smooth' });
+    // Initialiser le calendrier si nécessaire
+    if (typeof initializeCalendar === 'function') {
+      initializeCalendar();
+    }
+  } else {
+    calendarSection.style.display = 'none';
+    button.innerHTML = '<i class="fas fa-calendar-alt"></i>';
+    button.title = 'Calendrier';
+  }
+}
+
+</script>
+<!-- Modal d'alerte personnalisée -->
+<div class="modal fade" id="modalCustomAlert" tabindex="-1" aria-labelledby="modalCustomAlertLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalCustomAlertLabel"><i class="fas fa-exclamation-triangle me-2"></i>Erreur</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body" id="modalCustomAlertBody">
+        <!-- Message d'erreur injecté dynamiquement -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+// Fonction utilitaire pour afficher une alerte personnalisée
+function showCustomAlert(message) {
+  const modal = document.getElementById('modalCustomAlert');
+  const body = document.getElementById('modalCustomAlertBody');
+  if (body) body.textContent = message;
+  if (modal) {
+    const bsModal = bootstrap.Modal.getOrCreateInstance(modal);
+    bsModal.show();
+  }
+}
+
+// Ajout : fonction pour recharger le tableau d'archive des entretiens
+function reloadArchivedInterviewsTable() {
+  const archivedSection = document.getElementById('archived-interviews-section');
+  if (archivedSection && archivedSection.style.display !== 'none') {
+    const archivedInterviewsTable = document.getElementById('archived-interviews-table');
+    if (archivedInterviewsTable) {
+      archivedInterviewsTable.innerHTML = '<tr><td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin"></i> Chargement...</td></tr>';
+      fetch('/rc/interview/archived/', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(response => response.text())
+        .then(html => {
+          archivedInterviewsTable.innerHTML = html;
+        });
+    }
+  }
+}
+</script>
+
+{% endblock %} 
+

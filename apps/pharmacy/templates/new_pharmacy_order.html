@@ -1,0 +1,408 @@
+
+{% if request.session.user.permissions.pharmacy.write %}
+
+{% load static %}
+
+{% block content %}
+    <div class="content">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-edit me-2"></i>
+                Nouvelle Commande Pharmacie
+            </div>
+            <div class="card-body">
+                <form id="new-pharmacy-order-form" method="post" action="{% url 'pharmacy_order_create' %}">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="supplier" class="form-label">Fournisseur</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <select id="supplier" name="supplier" class="form-select" required>
+                                    <option value="">Sélectionner un fournisseur</option>
+                                    {% for supplier in suppliers %}
+                                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="hidden" id="reference" name="reference" class="form-control" value="{{ reference }}">
+                            <label for="order_date" class="form-label">Date de commande</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                <input type="date" id="order_date" name="order_date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="currency" class="form-label">Devise</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                <select id="currency" name="currency" class="form-select">
+                                    <option value="">Sélectionner une devise</option>
+                                    {% for currency in currencies %}
+                                    <option value="{{ currency.id }}">{{ currency.libelle }} ({{ currency.abreviation }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h6>Lignes de commande</h6>
+                    <table class="table table-responsive-stack" id="order-lines-table">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Taxe</th>
+                                <th>Sous-total HT</th>
+                                <th>Taxe</th>
+                                <th>Total TTC</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="position-relative" data-label="Produit">
+                                    <select name="product[]" class="form-select" required>
+                                        <option value="">Sélectionner un produit</option>
+                                        {% for product in products %}
+                                        <option value="{{ product.short_label }}">{{ product.short_label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td data-label="Quantité"><input type="number" name="quantity[]" class="form-control" value="1" min="0" required></td>
+                                <td data-label="Prix unitaire"><input type="number" name="unit_price[]" class="form-control" value="0.00" step="0.01" required></td>
+                                <td data-label="Taxe">
+                                    <select name="tax[]" class="form-select">
+                                        <option value="">Aucune</option>
+                                        {% for tax in taxes %}
+                                        <option value="{{ tax.id }}" data-rate="{{ tax.valeur }}">{{ tax.libelle }} ({{ tax.valeur }}%)</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="line-subtotal" data-label="Sous-total HT">0.00</td>
+                                <td class="line-tax" data-label="Taxe">0.00</td>
+                                <td class="line-total" data-label="Total TTC">0.00</td>
+                                <td data-label="Actions">
+                                    <button class="btn btn-sm btn-light border text-danger btn-remove-line" title="Supprimer">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="4" class="text-end" data-label="">Totaux :</td>
+                                <td id="order-subtotal" data-label="Sous-total HT">0.00</td>
+                                <td id="order-tax" data-label="Taxe">0.00</td>
+                                <td id="order-total" data-label="Total TTC">0.00</td>
+                                <td data-label=""></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <button type="button" class="btn btn-outline-primary btn-sm me-2" id="add-line">
+                        <i class="fas fa-plus"></i> Ajouter une ligne
+                    </button>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Remarques..."></textarea>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+                        <a href="{% url 'pharmacy_order_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i>
+                            <span class="d-none d-sm-inline ms-1">Annuler</span>
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            <span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+{% block extra_styles %}
+<style>
+@media (max-width: 768px) {
+    .table-responsive-stack tfoot {
+        display: none;
+    }
+    .table-responsive-stack {
+        width: 100%;
+    }
+    .table-responsive-stack thead {
+        display: none;
+    }
+    .table-responsive-stack tbody tr, .table-responsive-stack tfoot tr {
+        display: block;
+        border: 1px solid #dee2e6;
+        margin-bottom: 1rem;
+    }
+    .table-responsive-stack td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        text-align: right;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .table-responsive-stack td:last-child {
+        border-bottom: none;
+    }
+    .table-responsive-stack td[data-label]:before {
+        content: attr(data-label);
+        font-weight: bold;
+        text-align: left;
+        margin-right: auto;
+    }
+    .table-responsive-stack tfoot td {
+        border: none;
+    }
+    .table-responsive-stack tfoot tr {
+        border: 1px solid #dee2e6;
+        padding: 0.5rem;
+    }
+    .table-responsive-stack tfoot td[colspan] {
+        display: block;
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #eee;
+    }
+    .table-responsive-stack tfoot td[colspan]:before {
+        content: ""; /* Remove data-label for the main total label */
+    }
+    .table-responsive-stack tfoot td[data-label]:not([data-label=""]) {
+        display: flex;
+        justify-content: space-between;
+    }
+}
+</style>
+{% endblock %}
+{% endblock %}
+{% block extra_scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function showSuccessAlert(message, autoHide = true, delay = 5000) {
+                const alertContainer = document.getElementById('alert-container');
+                if (!alertContainer) return;
+
+                const alertId = 'alert-' + Date.now();
+                alertContainer.innerHTML = `
+                    <div id="${alertId}" class="alert alert-success d-flex align-items-center alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2 fw-bold"></i>
+                        <div><strong>Succès :</strong> ${message}</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (autoHide) {
+                    setTimeout(() => {
+                        const alertElement = document.getElementById(alertId);
+                        if (alertElement) {
+                            alertElement.classList.remove('show');
+                            alertElement.classList.add('fade');
+                            setTimeout(() => {
+                                if (alertElement.parentNode) {
+                                    alertElement.parentNode.removeChild(alertElement);
+                                }
+                            }, 150);
+                        }
+                    }, delay);
+                }
+            }
+
+            function showErrorAlert(message, autoHide = true, delay = 8000) {
+                const alertContainer = document.getElementById('alert-container');
+                if (!alertContainer) return;
+
+                const alertId = 'alert-' + Date.now();
+                alertContainer.innerHTML = `
+                    <div id="${alertId}" class="alert alert-danger d-flex align-items-center alert-dismissible fade show" role="alert">
+                        <i class="fas fa-times-circle me-2 fw-bold"></i>
+                        <div><strong>Erreur :</strong> ${message}</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (autoHide) {
+                    setTimeout(() => {
+                        const alertElement = document.getElementById(alertId);
+                        if (alertElement) {
+                            alertElement.classList.remove('show');
+                            alertElement.classList.add('fade');
+                            setTimeout(() => {
+                                if (alertElement.parentNode) {
+                                    alertElement.parentNode.removeChild(alertElement);
+                                }
+                            }, 150);
+                        }
+                    }, delay);
+                }
+            }
+
+            if (typeof djangoMessages !== 'undefined') {
+                djangoMessages.forEach(msg => {
+                    if (msg.level === 'success') {
+                        showSuccessAlert(msg.message);
+                    } else if (msg.level === 'error') {
+                        showErrorAlert(msg.message);
+                    }
+                });
+            }
+
+            function updateLineTotals(row) {
+                const qty = parseFloat(row.querySelector('input[name="quantity[]"]').value || 0);
+                const price = parseFloat(row.querySelector('input[name="unit_price[]"]').value || 0);
+                const taxSelect = row.querySelector('select[name="tax[]"]');
+                const taxRate = taxSelect ? parseFloat(taxSelect.selectedOptions[0]?.dataset.rate || 0) : 0;
+                const subtotal = qty * price;
+                const taxAmount = subtotal * (taxRate / 100);
+                const total = subtotal + taxAmount;
+
+                row.querySelector('.line-subtotal').textContent = subtotal.toFixed(2);
+                row.querySelector('.line-tax').textContent = taxAmount.toFixed(2);
+                row.querySelector('.line-total').textContent = total.toFixed(2);
+
+                updateOrderTotals();
+            }
+
+            function updateOrderTotals() {
+                let subtotal = 0, tax = 0;
+                document.querySelectorAll('#order-lines-table tbody tr').forEach(row => {
+                    subtotal += parseFloat(row.querySelector('.line-subtotal').textContent) || 0;
+                    tax += parseFloat(row.querySelector('.line-tax').textContent) || 0;
+                });
+                document.getElementById('order-subtotal').textContent = subtotal.toFixed(2);
+                document.getElementById('order-tax').textContent = tax.toFixed(2);
+                document.getElementById('order-total').textContent = (subtotal + tax).toFixed(2);
+            }
+
+            function setupRowEvents(row) {
+                row.querySelectorAll('input, select').forEach(input => {
+                    input.addEventListener('input', () => updateLineTotals(row));
+                });
+
+                const removeBtn = row.querySelector('.btn-remove-line');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        row.remove();
+                        updateOrderTotals();
+                    });
+                }
+            }
+
+            document.querySelectorAll('#order-lines-table tbody tr').forEach(setupRowEvents);
+
+            document.getElementById('add-line').addEventListener('click', function(e) {
+                e.preventDefault();
+                const tbody = document.querySelector('#order-lines-table tbody');
+                if (!tbody || tbody.rows.length === 0) return;
+
+                const newRow = tbody.rows[0].cloneNode(true);
+                newRow.querySelectorAll('input').forEach(input => {
+                    if (input.type === 'number') {
+                        input.value = input.name.includes('quantity') ? '1' : '0.00';
+                    }
+                });
+                newRow.querySelectorAll('select').forEach(select => {
+                    select.selectedIndex = 0;
+                });
+                newRow.querySelectorAll('.line-subtotal, .line-tax, .line-total').forEach(cell => {
+                    cell.textContent = '0.00';
+                });
+                tbody.appendChild(newRow);
+                setupRowEvents(newRow);
+            });
+
+            updateOrderTotals();
+
+            document.getElementById('new-pharmacy-order-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                let isValid = true;
+                document.getElementById('alert-container').innerHTML = '';
+                this.querySelectorAll('[required]').forEach(field => {
+                    if (!field.value.trim()) {
+                        isValid = false;
+                        field.classList.add('is-invalid');
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
+                });
+
+                if (!isValid) {
+                    showErrorAlert('Veuillez remplir tous les champs obligatoires.', false);
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'question',
+                    title: 'Confirmer la création',
+                    text: 'Voulez-vous vraiment créer cette commande ?',
+                    showCancelButton: true,
+                    confirmButtonText: 'Oui, créer',
+                    cancelButtonText: 'Annuler'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const form = this;
+                        const formData = new FormData(form);
+                        Swal.fire({
+                            title: 'Traitement en cours...',
+                            text: 'Veuillez patienter',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => {
+                            Swal.close();
+                            const contentType = response.headers.get("content-type");
+                            if (contentType && contentType.includes("application/json")) {
+                                return response.json().then(data => {
+                                    if (response.ok) {
+                                        window.location.href = "{% url 'pharmacy_order_list' %}";
+                                    } else {
+                                        showErrorAlert(data.message || 'Erreur lors de la création de la commande.', false);
+                                    }
+                                });
+                            } else {
+                                if (response.ok) {
+                                    window.location.href = "{% url 'pharmacy_order_list' %}";
+                                } else {
+                                    window.location.reload();
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            Swal.close();
+                            console.error('Erreur:', error);
+                            showErrorAlert('Une erreur réseau est survenue. Veuillez réessayer.', false);
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}
+
+
+                {% endif %}

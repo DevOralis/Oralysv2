@@ -1,0 +1,71 @@
+<div class="sidebar-container hr-menu-capitalize">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    <div class="menu-items">
+      {% with request.session.user as sess_user %}
+      {% if sess_user.hr_is_supervisor %}
+        <a href="{% url 'hr_statistics' %}" class="menu-item">
+          <i class="fas fa-chart-line"></i>
+          <span class="menu-text">Statistiques</span>
+        </a>
+      {% endif %}
+
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-calendar-alt"></i>
+          <span class="menu-text">GESTION DES CONGÉS</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          {% if sess_user.is_hr_employee or sess_user.hr_is_supervisor %}
+          <li><a href="{% url 'approbation_conges' %}"><i class="fas fa-check-circle"></i> Approbation des congés</a></li>
+          {% endif %}
+          {% if sess_user.is_supervisor %}
+            <li><a href="{% url 'manager_approval_conges' %}"><i class="fas fa-vote-yea"></i> Avis des congés</a></li>
+          {% endif %}
+          {% if sess_user.hr_is_supervisor %}
+             <li><a href="{% url 'calendar_conges' %}"><i class="fas fa-calendar"></i> Calendrier des congés</a></li>
+          {% endif %}
+          <li><a href="{% url 'gestion_conges' %}"><i class="fas fa-calendar-alt"></i> Gestion des congés</a></li>
+        </ul>
+      </div>
+
+      {% if sess_user.is_hr_employee %}
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-file-medical"></i>
+          <span class="menu-text">ADMINISTRATION RH</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'human_resources' %}"><i class="fas fa-users"></i> Gestion du personnel</a></li>
+          <li><a href="{% url 'payroll_management' %}"><i class="fas fa-money-check-alt"></i> Gestion de paie</a></li>
+          <li><a href="{% url 'gestion_sorties' %}"><i class="fas fa-door-open"></i> Gestion Des Départs</a></li>
+        </ul>
+      </div>
+
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-cog"></i>
+          <span class="menu-text">PARAMÈTRES</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'hr_configuration' %}"><i class="fas fa-cog"></i> Configuration</a></li>
+        </ul>
+      </div>
+      {% endif %}
+      {% endwith %}
+    </div>
+  </nav>
+</div>

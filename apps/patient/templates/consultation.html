@@ -1,0 +1,417 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Consultations{% endblock %}
+{% block menu %}
+  {% include 'patient_menu.html' %}
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+<script src="{% static 'js/consultation.js' %}"></script>
+<script>
+// Fonctions pour gérer le formulaire d'ajout de consultation
+function showAddConsultationForm() {
+    const form = document.getElementById('add-consultation-form');
+    if (form) {
+        form.style.display = 'block';
+        // Faire défiler vers le formulaire
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Focus sur le premier champ
+        const firstInput = form.querySelector('select[name="patient_id"]');
+        if (firstInput) {
+            firstInput.focus();
+        }
+    }
+}
+
+function hideAddConsultationForm() {
+    const form = document.getElementById('add-consultation-form');
+    if (form) {
+        form.style.display = 'none';
+        // Réinitialiser le formulaire
+        const consultationForm = document.getElementById('consultationForm');
+        if (consultationForm) {
+            consultationForm.reset();
+            // Réinitialiser l'état des champs
+            togglePatientFields();
+        }
+    }
+}
+
+// Fonction pour gérer l'affichage conditionnel des champs patient
+function togglePatientFields() {
+    const isExistingYes = document.getElementById('isExistingYes');
+    const isExistingNo = document.getElementById('isExistingNo');
+    const patientSelectDiv = document.getElementById('patientSelectDiv');
+    const sourceDiv = document.getElementById('sourceDiv');
+    const nomInput = document.getElementById('nomInput');
+    const prenomInput = document.getElementById('prenomInput');
+    const telephoneInput = document.getElementById('telephoneInput');
+    const emailInput = document.getElementById('emailInput');
+    
+    if (isExistingYes && isExistingYes.checked) {
+        // Patient existant
+        patientSelectDiv.style.display = 'block';
+        sourceDiv.style.display = 'block'; // Toujours afficher le champ source
+        // Désactiver les champs de saisie
+        if (nomInput) nomInput.disabled = true;
+        if (prenomInput) prenomInput.disabled = true;
+        if (telephoneInput) telephoneInput.disabled = true;
+        if (emailInput) emailInput.disabled = true;
+    } else {
+        // Nouveau patient
+        patientSelectDiv.style.display = 'none';
+        sourceDiv.style.display = 'block';
+        // Activer les champs de saisie
+        if (nomInput) nomInput.disabled = false;
+        if (prenomInput) prenomInput.disabled = false;
+        if (telephoneInput) telephoneInput.disabled = false;
+        if (emailInput) emailInput.disabled = false;
+    }
+}
+
+// Initialiser les événements pour le formulaire de consultation
+document.addEventListener('DOMContentLoaded', function() {
+    const isExistingYes = document.getElementById('isExistingYes');
+    const isExistingNo = document.getElementById('isExistingNo');
+    const patientSelect = document.getElementById('patientSelect');
+    
+    if (isExistingYes) {
+        isExistingYes.addEventListener('change', togglePatientFields);
+    }
+    if (isExistingNo) {
+        isExistingNo.addEventListener('change', togglePatientFields);
+    }
+    
+    // Gérer la sélection d'un patient existant
+    if (patientSelect) {
+        patientSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                // Remplir automatiquement les champs avec les données du patient sélectionné
+                const nomInput = document.getElementById('nomInput');
+                const prenomInput = document.getElementById('prenomInput');
+                const telephoneInput = document.getElementById('telephoneInput');
+                const emailInput = document.getElementById('emailInput');
+                const sourceInput = document.getElementById('sourceInput');
+                
+                if (nomInput && selectedOption.dataset.nom) {
+                    nomInput.value = selectedOption.dataset.nom;
+                }
+                if (prenomInput && selectedOption.dataset.prenom) {
+                    prenomInput.value = selectedOption.dataset.prenom;
+                }
+                if (telephoneInput && selectedOption.dataset.telephone) {
+                    telephoneInput.value = selectedOption.dataset.telephone;
+                }
+                if (emailInput && selectedOption.dataset.email) {
+                    emailInput.value = selectedOption.dataset.email;
+                }
+                if (sourceInput && selectedOption.dataset.source) {
+                    sourceInput.value = selectedOption.dataset.source;
+                }
+            }
+        });
+    }
+    
+    // Initialiser l'état des champs
+    togglePatientFields();
+    
+    // Gérer la suppression des rendez-vous (consultations à compléter)
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-appointment-btn')) {
+            const button = e.target.closest('.delete-appointment-btn');
+            const appointmentId = button.dataset.appointmentId;
+            const patientName = button.dataset.patientName;
+            
+            Swal.fire({
+                title: 'Êtes-vous sûr ?',
+                html: `Voulez-vous vraiment supprimer le rendez-vous de <strong>${patientName}</strong> ?<br><br>
+                       <small class="text-muted">Cette action est irréversible.</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Oui, supprimer !',
+                cancelButtonText: 'Annuler',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Afficher un spinner de chargement
+                    Swal.fire({
+                        title: 'Suppression en cours...',
+                        text: 'Veuillez patienter',
+                        icon: 'info',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Envoyer la requête de suppression
+                    fetch(`/patient/appointment/delete/${appointmentId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                            'Content-Type': 'application/json',
+                        },
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erreur lors de la suppression');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                title: 'Supprimé !',
+                                text: 'Le rendez-vous a été supprimé avec succès.',
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                // Recharger la page pour mettre à jour la liste
+                                window.location.reload();
+                            });
+                        } else {
+                            throw new Error(data.message || 'Erreur lors de la suppression');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            title: 'Erreur !',
+                            text: error.message || 'Une erreur est survenue lors de la suppression.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                        console.error('Erreur suppression rendez-vous:', error);
+                    });
+                }
+            });
+        }
+    });
+    
+    // Gérer la suppression des consultations validées
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-consultation-btn')) {
+            const button = e.target.closest('.delete-consultation-btn');
+            const consultationId = button.dataset.consultationId;
+            const patientName = button.dataset.patientName;
+            
+            Swal.fire({
+                title: 'Êtes-vous sûr ?',
+                html: `Voulez-vous vraiment supprimer la consultation de <strong>${patientName}</strong> ?<br><br>
+                       <small class="text-muted">Cette action est irréversible.</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Oui, supprimer !',
+                cancelButtonText: 'Annuler',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Afficher un spinner de chargement
+                    Swal.fire({
+                        title: 'Suppression en cours...',
+                        text: 'Veuillez patienter',
+                        icon: 'info',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Envoyer la requête de suppression
+                    fetch(`/patient/consultation/delete/${consultationId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                            'Content-Type': 'application/json',
+                        },
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erreur lors de la suppression');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                title: 'Supprimé !',
+                                text: 'La consultation a été supprimée avec succès.',
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                // Recharger la page pour mettre à jour la liste
+                                window.location.reload();
+                            });
+                        } else {
+                            throw new Error(data.message || 'Erreur lors de la suppression');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            title: 'Erreur !',
+                            text: error.message || 'Une erreur est survenue lors de la suppression.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                        console.error('Erreur suppression consultation:', error);
+                    });
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+
+        <div class="content">
+            <div id="consultations-a-completer-block">
+                {% include 'consultations_complete_partial.html' %}
+            </div>
+            <div id="consultations-validees-block">
+                {% include 'consultations_valide_partial.html' %}
+            </div>
+            
+            <!-- Formulaire d'ajout de consultation -->
+            <div class="card mb-4" id="add-consultation-form" style="display: none;">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-calendar-plus me-2"></i>
+                Nouvelle Consultation
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'patient:add_consultation' %}" id="consultationForm" novalidate>
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12 mb-2">
+                            <label class="form-label fw-bold">Patient Déjà Existant ?</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="is_existing" id="isExistingYes" value="1">
+                                    <label class="form-check-label" for="isExistingYes">Oui</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="is_existing" id="isExistingNo" value="0" checked>
+                                    <label class="form-check-label" for="isExistingNo">Non</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6" id="patientSelectDiv" style="display:none;">
+                            <label class="form-label">Patient Existant</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-check"></i></span>
+                                <select class="form-select" name="patient_id" id="patientSelect">
+                                    <option value="">Sélectionner</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}" 
+                                            data-nom="{{ patient.last_name }}" 
+                                            data-prenom="{{ patient.first_name }}" 
+                                            data-telephone="{{ patient.phone|default:'' }}" 
+                                            data-email="{{ patient.email|default:'' }}"
+                                            data-source="{{ patient.source|default:'' }}">
+                                        {{ patient.last_name }} {{ patient.first_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Nom</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" name="nom" id="nomInput" placeholder="Nom Du Patient" required>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Prénom</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" name="prenom" id="prenomInput" placeholder="Prénom Du Patient" required>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Téléphone</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="text" class="form-control" name="telephone" id="telephoneInput" placeholder="Téléphone" required>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" name="email" id="emailInput" placeholder="Email" required>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Médecin</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-md"></i></span>
+                                <select class="form-select" name="medecin_id" required>
+                                    <option value="">Sélectionner</option>
+                                    {% for medecin in medecins %}
+                                    <option value="{{ medecin.id }}">{{ medecin.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Date Et Heure</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                <input type="datetime-local" class="form-control" name="date_heure" required placeholder="jj/mm/aaaa HH:00" step="3600" min="2023-01-01T00:00" max="2030-12-31T23:00">
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-6">
+                            <label class="form-label">Motif</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-notes-medical"></i></span>
+                                <input type="text" class="form-control" name="motif" placeholder="Motif De La Consultation" required>
+                            </div>
+                        </div>
+                        <!-- Champ Source - toujours visible -->
+                        <div class="col-12 col-sm-6 col-md-6" id="sourceDiv" style="display:block;">
+                            <label class="form-label">Source</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-share-alt"></i></span>
+                                <select class="form-select" name="source" id="sourceInput">
+                                    <option value="">Sélectionner Une Source</option>
+                                    {% for source in sources %}
+                                    <option value="{{ source.name }}">{{ source.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button type="button" class="btn btn-secondary me-2" onclick="hideAddConsultationForm()">
+                            <i class="fas fa-times me-1"></i>Annuler
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-calendar-check me-1"></i>Valider La Consultation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        </div>
+
+<!-- Generic Modal for Details -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="detailsModalContent">
+            <!-- Content will be loaded here via AJAX -->
+        </div>
+    </div>
+</div>
+
+{% endblock %}

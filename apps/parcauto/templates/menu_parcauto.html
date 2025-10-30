@@ -1,0 +1,52 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    
+    <div class="menu-items">
+      
+      <a href="{% url 'parcauto_home' %}" class="menu-item {% if request.resolver_match.url_name == 'parcauto_home' %}active{% endif %}">
+        <i class="fas fa-car"></i>
+        <span class="menu-text">Véhicules</span>
+      </a>
+      
+      <a href="{% url 'affectation' %}" class="menu-item {% if request.resolver_match.url_name == 'affectation' %}active{% endif %}">
+        <i class="fas fa-user-tie"></i>
+        <span class="menu-text">Affectation</span>
+      </a>
+      
+      <a href="{% url 'entretien' %}" class="menu-item {% if request.resolver_match.url_name == 'entretien' %}active{% endif %}">
+        <i class="fas fa-tools"></i>
+        <span class="menu-text">Entretien</span>
+      </a>
+      
+      <a href="{% url 'contract' %}" class="menu-item {% if request.resolver_match.url_name == 'contract' %}active{% endif %}" id="contract-menu-item">
+        <i class="fas fa-file-signature"></i>
+        <span class="menu-text">Contrats</span>
+        <span class="contract-badge badge bg-warning rounded-pill ms-1 d-none"
+              id="expiring-contracts-badge"
+              title="Contrats expirant dans les 30 prochains jours">
+        </span>
+      </a>
+      
+            <a href="{% url 'parcauto_statistics' %}" class="menu-item {% if request.resolver_match.url_name == 'parcauto_statistics' %}active{% endif %}">
+        <i class="fas fa-chart-line"></i>
+        <span class="menu-text">Statistiques</span>
+      </a>
+      
+      <a href="{% url 'parcauto_configuration' %}" class="menu-item {% if request.resolver_match.url_name == 'configuration' %}active{% endif %}">
+        <i class="fas fa-cogs"></i>
+        <span class="menu-text">Configuration</span>
+      </a>
+    </div>
+  </nav>
+</div>

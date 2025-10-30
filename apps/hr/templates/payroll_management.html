@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block menu %}
+  {% include 'hr_menu.html' %}
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/payroll_management.js' %}"></script>
+{% endblock %}
+{% block content %}
+<div class="content">
+    <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-file-invoice-dollar me-2"></i>
+            Générer un bulletin de paie
+        </div>
+        <div class="card-body">
+            <form id="payrollForm" class="row g-3 mb-4" method="get" action="{% url 'download_payroll_pdf' %}">
+                <div class="col-md-3">
+                    <label for="employeeSelect" class="form-label">Employé</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <select id="employeeSelect" name="employee_id" class="form-select" required>
+                            <option value="">Sélectionner un employé</option>
+                            {% for emp in employees %}
+                            <option value="{{ emp.id }}">{{ emp.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label for="startDate" class="form-label">Date début</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border">
+                            <i class="fas fa-calendar-alt"></i>
+                        </span>
+                        <input type="date" id="startDate" name="start_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label for="endDate" class="form-label">Date fin</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border">
+                            <i class="fas fa-calendar-check"></i>
+                        </span>
+                        <input type="date" id="endDate" name="end_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-file-pdf me-1"></i>
+                        <span class="d-none d-lg-inline">Générer Bulletin</span>
+                        <span class="d-lg-none">Générer</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-history me-2"></i>
+            Historique des bulletins de paie générés
+        </div>
+        <div class="card-body">
+            <form id="payrollHistoryFilters" class="row g-2 mb-3">
+                <!-- Barre de recherche -->
+                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                    <div class="input-group">
+                        <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control border-primary" placeholder="Rechercher un employé..." value="{{ filters.search|default:'' }}">
+                    </div>
+                </div>
+                <!-- Filtre employé -->
+                <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+                    <select name="employee_id" class="form-select" title="Filtrer par employé">
+                        <option value="">Tous les employés</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}" {% if filters.employee_id == emp.id|stringformat:'s' %}selected{% endif %}>{{ emp.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Bouton d'action -->
+                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                    <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn">
+                        <i class="fas fa-file-import" id="export-import-icon"></i>
+                        <span class="d-none d-lg-inline ms-1" id="export-import-text">Importer</span>
+                    </button>
+                </div>
+            </form>
+            <div id="payrollHistoryContainer">
+                {% include 'payroll_history_partial.html' with history=history employees=employees filters=filters %}
+            </div>
+        </div>
+    </div>
+    {% comment %} Suppression de la section soldes de congés globaux {% endcomment %}
+</div>
+
+<!-- Modal pour les détails du bulletin de paie -->
+<div class="modal fade" id="payrollDetailsModal" tabindex="-1" aria-labelledby="payrollDetailsModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title" id="payrollDetailsModalLabel">
+                    <i class="fas fa-file-invoice-dollar me-2"></i>
+                    Détails du bulletin de paie
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary">
+                                    <i class="fas fa-user me-1"></i>
+                                    Employé concerné
+                                </h6>
+                                <p class="card-text fw-bold" id="modalEmployee">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-success">
+                                    <i class="fas fa-user-cog me-1"></i>
+                                    Généré par
+                                </h6>
+                                <p class="card-text" id="modalGeneratedBy">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-info">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Date de génération
+                                </h6>
+                                <p class="card-text" id="modalGeneratedAt">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-warning">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    Période couverte
+                                </h6>
+                                <p class="card-text">
+                                    <span class="badge bg-info text-dark fs-6" id="modalPeriod">-</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-secondary">
+                                    <i class="fas fa-calendar-day me-1"></i>
+                                    Détails de la période
+                                </h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Date début :</strong>
+                                        <span id="modalStartDate">-</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Date fin :</strong>
+                                        <span id="modalEndDate">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,50 @@
+{% if pagination_info and pagination_info.total_pages > 1 %}
+<nav aria-label="Pagination" class="mt-3">
+    <ul class="pagination justify-content-center flex-wrap">
+        {# Précédent #}
+        {% if pagination_info.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ pagination_info.previous_page_number }}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}{% for key, value in request.GET.items %}{% if key != 'page' and key != 'per_page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">« Préc</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">« Préc</span></li>
+        {% endif %}
+
+        {# Pages #}
+        {% for num in pagination_info.page_range %}
+            {% if num == '...' %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% else %}
+                {% if num == pagination_info.current_page %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% else %}
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}{% for key, value in request.GET.items %}{% if key != 'page' and key != 'per_page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a></li>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+
+        {# Suivant #}
+        {% if pagination_info.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ pagination_info.next_page_number }}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}{% for key, value in request.GET.items %}{% if key != 'page' and key != 'per_page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Suiv »</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Suiv »</span></li>
+        {% endif %}
+    </ul>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const perPageSelect = document.getElementById('per_page');
+        if (perPageSelect) {
+            perPageSelect.addEventListener('change', function() {
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('per_page', this.value);
+                currentUrl.searchParams.delete('page');
+                window.location.href = currentUrl.toString();
+            });
+        }
+    });
+    </script>
+</nav>
+{% endif %}

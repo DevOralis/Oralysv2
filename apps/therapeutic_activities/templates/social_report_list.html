@@ -1,0 +1,773 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block menu %}
+  {% include 'therapeutic_activities_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-file-medical-alt text-primary me-2"></i>
+    Rapports Sociaux
+  </h3>
+
+  <div class="card">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <div>
+        <i class="fas fa-file-medical-alt me-2"></i>
+        Liste des rapports sociaux
+      </div>
+    </div>
+    
+    <div class="card-body">
+      <!-- Search and Filter Form -->
+      <form id="search-form">
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+            <div class="input-group">
+              <span class="input-group-text input-group-text-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" class="form-control search-input-primary"
+                     placeholder="Rechercher par patient, activité, plan d'intervention..."
+                     id="searchInput">
+            </div>
+          </div>
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-2">
+            <select class="form-select" title="Filtrer par patient" id="filterPatient">
+              <option value="">Tous les patients</option>
+              {% for patient in patients %}
+                <option value="{{ patient.id }}">
+                  {{ patient.get_full_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% if request.session.user.permissions.therapeutic_activities.write %}
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-3">
+            <button type="button" class="btn btn-primary w-100 text-nowrap px-2" 
+                    id="showCreateFormBtn" title="Nouveau rapport">
+              <i class="fas fa-plus"></i>
+              <span class="d-lg-inline ms-1">Nouveau rapport</span>
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </form>
+
+      <!-- Table des rapports sociaux -->
+        <table class="table table-striped table-hover table-responsive" id="social-reports-table">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="sortable" data-sort="patient" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Patient</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="activity" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Activité</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="date" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Date</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="intervention" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Plan d'intervention</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="notes" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Notes d'entretien</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="summary" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Résumé de sortie</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center action-column no-sort">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="social-reports-tbody">
+            {% for report in social_reports %}
+            <tr>
+              <td data-label="Patient">
+                  {{ report.participation.patient.get_full_name }}
+              </td>
+              <td data-label="Session">
+                <div>
+                  <strong>{{ report.participation.session.activity.title }}</strong>
+                  <br><small class="text-muted">{{ report.participation.session.location.name }}</small>
+                </div>
+              </td>
+              <td data-label="Date">{{ report.report_date|date:"d/m/Y" }}</td>
+              <td data-label="Intervention">
+                {% if report.intervention_plan %}
+                  <div class="text-truncate" style="max-width: 150px;" title="{{ report.intervention_plan }}">
+                    {{ report.intervention_plan|truncatechars:60 }}
+                  </div>
+                {% else %}
+                  <span class="text-muted">Aucun plan</span>
+                {% endif %}
+              </td>
+              <td data-label="Entretien">
+                {% if report.interview_notes %}
+                  <div class="text-truncate" style="max-width: 150px;" title="{{ report.interview_notes }}">
+                    {{ report.interview_notes|truncatechars:60 }}
+                  </div>
+                {% else %}
+                  <span class="text-muted">Aucune note</span>
+                {% endif %}
+              </td>
+              <td data-label="Sortie">
+                {% if report.exit_summary %}
+                  <div class="text-truncate" style="max-width: 150px;" title="{{ report.exit_summary }}">
+                    {{ report.exit_summary|truncatechars:60 }}
+                  </div>
+                  <span class="badge bg-success">Complété</span>
+                {% else %}
+                  <span class="badge bg-warning">En cours</span>
+                {% endif %}
+              </td>
+              <td class="text-end" data-label="Actions">
+                <div class="d-flex gap-1 justify-content-end">
+                  <button type="button" class="btn btn-sm btn-light border text-info view-social-details" 
+                          title="Voir détails" 
+                          data-report-id="{{ report.id }}"
+                          data-patient-name="{{ report.participation.patient.get_full_name }}"
+                          data-activity="{{ report.participation.session.activity.title }}"
+                          data-session-date="{{ report.participation.session.date|date:'d/m/Y' }}"
+                          data-location="{{ report.participation.session.location.name }}"
+                          data-report-date="{{ report.report_date|date:'d/m/Y' }}"
+                          data-intervention-plan="{{ report.intervention_plan|default:'Aucun plan défini' }}"
+                          data-observations="{{ report.observations|default:'Aucune observation' }}"
+                          data-bs-toggle="modal" 
+                          data-bs-target="#socialDetailsModal">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  {% if request.session.user.permissions.therapeutic_activities.write %}
+                  <button type="button" class="btn btn-sm btn-light border text-dark edit-btn" title="Modifier"
+                          data-id="{{ report.id }}"
+                          data-patient-id="{{ report.participation.patient.id }}"
+                          data-intervention-plan="{{ report.intervention_plan|default:'' }}"
+                          data-observations="{{ report.observations|default:'' }}">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4">
+                <i class="fas fa-file-medical-alt fa-3x mb-3"></i>
+                <br>Aucun rapport social trouvé.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+      <!-- Pagination dynamique -->
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center mb-0" id="social-reports-pagination-controls">
+          <!-- Pagination générée dynamiquement -->
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% if request.session.user.permissions.therapeutic_activities.write %}
+<!-- Formulaire de création de rapport social (collapsible) -->
+<div class="collapse" id="socialCreateFormCollapse">
+  <div class="content">
+    <div class="card shadow-sm">
+      <div class="card-header text-white d-flex align-items-center" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+        Ajouter un nouveau rapport social
+      </div>
+    <div class="card-body">
+      <form id="socialCreateForm" method="post" action="{% url 'therapeutic_activities:social_report_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create">
+        
+        <!-- Sélection du patient -->
+        <div class="mb-4">
+          <label class="form-label">
+            Patient : <span class="text-danger">*</span>
+          </label>
+          <select name="patient" class="form-select" id="create_patient" required>
+            <option value="">Sélectionner un patient</option>
+            {% for patient in patients %}
+              <option value="{{ patient.id }}">{{ patient.get_full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Plan d'intervention -->
+        <div class="mb-4">
+          <label for="create_intervention_plan" class="form-label">
+           Plan d'intervention : 
+          </label>
+          <textarea name="intervention_plan" id="create_intervention_plan" class="form-control" rows="4" 
+                    placeholder="Définir le plan d'intervention pour ce patient..."></textarea>
+        </div>
+
+        <!-- Notes d'entretien -->
+        <div class="mb-4">
+          <label for="create_interview_notes" class="form-label">
+           Notes d'entretien : 
+          </label>
+          <textarea name="interview_notes" id="create_interview_notes" class="form-control" rows="4" 
+                    placeholder="Saisir les notes d'entretien..."></textarea>
+        </div>
+
+        <!-- Résumé de sortie -->
+        <div class="mb-4">
+          <label for="create_exit_summary" class="form-label">
+            Résumé de sortie :
+          </label>
+          <textarea name="exit_summary" id="create_exit_summary" class="form-control" rows="4" 
+                    placeholder="Saisir le résumé de sortie..."></textarea>
+        </div>
+
+        <!-- Notes de réunion -->
+        <div class="mb-4">
+          <label for="create_meeting_notes" class="form-label">
+            Notes de réunion :
+          </label>
+          <textarea name="meeting_notes" id="create_meeting_notes" class="form-control" rows="4" 
+                    placeholder="Saisir les notes de réunion..."></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex justify-content-end gap-2">
+          <div>
+            <button type="button" class="btn btn-sm btn-secondary" id="cancelCreateBtn">
+              <i class="fas fa-times me-1"></i>Annuler
+            </button>
+          </div>
+          <div>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-save me-1"></i>Sauvegarder
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  </div>
+</div>
+{% endif %}
+{% if request.session.user.permissions.therapeutic_activities.update %}
+<!-- Formulaire d'édition de rapport social (collapsible) -->
+<div class="collapse" id="socialEditFormCollapse">
+  <div class="content">
+    <div class="card shadow-sm">
+      <div class="card-header text-white d-flex align-items-center" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+        Modifier le rapport social
+      </div>
+    <div class="card-body">
+      <form id="socialEditForm" method="post" action="{% url 'therapeutic_activities:social_report_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="report_id" id="edit_report_id">
+        
+        <!-- Sélection du patient -->
+        <div class="mb-4">
+          <label class="form-label">
+            Patient :  <span class="text-danger">*</span>
+          </label>
+          <select name="patient" class="form-select" id="edit_patient" required>
+            <option value="">Sélectionner un patient</option>
+            {% for patient in patients %}
+              <option value="{{ patient.id }}">{{ patient.get_full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Plan d'intervention -->
+        <div class="mb-4">
+          <label for="edit_intervention_plan" class="form-label">
+          Plan d'intervention : 
+          </label>
+          <textarea name="intervention_plan" id="edit_intervention_plan" class="form-control" rows="4" 
+                    placeholder="Définir le plan d'intervention pour ce patient..."></textarea>
+        </div>
+
+        <!-- Notes d'entretien -->
+        <div class="mb-4">
+          <label for="edit_interview_notes" class="form-label">
+          Notes d'entretien : 
+          </label>
+          <textarea name="interview_notes" id="edit_interview_notes" class="form-control" rows="4" 
+                    placeholder="Saisir les notes d'entretien..."></textarea>
+        </div>
+
+        <!-- Résumé de sortie -->
+        <div class="mb-4">
+          <label for="edit_exit_summary" class="form-label">
+          Résumé de sortie : 
+          </label>
+          <textarea name="exit_summary" id="edit_exit_summary" class="form-control" rows="4" 
+                    placeholder="Saisir le résumé de sortie..."></textarea>
+        </div>
+
+        <!-- Notes de réunion -->
+        <div class="mb-4">
+          <label for="edit_meeting_notes" class="form-label">
+          Notes de réunion : 
+          </label>
+          <textarea name="meeting_notes" id="edit_meeting_notes" class="form-control" rows="4" 
+                    placeholder="Saisir les notes de réunion..."></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex justify-content-end gap-2">
+          <div>
+            <button type="button" class="btn btn-sm btn-secondary" id="cancelEditBtn">
+              <i class="fas fa-times me-1"></i>Annuler
+            </button>
+          </div>
+          <div>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-save me-1"></i>Sauvegarder
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal Détails Rapport Social -->
+<div class="modal fade" id="socialDetailsModal" tabindex="-1" aria-labelledby="socialDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: #1e90ff; color: white;">
+        <h5 class="modal-title" id="socialDetailsModalLabel">
+          <i class="fas fa-eye me-2"></i>
+          Détails de la session
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <strong>Patient:</strong>
+            <p id="social-modal-patient-name" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Activité:</strong>
+            <p id="social-modal-activity" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Date session:</strong>
+            <p id="social-modal-session-date" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Lieu:</strong>
+            <p id="social-modal-location" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Date rapport:</strong>
+            <p id="social-modal-report-date" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Plan d'intervention:</strong>
+            <p id="social-modal-intervention-plan" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Notes d'entretien:</strong>
+            <p id="social-modal-interview-notes" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Résumé de sortie:</strong>
+            <p id="social-modal-exit-summary" class="mb-2"></p>
+          </div>
+          <div class="col-12">
+            <strong>Notes de réunion:</strong>
+            <p id="social-modal-meeting-notes" class="mb-2"></p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+</style>
+
+<script>
+// Variables globales pour la pagination
+let allSocialReports = [];
+let filteredSocialReports = [];
+let currentSocialReportPage = 1;
+let socialReportsPerPage = 5;
+let totalSocialReportPages = 0;
+
+// Charger les données des rapports sociaux
+function loadAllSocialReports() {
+    const reportRows = document.querySelectorAll('#social-reports-tbody tr');
+    
+    allSocialReports = Array.from(reportRows).map(row => {
+        if (row.cells.length > 1 && !row.textContent.includes('Aucun rapport social trouvé')) {
+            return {
+                element: row,
+                patient: row.cells[0].textContent.toLowerCase().trim(),
+                activity: row.cells[1].textContent.toLowerCase().trim(),
+                date: row.cells[2].textContent.toLowerCase().trim(),
+                interventionPlan: row.cells[3].textContent.toLowerCase().trim(),
+                interviewNotes: row.cells[4].textContent.toLowerCase().trim(),
+                exitSummary: row.cells[5].textContent.toLowerCase().trim(),
+                patientId: row.querySelector('.edit-btn') ? row.querySelector('.edit-btn').dataset.patientId : ''
+            };
+        }
+        return null;
+    }).filter(item => item !== null);
+    
+    return allSocialReports;
+}
+
+// Fonction de tri pour les rapports sociaux
+function setupSocialReportSorting() {
+    const sortableHeaders = document.querySelectorAll('#social-reports-table .sortable');
+    
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const sortField = this.dataset.sort;
+            const currentDirection = this.dataset.direction || 'asc';
+            const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            
+            // Mettre à jour l'icône de tri
+            updateSocialReportSortIcons(this, newDirection);
+            
+            // Trier le tableau
+            sortSocialReportTable(sortField, newDirection);
+            
+            // Réappliquer la pagination
+            showSocialReportPage(1);
+            currentSocialReportPage = 1;
+            
+            // Sauvegarder la direction
+            this.dataset.direction = newDirection;
+        });
+    });
+}
+
+function sortSocialReportTable(sortField, direction) {
+    allSocialReports.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch(sortField) {
+            case 'patient':
+                aValue = a.patient;
+                bValue = b.patient;
+                break;
+            case 'activity':
+                aValue = a.activity;
+                bValue = b.activity;
+                break;
+            case 'date':
+                // Convertir dd/mm/yyyy en yyyy-mm-dd pour tri correct
+                aValue = a.date;
+                bValue = b.date;
+                if (aValue.includes('/')) {
+                    const [day, month, year] = aValue.trim().split('/');
+                    aValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+                if (bValue.includes('/')) {
+                    const [day, month, year] = bValue.trim().split('/');
+                    bValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+                break;
+            case 'intervention':
+                aValue = a.interventionPlan;
+                bValue = b.interventionPlan;
+                break;
+            case 'notes':
+                aValue = a.interviewNotes;
+                bValue = b.interviewNotes;
+                break;
+            case 'summary':
+                aValue = a.exitSummary;
+                bValue = b.exitSummary;
+                break;
+            default:
+                return 0;
+        }
+        
+        const comparison = aValue.localeCompare(bValue, 'fr', { numeric: true });
+        return direction === 'asc' ? comparison : -comparison;
+    });
+    
+    // Recharger la liste filtrée avec le nouvel ordre
+    filterSocialReports();
+}
+
+function updateSocialReportSortIcons(activeHeader, direction) {
+    // Réinitialiser toutes les icônes
+    document.querySelectorAll('#social-reports-table .sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon text-muted';
+    });
+    
+    // Mettre à jour l'icône active
+    const activeIcon = activeHeader.querySelector('.sort-icon');
+    if (activeIcon) {
+        if (direction === 'asc') {
+            activeIcon.className = 'fas fa-sort-up sort-icon text-primary';
+        } else {
+            activeIcon.className = 'fas fa-sort-down sort-icon text-primary';
+        }
+    }
+}
+
+// Fonction de filtrage des rapports sociaux
+function filterSocialReports() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+    const patientFilter = document.getElementById('filterPatient').value;
+    
+    filteredSocialReports = allSocialReports.filter(report => {
+        const matchesSearch = !searchTerm || 
+            report.patient.includes(searchTerm) ||
+            report.activity.includes(searchTerm) ||
+            report.interventionPlan.includes(searchTerm) ||
+            report.interviewNotes.includes(searchTerm) ||
+            report.exitSummary.includes(searchTerm) ||
+            report.date.includes(searchTerm);
+        
+        const matchesPatient = !patientFilter || report.patientId === patientFilter;
+        
+        return matchesSearch && matchesPatient;
+    });
+    
+    totalSocialReportPages = Math.ceil(filteredSocialReports.length / socialReportsPerPage);
+    if (totalSocialReportPages === 0) totalSocialReportPages = 1;
+    
+    if (currentSocialReportPage > totalSocialReportPages) {
+        currentSocialReportPage = 1;
+    }
+    
+    showSocialReportPage(currentSocialReportPage);
+}
+
+// Fonction d'affichage d'une page de rapports sociaux
+function showSocialReportPage(page) {
+    const startIndex = (page - 1) * socialReportsPerPage;
+    const endIndex = startIndex + socialReportsPerPage;
+    
+    // Cacher toutes les lignes de rapports sociaux
+    allSocialReports.forEach(report => {
+        report.element.style.display = 'none';
+    });
+    
+    // Afficher les lignes filtrées pour la page courante
+    const pageSocialReports = filteredSocialReports.slice(startIndex, endIndex);
+    pageSocialReports.forEach(report => {
+        report.element.style.display = '';
+    });
+    
+    // Gérer le message "Aucun rapport social trouvé"
+    const tbody = document.getElementById('social-reports-tbody');
+    const noDataRow = tbody.querySelector('tr td[colspan="7"]');
+    if (noDataRow) {
+        noDataRow.parentElement.style.display = filteredSocialReports.length === 0 ? '' : 'none';
+    }
+    
+    // Mettre à jour les contrôles de pagination
+    updateSocialReportPaginationControls();
+}
+
+// Mettre à jour les contrôles de pagination
+function updateSocialReportPaginationControls() {
+    const paginationControls = document.getElementById('social-reports-pagination-controls');
+    paginationControls.innerHTML = '';
+    
+    if (totalSocialReportPages <= 1) return;
+    
+    // Bouton Précédent
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentSocialReportPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<button class="page-link" ${currentSocialReportPage === 1 ? 'disabled' : ''}>Préc</button>`;
+    if (currentSocialReportPage > 1) {
+        prevLi.querySelector('button').onclick = () => {
+            currentSocialReportPage--;
+            showSocialReportPage(currentSocialReportPage);
+        };
+    }
+    paginationControls.appendChild(prevLi);
+    
+    // Boutons de page
+    for (let i = 1; i <= totalSocialReportPages; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === currentSocialReportPage ? 'active' : ''}`;
+        pageLi.innerHTML = `<button class="page-link">${i}</button>`;
+        pageLi.querySelector('button').onclick = () => {
+            currentSocialReportPage = i;
+            showSocialReportPage(currentSocialReportPage);
+        };
+        paginationControls.appendChild(pageLi);
+    }
+    
+    // Bouton Suivant
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentSocialReportPage === totalSocialReportPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<button class="page-link" ${currentSocialReportPage === totalSocialReportPages ? 'disabled' : ''}>Suiv</button>`;
+    if (currentSocialReportPage < totalSocialReportPages) {
+        nextLi.querySelector('button').onclick = () => {
+            currentSocialReportPage++;
+            showSocialReportPage(currentSocialReportPage);
+        };
+    }
+    paginationControls.appendChild(nextLi);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Charger les rapports sociaux et initialiser la pagination
+  loadAllSocialReports();
+  
+  // Event listeners pour les filtres
+  document.getElementById('searchInput').addEventListener('input', function() {
+      currentSocialReportPage = 1;
+      filterSocialReports();
+  });
+  
+  document.getElementById('filterPatient').addEventListener('change', function() {
+      currentSocialReportPage = 1;
+      filterSocialReports();
+  });
+  
+  // Initialiser le tri
+  setupSocialReportSorting();
+  
+  // Initialiser l'affichage
+  filterSocialReports();
+  // Fonction pour masquer tous les formulaires
+  function hideAllForms() {
+    const createForm = document.getElementById('socialCreateFormCollapse');
+    const editForm = document.getElementById('socialEditFormCollapse');
+    
+    if (createForm) {
+      const createCollapse = bootstrap.Collapse.getInstance(createForm);
+      if (createCollapse) createCollapse.hide();
+    }
+    
+    if (editForm) {
+      const editCollapse = bootstrap.Collapse.getInstance(editForm);
+      if (editCollapse) editCollapse.hide();
+    }
+  }
+  
+  // Fonction pour afficher le formulaire de création
+  function showCreateForm() {
+    hideAllForms();
+    const createForm = document.getElementById('socialCreateFormCollapse');
+    const createCollapse = bootstrap.Collapse.getInstance(createForm) || new bootstrap.Collapse(createForm);
+    createCollapse.show();
+    createForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  
+  // Fonction pour afficher le formulaire de modification
+  function showEditForm() {
+    hideAllForms();
+    const editForm = document.getElementById('socialEditFormCollapse');
+    const editCollapse = bootstrap.Collapse.getInstance(editForm) || new bootstrap.Collapse(editForm);
+    editCollapse.show();
+    editForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  
+  // Gestionnaire pour le bouton "Nouveau rapport"
+  const showCreateBtn = document.getElementById('showCreateFormBtn');
+  if (showCreateBtn) {
+    showCreateBtn.addEventListener('click', showCreateForm);
+  }
+  
+  // Gestionnaire pour le bouton "Annuler" du formulaire de création
+  const cancelCreateBtn = document.getElementById('cancelCreateBtn');
+  if (cancelCreateBtn) {
+    cancelCreateBtn.addEventListener('click', hideAllForms);
+  }
+  
+  // Gestionnaire pour le bouton "Annuler" du formulaire de modification
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', hideAllForms);
+  }
+  
+  // Gestionnaires d'événements pour les boutons d'édition
+  const editButtons = document.querySelectorAll('.edit-btn');
+  editButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const id = this.dataset.id;
+      const patientId = this.dataset.patientId;
+      const interventionPlan = this.dataset.interventionPlan;
+      const interviewNotes = this.dataset.interviewNotes;
+      const exitSummary = this.dataset.exitSummary;
+      const meetingNotes = this.dataset.meetingNotes;
+
+      // Remplir le formulaire
+      document.getElementById('edit_report_id').value = id;
+      document.getElementById('edit_patient').value = patientId;
+      document.getElementById('edit_intervention_plan').value = interventionPlan || '';
+      document.getElementById('edit_interview_notes').value = interviewNotes || '';
+      document.getElementById('edit_exit_summary').value = exitSummary || '';
+      document.getElementById('edit_meeting_notes').value = meetingNotes || '';
+
+      // Afficher le formulaire de modification
+      showEditForm();
+    });
+  });
+  // Gestionnaire pour les boutons "Voir détails" rapport social
+  document.querySelectorAll('.view-social-details').forEach(button => {
+    button.addEventListener('click', function() {
+      // Récupérer les données depuis les attributs data-*
+      const patientName = this.getAttribute('data-patient-name');
+      const activity = this.getAttribute('data-activity');
+      const sessionDate = this.getAttribute('data-session-date');
+      const location = this.getAttribute('data-location');
+      const reportDate = this.getAttribute('data-report-date');
+      const interventionPlan = this.getAttribute('data-intervention-plan');
+      const interviewNotes = this.getAttribute('data-interview-notes');
+      const exitSummary = this.getAttribute('data-exit-summary');
+      const meetingNotes = this.getAttribute('data-meeting-notes');
+      
+      // Remplir les éléments de la modal
+      document.getElementById('social-modal-patient-name').textContent = patientName;
+      document.getElementById('social-modal-activity').textContent = activity;
+      document.getElementById('social-modal-session-date').textContent = sessionDate;
+      document.getElementById('social-modal-location').textContent = location;
+      document.getElementById('social-modal-report-date').textContent = reportDate;
+      document.getElementById('social-modal-intervention-plan').textContent = interventionPlan || 'Aucun plan défini';
+      document.getElementById('social-modal-interview-notes').textContent = interviewNotes || 'Aucune note d\'entretien';
+      document.getElementById('social-modal-exit-summary').textContent = exitSummary || 'Aucun résumé de sortie';
+      document.getElementById('social-modal-meeting-notes').textContent = meetingNotes || 'Aucune note de réunion';
+    });
+  });
+});
+</script>
+{% endblock %}

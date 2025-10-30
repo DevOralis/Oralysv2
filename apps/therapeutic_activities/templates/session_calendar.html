@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block menu %}
+  {% include 'therapeutic_activities_menu.html' %}
+{% endblock %}
+{% block title %}Calendrier des Séances - Activités Thérapeutiques{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h3 class="border-bottom pb-2">
+        <i class="fas fa-calendar-alt text-primary me-2"></i>
+        Sessions
+    </h3>
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                    <div>
+                        <i class="fas fa-calendar me-2"></i>
+                        Calendrier des Séances Thérapeutiques
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Filtres -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <select id="filter-coach" class="form-select">
+                                <option value="">Tous les coachs</option>
+                                {% for coach in coaches %}
+                                <option value="{{ coach.id }}">{{ coach.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="filter-type" class="form-select">
+                                <option value="">Tous types d'activités</option>
+                                {% for type in activity_types %}
+                                <option value="{{ type.id }}">{{ type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="filter-activity" class="form-select">
+                                <option value="">Toutes les activités</option>
+                                {% for activity in activities %}
+                                <option value="{{ activity.id }}">{{ activity.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="filter-status" class="form-select">
+                                <option value="">Tous les statuts</option>
+                                <option value="planned">Planifié</option>
+                                <option value="done">Terminé</option>
+                                <option value="canceled">Annulé</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Calendrier -->
+                    <div id="calendar" class="calendar-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour les détails de séance -->
+<div class="modal fade" id="sessionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails de la séance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="sessionDetails">
+                <!-- Contenu dynamique -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <a href="#" id="editSessionLink" class="btn btn-primary">Modifier</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- FullCalendar -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/fr.js'></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'fr',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Aujourd\'hui',
+            month: 'Mois',
+            week: 'Semaine',
+            day: 'Jour',
+            list: 'Liste'
+        },
+        events: {
+            url: '{% url "therapeutic_activities:api_sessions" %}',
+            method: 'GET',
+            failure: function() {
+                alert('Erreur lors du chargement des séances');
+            }
+        },
+        eventColor: '#3788d8',
+        eventTextColor: '#ffffff',
+        eventClick: function(info) {
+            showSessionDetails(info.event);
+        },
+        eventMouseEnter: function(info) {
+            showTooltip(info);
+        },
+        eventMouseLeave: function(info) {
+            hideTooltip(info);
+        },
+        height: 'auto',
+        contentHeight: 'auto',
+        aspectRatio: 1.8,
+        nowIndicator: true,
+        selectable: true,
+        select: function(info) {
+            window.location.href = `{% url "therapeutic_activities:session_create" %}?date=${info.startStr}`;
+        }
+    });
+
+    calendar.render();
+
+    // Filtres
+    function applyFilters() {
+        const coachId = document.getElementById('filter-coach').value;
+        const activityId = document.getElementById('filter-activity').value;
+        const typeId = document.getElementById('filter-type').value;
+        const status = document.getElementById('filter-status').value;
+        
+        let url = '{% url "therapeutic_activities:api_sessions" %}';
+        let params = [];
+        
+        if (coachId) params.push('coach=' + coachId);
+        if (activityId) params.push('activity=' + activityId);
+        if (typeId) params.push('type=' + typeId);
+        if (status) params.push('status=' + status);
+        
+        if (params.length > 0) {
+            url += '?' + params.join('&');
+        }
+        
+        // Mettre à jour l'URL source des événements
+        calendar.removeAllEventSources();
+        calendar.addEventSource({
+            url: url,
+            method: 'GET',
+            failure: function() {
+                alert('Erreur lors du chargement des séances');
+            }
+        });
+    }
+
+    // Filtre des coaches - version simplifiée sans fetch
+    function updateCoachFilter() {
+        const activityId = document.getElementById('filter-activity').value;
+        const coachSelect = document.getElementById('filter-coach');
+        
+        // Toujours garder tous les coaches disponibles
+        // La relation coach-activité est gérée côté serveur via l'API
+        applyFilters();
+    }
+
+    // Attacher les événements aux filtres
+    document.getElementById('filter-coach').addEventListener('change', applyFilters);
+    document.getElementById('filter-activity').addEventListener('change', applyFilters);
+    document.getElementById('filter-type').addEventListener('change', applyFilters);
+    document.getElementById('filter-status').addEventListener('change', applyFilters);
+    
+
+    // Fonction pour afficher les détails de la séance
+    function showSessionDetails(event) {
+        var session = event.extendedProps;
+        var modal = new bootstrap.Modal(document.getElementById('sessionModal'));
+        
+        var detailsHtml = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-clipboard-list text-primary me-2"></i>Activité</h6>
+                    <p>${session.activity_title}</p>
+                    
+                    <h6><i class="fas fa-user text-primary me-2"></i>Coach</h6>
+                    <p>${session.coach_name}</p>
+                    
+                    <h6><i class="fas fa-users text-primary me-2"></i>Participants</h6>
+                    <p>${session.participants_count} participant(s)</p>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-calendar text-primary me-2"></i>Date et heure</h6>
+                    <p>${session.date} de ${session.start_time} à ${session.end_time}</p>
+                    
+                    <h6><i class="fas fa-map-marker-alt text-primary me-2"></i>Lieu</h6>
+                    <p>${session.location || 'Non spécifié'}</p>
+                    
+                    <h6><i class="fas fa-info-circle text-primary me-2"></i>Statut</h6>
+                    <span class="badge bg-${getStatusColor(session.status)}">${getStatusText(session.status)}</span>
+                </div>
+            </div>
+            ${session.notes ? `
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6><i class="fas fa-sticky-note text-primary me-2"></i>Notes</h6>
+                    <p>${session.notes}</p>
+                </div>
+            </div>` : ''}
+        `;
+        
+        document.getElementById('sessionDetails').innerHTML = detailsHtml;
+        document.getElementById('editSessionLink').href = `/therapeutic_activities/sessions/${session.id}/edit/`;
+        
+        modal.show();
+    }
+
+    // Tooltip - Version simplifiée et corrigée
+    let currentTooltip = null;
+
+    function showTooltip(info) {
+        const session = info.event.extendedProps;
+        const tooltipEl = document.createElement('div');
+        tooltipEl.className = 'position-absolute bg-white border rounded shadow p-3';
+        tooltipEl.style.zIndex = '9999';
+        tooltipEl.style.maxWidth = '300px';
+        tooltipEl.style.fontSize = '0.8rem';
+        tooltipEl.innerHTML = `
+            <div>
+                <strong>${session.activity_title}</strong><br>
+                <small class="text-muted">
+                    <i class="fas fa-clock"></i> ${session.start_time} - ${session.end_time}<br>
+                    <i class="fas fa-user"></i> ${session.coach_name}<br>
+                    <i class="fas fa-users"></i> ${session.participants_count}/${session.max_participants} participants
+                </small>
+            </div>
+        `;
+        
+        document.body.appendChild(tooltipEl);
+        currentTooltip = tooltipEl;
+        
+        // Positionner le tooltip
+        const rect = info.el.getBoundingClientRect();
+        tooltipEl.style.left = (rect.left + window.scrollX + 10) + 'px';
+        tooltipEl.style.top = (rect.top + window.scrollY - tooltipEl.offsetHeight - 10) + 'px';
+    }
+
+    function hideTooltip() {
+        if (currentTooltip) {
+            currentTooltip.remove();
+            currentTooltip = null;
+        }
+    }
+
+    function getStatusColor(status) {
+        const colors = {
+            'planned': 'primary',
+            'done': 'success',
+            'canceled': 'danger'
+        };
+        return colors[status] || 'secondary';
+    }
+
+    function getStatusText(status) {
+        const texts = {
+            'planned': 'Planifié',
+            'done': 'Terminé',
+            'canceled': 'Annulé'
+        };
+        return texts[status] || status;
+    }
+
+    // Fonction pour afficher les tooltips améliorés
+    function showTooltip(info) {
+        var session = info.event.extendedProps;
+        var tooltipEl = document.createElement('div');
+        tooltipEl.className = 'tooltip-custom position-absolute';
+        tooltipEl.style.zIndex = '9999';
+        tooltipEl.style.pointerEvents = 'none';
+        tooltipEl.innerHTML = `
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white py-2">
+                    <h6 class="card-title mb-0">${session.activity_title}</h6>
+                </div>
+                <div class="card-body p-3">
+                    <p class="mb-2"><strong><i class="fas fa-clock me-2"></i>Horaire:</strong><br>
+                    ${session.date} de ${session.start_time} à ${session.end_time}</p>
+                    
+                    <p class="mb-2"><strong><i class="fas fa-user me-2"></i>Coach:</strong><br>
+                    ${session.coach_name}</p>
+                    
+                    <p class="mb-2"><strong><i class="fas fa-map-marker-alt me-2"></i>Lieu:</strong><br>
+                    ${session.location}</p>
+                    
+                    <p class="mb-2"><strong><i class="fas fa-users me-2"></i>Participants:</strong><br>
+                    ${session.participants_count}/${session.max_participants}</p>
+                    
+                    <p class="mb-0"><strong><i class="fas fa-info-circle me-2"></i>Statut:</strong><br>
+                    <span class="badge bg-${getStatusColor(session.status)}">${getStatusText(session.status)}</span></p>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(tooltipEl);
+        
+        var rect = info.el.getBoundingClientRect();
+        tooltipEl.style.left = (rect.left + window.scrollX) + 'px';
+        tooltipEl.style.top = (rect.top + window.scrollY - tooltipEl.offsetHeight - 10) + 'px';
+        
+        info.el.tooltip = tooltipEl;
+    }
+
+    function hideTooltip(info) {
+        if (info.el.tooltip) {
+            info.el.tooltip.remove();
+            info.el.tooltip = null;
+        }
+    }
+});
+</script>
+
+<style>
+.calendar-container {
+    min-height: 600px;
+}
+
+.fc-event {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 0.85em;
+    margin: 1px 0;
+}
+
+.fc-event:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
+
+.tooltip-custom {
+    position: absolute;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .fc-toolbar {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .fc-toolbar-chunk {
+        margin: 5px 0;
+    }
+}
+</style>
+{% endblock %}

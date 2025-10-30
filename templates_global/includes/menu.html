@@ -1,0 +1,64 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    
+    <div class="menu-items">
+      <a href="#" class="menu-item">
+        <i class="fas fa-chart-line"></i>
+        <span class="menu-text">Statistiques</span>
+      </a>
+      <a href="#" class="menu-item {% if request.resolver_match.url_name == 'patient_list_create' %}active{% endif %}">
+        <i class="fas fa-user-injured"></i>
+        <span class="menu-text">Patients</span>
+      </a>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-calendar-alt"></i>
+          <span class="menu-text">Rendez-vous</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="#"><i class="fas fa-calendar"></i>Planning</a></li>
+          <li><a href="#"><i class="fas fa-history"></i>Historique</a></li>
+          <li><a href="#"><i class="fas fa-clock"></i>Disponibilités</a></li>
+        </ul>
+      </div>
+      
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-file-medical"></i>
+          <span class="menu-text">Dossiers médicaux</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="#"><i class="fas fa-plus-circle"></i>Ajustement d'inventaire</a></li>
+          <li><a href="#"><i class="fas fa-search"></i>Rechercher</a></li>
+          <li><a href="#"><i class="fas fa-archive"></i>Archives</a></li>
+        </ul>
+      </div>
+      
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-pills"></i>
+          <span class="menu-text">Médicaments</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="#"><i class="fas fa-book-medical"></i>Catalogue</a></li>
+          <li><a href="#"><i class="fas fa-prescription"></i>Prescriptions</a></li>
+          <li><a href="#"><i class="fas fa-warehouse"></i>Stock</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+</div>

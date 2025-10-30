@@ -1,0 +1,54 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    
+    <div class="menu-items">
+      
+      
+      <a href="{% url 'formation_home' %}" class="menu-item {% if request.resolver_match.url_name == 'formation_home' %}active{% endif %}">
+        <i class="fas fa-graduation-cap"></i>
+        <span class="menu-text">Formations</span>
+      </a>
+      
+      <a href="{% url 'session_home' %}" class="menu-item {% if request.resolver_match.url_name == 'session_home' %}active{% endif %}">
+        <i class="fas fa-calendar-alt"></i>
+        <span class="menu-text">Sessions</span>
+      </a>
+      
+      <a href="{% url 'inscription_home' %}" class="menu-item {% if request.resolver_match.url_name == 'inscription_home' %}active{% endif %}">
+        <i class="fas fa-users"></i>
+        <span class="menu-text">Participants</span>
+      </a>
+      
+      <a href="{% url 'formateur_home' %}" class="menu-item {% if request.resolver_match.url_name == 'formateur_home' %}active{% endif %}">
+        <i class="fas fa-chalkboard-teacher"></i>
+        <span class="menu-text">Formateurs</span>
+      </a>
+      
+      <a href="{% url 'cours_programmes_home' %}" class="menu-item {% if request.resolver_match.url_name == 'cours_programmes_home' %}active{% endif %}">
+        <i class="fas fa-book"></i>
+        <span class="menu-text">Cours & Programmes</span>
+      </a>
+      
+      <a href="{% url 'formation_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'formation_dashboard' %}active{% endif %}">
+        <i class="fas fa-chart-line"></i>
+        <span class="menu-text">Rapports</span>
+      </a>
+      
+      <a href="{% url 'configuration_home' %}" class="menu-item {% if request.resolver_match.url_name == 'configuration_home' %}active{% endif %}">
+        <i class="fas fa-cog"></i>
+        <span class="menu-text">Configuration</span>
+      </a>
+    </div>
+  </nav>
+</div>

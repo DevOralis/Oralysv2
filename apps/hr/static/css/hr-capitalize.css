@@ -1,0 +1,23 @@
+.hr-capitalize .card-header,
+.hr-capitalize .modal-title,
+.hr-capitalize label,
+.hr-capitalize .form-label,
+.hr-capitalize .nav-link,
+.hr-capitalize th span,
+.hr-capitalize .table thead th,
+.hr-capitalize .btn,
+.hr-capitalize .btn span,
+.hr-capitalize .page-link,
+.hr-capitalize .input-group-text,
+.hr-capitalize .menu-text,
+.hr-capitalize .actions-cell .btn[title],
+.hr-capitalize .breadcrumb-item,
+.hr-capitalize .card-header i + span {
+  text-transform: capitalize;
+}
+
+.hr-menu-capitalize .menu-text,
+.hr-menu-capitalize ul li a {
+  text-transform: capitalize;
+}
+

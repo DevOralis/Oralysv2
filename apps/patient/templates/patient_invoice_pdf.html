@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Facture N° {{ invoice_number|default:"FACTURE" }}</title>
+    <style>
+        @page {
+            margin: 2cm;
+            size: A4;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            line-height: 1.4;
+        }
+        .invoice-header {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .company-info {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+        }
+        .invoice-details {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+            text-align: right;
+        }
+        .company-logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 5px;
+        }
+        .company-address {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.3;
+        }
+        .invoice-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 5px;
+        }
+        .invoice-date {
+            font-size: 12px;
+            color: #666;
+        }
+        .billing-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-left: 4px solid #0066cc;
+            margin: 30px 0;
+        }
+        .billing-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        .services-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+        }
+        .services-table th {
+            background-color: #0066cc;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #0066cc;
+        }
+        .services-table td {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+        }
+        .services-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .service-category {
+            background-color: #e3f2fd !important;
+            font-weight: bold;
+            color: #0066cc;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .subtotal-row {
+            background-color: #f1f1f1;
+            font-weight: bold;
+        }
+        .total-row {
+            background-color: #0066cc;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .payment-info {
+            margin-top: 40px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 10px;
+            color: #888;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+        .amount {
+            font-weight: bold;
+            color: #0066cc;
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête de facture -->
+    <div class="invoice-header">
+        <div class="company-info">
+            <div class="company-logo">🏥 Oralys Clinique</div>
+            <div class="company-address">
+                Clinique Médicale Spécialisée<br>
+                123 Avenue Mohammed V<br>
+                Casablanca, 20000 Maroc<br>
+                Tél: +212 522 XXX XXX<br>
+                Email: contact@oralys-clinique.ma
+            </div>
+        </div>
+        <div class="invoice-details">
+            <div class="invoice-number">FACTURE N° {{ invoice_number|default:"FACTURE" }}</div>
+            <div class="invoice-date">Date: {{ today|date:"d/m/Y" }}</div>
+        </div>
+    </div>
+
+    <!-- Informations de facturation -->
+    <div class="billing-info">
+        <div class="billing-title">FACTURÉ À:</div>
+        <strong>{{ patient.last_name }} {{ patient.first_name }}</strong><br>
+        {% if patient.cin %}CIN: {{ patient.cin }}<br>{% endif %}
+        {% if patient.phone %}Téléphone: {{ patient.phone }}<br>{% endif %}
+        {% if patient.email %}Email: {{ patient.email }}<br>{% endif %}
+        {% if patient.city %}Ville: {{ patient.city }}<br>{% endif %}
+        {% if patient.has_insurance %}
+            <strong>Assurance médicale: Oui</strong>
+            {% if patient.insurance_number %}<br>N° Assurance: {{ patient.insurance_number }}{% endif %}
+        {% endif %}
+    </div>
+
+    <!-- Tableau des services -->
+    <table class="services-table">
+        <thead>
+            <tr>
+                <th style="width: 50%;">DESCRIPTION</th>
+                <th style="width: 15%;" class="text-center">QTÉ</th>
+                <th style="width: 15%;" class="text-right">PRIX UNIT.</th>
+                <th style="width: 20%;" class="text-right">TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Consultations -->
+            {% if consultations %}
+            <tr class="service-category">
+                <td colspan="4">CONSULTATIONS MÉDICALES</td>
+            </tr>
+            {% for consultation in consultations %}
+                {% if consultation.actes.exists %}
+                    {% for acte in consultation.actes.all %}
+                    <tr>
+                        <td>{{ acte.libelle }}<br>
+                            <small>Consultation du {{ consultation.date|date:"d/m/Y" }} - Dr {{ consultation.medecin.full_name|default:"Non défini" }}</small>
+                        </td>
+                        <td class="text-center">1</td>
+                        <td class="text-right amount">{{ acte.price }} DH</td>
+                        <td class="text-right amount">{{ acte.price }} DH</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                <tr>
+                    <td>Consultation médicale<br>
+                        <small>{{ consultation.date|date:"d/m/Y" }} - Dr {{ consultation.medecin.full_name|default:"Non défini" }}</small>
+                    </td>
+                    <td class="text-center">1</td>
+                    <td class="text-right amount">0 DH</td>
+                    <td class="text-right amount">0 DH</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+            {% endif %}
+
+            <!-- Hébergements -->
+            {% if admissions %}
+            <tr class="service-category">
+                <td colspan="4">HÉBERGEMENT</td>
+            </tr>
+            {% for admission in admissions %}
+                {% with admission.calculate_room_cost as room_cost %}
+                {% with admission.calculate_stay_duration as duration %}
+                <tr>
+                    <td>Hébergement - {{ admission.room.room_name|default:"Chambre" }}<br>
+                        <small>Du {{ admission.admission_date|date:"d/m/Y" }} au {{ admission.discharge_date|date:"d/m/Y"|default:"en cours" }}</small>
+                    </td>
+                    <td class="text-center">{{ duration }} jour{{ duration|pluralize }}</td>
+                    <td class="text-right amount">{{ admission.calculate_room_unit_price|floatformat:2 }} DH</td>
+                    <td class="text-right amount">{{ room_cost|floatformat:2 }} DH</td>
+                </tr>
+                {% endwith %}
+                {% endwith %}
+            {% endfor %}
+            {% endif %}
+
+            <!-- Médicaments Prescrits -->
+            {% if medication_prescriptions %}
+            <tr class="service-category">
+                <td colspan="4">MÉDICAMENTS PRESCRITS</td>
+            </tr>
+            {% for prescription in medication_prescriptions %}
+            <tr>
+                <td>{{ prescription.medicament.short_label }}<br>
+                    <small>{{ prescription.dose }} - {{ prescription.get_frequence_display }} - {{ prescription.duree }}</small>
+                    {% if prescription.instructions_supplementaires %}
+                        <br><small><em>{{ prescription.instructions_supplementaires }}</em></small>
+                    {% endif %}
+                </td>
+                <td class="text-center">{{ prescription.quantite_totale|default:"-" }}</td>
+                <td class="text-right amount">{% if prescription.medicament.unit_price %}{{ prescription.medicament.unit_price|floatformat:2 }} DH{% else %}-{% endif %}</td>
+                <td class="text-right amount">{{ prescription.total_cost|floatformat:2 }} DH</td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+
+            <!-- Accompagnants -->
+            {% if companions %}
+            <tr class="service-category">
+                <td colspan="4">ACCOMPAGNANTS</td>
+            </tr>
+            {% for companion in companions %}
+                {% if companion.cout_total %}
+                <tr>
+                    <td>Hébergement accompagnant - {{ companion.companion_name }}<br>
+                        <small>{{ companion.relationship }}</small>
+                    </td>
+                    <td class="text-center">{{ companion.nb_jours_acc|default:0 }} jour{{ companion.nb_jours_acc|default:0|pluralize }}</td>
+                    <td class="text-right amount">{% if companion.acte_accompagnant %}{{ companion.acte_accompagnant.price }}{% else %}0{% endif %} DH</td>
+                    <td class="text-right amount">{{ companion.cout_total|default:0 }} DH</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+            {% endif %}
+
+            <!-- Ligne de total -->
+            <tr class="total-row">
+                <td colspan="3" class="text-right">TOTAL:</td>
+                <td class="text-right">{{ total_cout.total }} DH</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Informations de paiement -->
+    <div class="payment-info">
+        <strong>MODALITÉS DE PAIEMENT:</strong><br>
+        Paiement à réception de facture<br>
+        Modes de paiement acceptés: Espèces, Chèque, Virement bancaire<br>
+        <br>
+        <strong>Merci de votre confiance.</strong>
+    </div>
+
+
+    <!-- Pied de page -->
+    <div class="footer">
+        <p>Document généré automatiquement le {{ today|date:"d/m/Y" }}</p>
+        <p>Oralys Clinique - Système de gestion médicale</p>
+    </div>
+</body>
+</html>

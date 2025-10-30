@@ -1,0 +1,841 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Véhicules{% endblock %}
+
+{% block menu %}
+{% include "menu_parcauto.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% else %}Information :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Table Header Component -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-car me-2"></i>
+      Liste des Véhicules
+    </div>
+    <div class="card-body">
+      <form method="get" id="search-form">
+        <div class="row g-3 align-items-end">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+            <div class="input-group">
+              <span class="input-group-text bg-primary text-white border-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" name="q" id="search-immatriculation" class="form-control border-primary" 
+                     placeholder="Rechercher par immatriculation..." value="{{ request.GET.q }}">
+            </div>
+          </div>
+          <!-- Filtre marques -->
+          <div class="col-6 col-sm-6 col-md-2 col-lg-2 order-2">
+            <select name="marque_id" id="search-marque" class="form-select" title="Filtrer par marque">
+              <option value="">Toutes les marques</option>
+              {% for marque in marques %}
+                <option value="{{ marque.id }}" {% if request.GET.marque_id == marque.id|stringformat:"s" %}selected{% endif %}>{{ marque.nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Filtre statuts -->
+          <div class="col-6 col-sm-6 col-md-2 col-lg-2 order-3">
+            <select name="statut" id="search-statut" class="form-select" title="Filtrer par statut">
+              <option value="">Tous les statuts</option>
+              {% for key, value in statuts.items %}
+                <option value="{{ key }}" {% if request.GET.statut == key %}selected{% endif %}>{{ value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Bouton Nouveau -->
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-4">
+            <button type="button" class="btn btn-primary w-100 text-nowrap px-3 py-2" onclick="showAddForm()">
+              <i class="fas fa-plus me-2"></i>
+              <span class="d-none d-lg-inline">Nouveau</span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+
+
+      <!-- Espacement entre la recherche et le tableau -->
+      <div class="mb-4"></div>
+
+      <!-- Table Component -->
+      <div class="table-container">
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Immatriculation</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell">Marque</th>
+              <th class="d-none d-md-table-cell">Modèle</th>
+              <th class="d-none d-md-table-cell">Année</th>
+              <th class="d-none d-md-table-cell">Kilométrage</th>
+              <th class="d-none d-md-table-cell">Type</th>
+              <th class="d-none d-md-table-cell">Statut</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for voiture in vehicules %}
+            <tr class="main-row">
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td>{{ voiture.immatriculation }}</td>
+              <td class="d-none d-md-table-cell" data-marque-id="{{ voiture.marque.id }}">{{ voiture.marque.nom }}</td>
+              <td class="d-none d-md-table-cell" data-modele-id="{{ voiture.modele.id }}">{{ voiture.modele.nom }}</td>
+              <td class="d-none d-md-table-cell">{{ voiture.annee }}</td>
+              <td class="d-none d-md-table-cell">{{ voiture.kilometrage_actuel }}</td>
+              <td class="d-none d-md-table-cell">
+                <span class="badge bg-{% if voiture.type == 'particulier' %}primary{% elif voiture.type == 'utilitaire' %}success{% else %}warning{% endif %}">
+                  {{ voiture.get_type_display }}
+                </span>
+              </td>
+              <td class="d-none d-md-table-cell">
+                <span class="badge bg-{% if voiture.statut == 'actif' %}success{% elif voiture.statut == 'maintenance' %}warning{% else %}danger{% endif %}">
+                  {{ voiture.get_statut_display }}
+                </span>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ voiture.id }}">
+                  Voir détails
+                </button>
+                <div class="d-none d-md-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-dark" title="Modifier"
+                          data-voiture-id="{{ voiture.id }}"
+                          data-voiture-immatriculation="{{ voiture.immatriculation }}"
+                          data-voiture-marque-id="{{ voiture.marque.id }}"
+                          data-voiture-modele-id="{{ voiture.modele.id }}"
+                          data-voiture-annee="{{ voiture.annee }}"
+                          data-voiture-kilometrage="{{ voiture.kilometrage_actuel }}"
+                          data-voiture-date-achat="{{ voiture.date_achat|date:'Y-m-d' }}"
+                          data-voiture-date-mise-service="{{ voiture.date_mise_service|date:'Y-m-d' }}"
+                          data-voiture-type="{{ voiture.type }}"
+                          data-voiture-statut="{{ voiture.statut }}"
+                          onclick="openEditForm(this)">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" title="Supprimer"
+                          data-bs-toggle="modal" data-bs-target="#modalDeleteVoiture"
+                          data-voiture-id="{{ voiture.id }}"
+                          data-voiture-marque="{{ voiture.marque.nom }}"
+                          data-voiture-modele="{{ voiture.modele.nom }}">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="collapse bg-light" id="details-{{ voiture.id }}">
+              <td colspan="9" class="p-3">
+                <div class="row">
+                  <div class="col-6">
+                    <p class="mb-2"><strong>Marque:</strong> {{ voiture.marque.nom }}</p>
+                    <p class="mb-2"><strong>Modèle:</strong> {{ voiture.modele.nom }}</p>
+                    <p class="mb-2"><strong>Année:</strong> {{ voiture.annee }}</p>
+                    <p class="mb-2"><strong>Kilométrage:</strong> {{ voiture.kilometrage_actuel }}</p>
+                  </div>
+                  <div class="col-6">
+                    <p class="mb-2"><strong>Type:</strong> 
+                      <span class="badge bg-{% if voiture.type == 'particulier' %}primary{% elif voiture.type == 'utilitaire' %}success{% else %}warning{% endif %}">
+                        {{ voiture.get_type_display }}
+                      </span>
+                    </p>
+                    <p class="mb-2"><strong>Statut:</strong> 
+                      <span class="badge bg-{% if voiture.statut == 'actif' %}success{% elif voiture.statut == 'maintenance' %}warning{% else %}danger{% endif %}">
+                        {{ voiture.get_statut_display }}
+                      </span>
+                    </p>
+                    <p class="mb-2"><strong>Date d'achat:</strong> {{ voiture.date_achat|date:"d/m/Y" }}</p>
+                    <p class="mb-2"><strong>Mise en service:</strong> {{ voiture.date_mise_service|date:"d/m/Y" }}</p>
+                  </div>
+                  <div class="col-12 mt-3">
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-dark" title="Modifier"
+                              data-voiture-id="{{ voiture.id }}"
+                              data-voiture-immatriculation="{{ voiture.immatriculation }}"
+                              data-voiture-marque-id="{{ voiture.marque.id }}"
+                              data-voiture-modele-id="{{ voiture.modele.id }}"
+                              data-voiture-annee="{{ voiture.annee }}"
+                              data-voiture-kilometrage="{{ voiture.kilometrage_actuel }}"
+                              data-voiture-date-achat="{{ voiture.date_achat|date:'Y-m-d' }}"
+                              data-voiture-date-mise-service="{{ voiture.date_mise_service|date:'Y-m-d' }}"
+                              data-voiture-type="{{ voiture.type }}"
+                              data-voiture-statut="{{ voiture.statut }}"
+                              onclick="openEditForm(this)">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                      </button>
+                      <button class="btn btn-sm btn-danger" title="Supprimer"
+                              data-bs-toggle="modal" data-bs-target="#modalDeleteVoiture"
+                              data-voiture-id="{{ voiture.id }}"
+                              data-voiture-marque="{{ voiture.marque.nom }}"
+                              data-voiture-modele="{{ voiture.modele.nom }}">
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9" class="text-center py-4">
+                <i class="fas fa-car fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Aucune voiture disponible</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Component -->
+      {% if vehicules.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if vehicules.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ vehicules.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.marque_id %}&marque_id={{ request.GET.marque_id }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.items_per_page %}&items_per_page={{ request.GET.items_per_page }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </span>
+            </li>
+          {% endif %}
+
+          {% for num in vehicules.paginator.page_range %}
+            {% if vehicules.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+            {% elif num > vehicules.number|add:'-3' and num < vehicules.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.marque_id %}&marque_id={{ request.GET.marque_id }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.items_per_page %}&items_per_page={{ request.GET.items_per_page }}{% endif %}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if vehicules.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ vehicules.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.marque_id %}&marque_id={{ request.GET.marque_id }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.items_per_page %}&items_per_page={{ request.GET.items_per_page }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout inline - Card séparée -->
+  <div class="card mb-4" id="add-voiture">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2"></i>
+      Nouveau Véhicule
+    </div>
+    <div class="card-body">
+      <form id="voitureForm" method="post" action="{% url 'parcauto_home' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="id_immatriculation" class="form-label fw-semibold">Immatriculation <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-car"></i></span>
+                <input type="text" class="form-control" id="id_immatriculation" name="immatriculation" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="id_marque" class="form-label fw-semibold">Marque <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                <select class="form-select" id="id_marque" name="marque" required>
+                  <option value="">-- Sélectionnez une marque --</option>
+                  {% for marque in marques %}
+                    <option value="{{ marque.id }}">{{ marque.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="id_modele" class="form-label fw-semibold">Modèle <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-cog"></i></span>
+                <select class="form-select" id="id_modele" name="modele" required disabled>
+                  <option value="">-- Sélectionnez d'abord une marque --</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="id_annee" class="form-label fw-semibold">Année <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="number" class="form-control" id="id_annee" name="annee" min="1900" max="2100" required>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="id_kilometrage_actuel" class="form-label fw-semibold">Kilométrage actuel <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-tachometer-alt"></i></span>
+                <input type="number" class="form-control" id="id_kilometrage_actuel" name="kilometrage_actuel" min="0" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="id_date_achat" class="form-label fw-semibold">Date d'achat <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                <input type="date" class="form-control" id="id_date_achat" name="date_achat" required>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="id_date_mise_service" class="form-label fw-semibold">Date mise en service <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar-check"></i></span>
+                <input type="date" class="form-control" id="id_date_mise_service" name="date_mise_service" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="id_type" class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-car-side"></i></span>
+                <select class="form-select" id="id_type" name="type" required>
+                  <option value="">-- Sélectionnez un type --</option>
+                  {% for key, value in types.items %}
+                    <option value="{{ key }}">{{ value }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="id_statut" class="form-label fw-semibold">Statut <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                <select class="form-select" id="id_statut" name="statut" required>
+                  <option value="">-- Sélectionnez un statut --</option>
+                  {% for key, value in statuts.items %}
+                    <option value="{{ key }}">{{ value }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- Formulaire de modification inline - Card séparée -->
+  <div class="card mb-4" id="edit-voiture" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier le Véhicule
+    </div>
+    <div class="card-body">
+      <form id="editVoitureInlineForm" method="post" action="{% url 'parcauto_home' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="voiture_id" id="edit_voiture_inline_id">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_inline_immatriculation" class="form-label fw-semibold">Immatriculation <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-car"></i></span>
+                <input type="text" class="form-control" id="edit_inline_immatriculation" name="immatriculation" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_inline_marque" class="form-label fw-semibold">Marque <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                <select class="form-select" id="edit_inline_marque" name="marque" required>
+                  <option value="">-- Sélectionnez une marque --</option>
+                  {% for marque in marques %}
+                    <option value="{{ marque.id }}">{{ marque.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_inline_modele" class="form-label fw-semibold">Modèle <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-cog"></i></span>
+                <select class="form-select" id="edit_inline_modele" name="modele" required disabled>
+                  <option value="">-- Sélectionnez d'abord une marque --</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_inline_annee" class="form-label fw-semibold">Année <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="number" class="form-control" id="edit_inline_annee" name="annee" min="1900" max="2100" required>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_inline_kilometrage" class="form-label fw-semibold">Kilométrage actuel <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-tachometer-alt"></i></span>
+                <input type="number" class="form-control" id="edit_inline_kilometrage" name="kilometrage_actuel" min="0" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_inline_date_achat" class="form-label fw-semibold">Date d'achat <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                <input type="date" class="form-control" id="edit_inline_date_achat" name="date_achat" required>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_inline_date_mise_service" class="form-label fw-semibold">Date mise en service <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar-check"></i></span>
+                <input type="date" class="form-control" id="edit_inline_date_mise_service" name="date_mise_service" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_inline_type" class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-car-side"></i></span>
+                <select class="form-select" id="edit_inline_type" name="type" required>
+                  <option value="">-- Sélectionnez un type --</option>
+                  {% for key, value in types.items %}
+                    <option value="{{ key }}">{{ value }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_inline_statut" class="form-label fw-semibold">Statut <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                <select class="form-select" id="edit_inline_statut" name="statut" required>
+                  <option value="">-- Sélectionnez un statut --</option>
+                  {% for key, value in statuts.items %}
+                    <option value="{{ key }}">{{ value }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Modifier
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- Suppression des modales d'édition: remplacées par les sections inline -->
+
+<!-- Modal Suppression -->
+<div class="modal fade" id="modalDeleteVoiture" tabindex="-1" aria-labelledby="modalDeleteVoitureLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="deleteVoitureForm" method="post" action="{% url 'parcauto_home' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="voiture_id" id="delete_voiture_id">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="modalDeleteVoitureLabel">
+            <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+            <div>
+              <strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer le véhicule : 
+              <strong id="delete_voiture_marque"></strong> <strong id="delete_voiture_modele"></strong> ?
+            </div>
+          </div>
+          <p class="text-danger mb-0"><i class="fas fa-times-circle me-1"></i>Cette action est irréversible.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>Annuler
+          </button>
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash-alt me-2"></i>Supprimer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Toggling inline add/edit sections
+  window.showAddForm = function() {
+    const addSection = document.getElementById('add-voiture');
+    const editSection = document.getElementById('edit-voiture');
+    if (editSection) editSection.style.display = 'none';
+    if (addSection) {
+      addSection.style.display = 'block';
+      window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  };
+
+  window.openEditForm = function(btn) {
+    const editSection = document.getElementById('edit-voiture');
+    const addSection = document.getElementById('add-voiture');
+    if (addSection) addSection.style.display = 'none';
+
+    // Fill edit inline fields
+    document.getElementById('edit_voiture_inline_id').value = btn.getAttribute('data-voiture-id');
+    document.getElementById('edit_inline_immatriculation').value = btn.getAttribute('data-voiture-immatriculation');
+    const marqueId = btn.getAttribute('data-voiture-marque-id');
+    const modeleId = btn.getAttribute('data-voiture-modele-id');
+    document.getElementById('edit_inline_marque').value = marqueId;
+
+    // Populate modeles list dynamically like modal logic
+    const editModeleSelect = document.getElementById('edit_inline_modele');
+    if (marqueId && editModeleSelect) {
+      editModeleSelect.disabled = true;
+      editModeleSelect.innerHTML = '<option>Chargement...</option>';
+      fetch(`/parcauto/get_modeles/${marqueId}/`)
+        .then(r => r.json())
+        .then(data => {
+          editModeleSelect.innerHTML = '';
+          if (data.length > 0) {
+            data.forEach(modele => {
+              const opt = document.createElement('option');
+              opt.value = modele.id;
+              opt.textContent = modele.nom;
+              if (modele.id.toString() === (modeleId || '')) opt.selected = true;
+              editModeleSelect.appendChild(opt);
+            });
+            editModeleSelect.disabled = false;
+          } else {
+            editModeleSelect.innerHTML = '<option disabled>Aucun modèle disponible</option>';
+            editModeleSelect.disabled = true;
+          }
+        })
+        .catch(() => {
+          editModeleSelect.innerHTML = '<option disabled>Erreur de chargement</option>';
+          editModeleSelect.disabled = true;
+        });
+    }
+
+    document.getElementById('edit_inline_annee').value = btn.getAttribute('data-voiture-annee');
+    document.getElementById('edit_inline_kilometrage').value = btn.getAttribute('data-voiture-kilometrage');
+    document.getElementById('edit_inline_date_achat').value = btn.getAttribute('data-voiture-date-achat');
+    document.getElementById('edit_inline_date_mise_service').value = btn.getAttribute('data-voiture-date-mise-service');
+    document.getElementById('edit_inline_type').value = btn.getAttribute('data-voiture-type');
+    document.getElementById('edit_inline_statut').value = btn.getAttribute('data-voiture-statut');
+
+    if (editSection) {
+      editSection.style.display = 'block';
+      window.scrollTo({ top: editSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  };
+
+  // Gestion du changement du nombre d'éléments par page
+  const itemsPerPageSelect = document.getElementById('items-per-page');
+  if (itemsPerPageSelect) {
+    itemsPerPageSelect.addEventListener('change', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      urlParams.set('items_per_page', this.value);
+      urlParams.set('page', '1'); // Revenir à la première page
+      window.location.search = urlParams.toString();
+    });
+  }
+
+  // ADD modal marque/modele handling
+  const addMarqueSelect = document.getElementById('id_marque');
+  const addModeleSelect = document.getElementById('id_modele');
+
+  if (addMarqueSelect && addModeleSelect) {
+    console.log('Add modal elements found');
+    addModeleSelect.disabled = true;
+    addMarqueSelect.addEventListener('change', function() {
+      const marqueId = this.value;
+      console.log('Marque selected:', marqueId);
+      if (!marqueId) {
+        addModeleSelect.innerHTML = '<option value="" disabled>Sélectionnez d\'abord une marque</option>';
+        addModeleSelect.disabled = true;
+        return;
+      }
+      addModeleSelect.disabled = true;
+      addModeleSelect.innerHTML = '<option>Chargement...</option>';
+
+      console.log('Fetching models for marque:', marqueId);
+      fetch(`/parcauto/get_modeles/${marqueId}/`)
+        .then(response => {
+          console.log('Response status:', response.status);
+          return response.json();
+        })
+        .then(data => {
+          console.log('Models data received:', data);
+          addModeleSelect.innerHTML = ''; // Clear previous options
+          const placeholder = document.createElement('option');
+          placeholder.value = "";
+          placeholder.textContent = "Sélectionnez un modèle";
+          placeholder.disabled = true;
+          placeholder.selected = true;
+          addModeleSelect.appendChild(placeholder);
+
+          if (data.length > 0) {
+            data.forEach(modele => {
+              const option = document.createElement('option');
+              option.value = modele.id;
+              option.textContent = modele.nom;
+              addModeleSelect.appendChild(option);
+            });
+            addModeleSelect.disabled = false; // Enable only if there are models
+            console.log('Modele select enabled with', data.length, 'options');
+          } else {
+            const noDataOption = document.createElement('option');
+            noDataOption.textContent = "Aucun modèle disponible";
+            noDataOption.disabled = true;
+            addModeleSelect.appendChild(noDataOption);
+            addModeleSelect.disabled = true; // Keep disabled if no models
+            console.log('No models available, keeping disabled');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching models:', error);
+          addModeleSelect.innerHTML = '<option disabled>Erreur de chargement</option>';
+          addModeleSelect.disabled = true;
+        });
+    });
+  } else {
+    console.log('Add modal elements not found');
+  }
+
+  // EDIT modal marque/modele handling
+  // Inline edit: dependent selects (marque -> modèle)
+  const editInlineMarque = document.getElementById('edit_inline_marque');
+  const editInlineModele = document.getElementById('edit_inline_modele');
+  if (editInlineMarque && editInlineModele) {
+    editInlineModele.disabled = true;
+    editInlineMarque.addEventListener('change', function() {
+      const marqueId = this.value;
+      if (!marqueId) {
+        editInlineModele.innerHTML = '<option value="" disabled>Sélectionnez d\'abord une marque</option>';
+        editInlineModele.disabled = true;
+        return;
+      }
+      editInlineModele.disabled = true;
+      editInlineModele.innerHTML = '<option>Chargement...</option>';
+      fetch(`/parcauto/get_modeles/${marqueId}/`)
+        .then(r => r.json())
+        .then(data => {
+          editInlineModele.innerHTML = '';
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = 'Sélectionnez un modèle';
+          placeholder.disabled = true;
+          placeholder.selected = true;
+          editInlineModele.appendChild(placeholder);
+          if (data.length > 0) {
+            data.forEach(modele => {
+              const opt = document.createElement('option');
+              opt.value = modele.id;
+              opt.textContent = modele.nom;
+              editInlineModele.appendChild(opt);
+            });
+            editInlineModele.disabled = false;
+          } else {
+            const noData = document.createElement('option');
+            noData.textContent = 'Aucun modèle disponible';
+            noData.disabled = true;
+            editInlineModele.appendChild(noData);
+            editInlineModele.disabled = true;
+          }
+        })
+        .catch(() => {
+          editInlineModele.innerHTML = '<option disabled>Erreur de chargement</option>';
+          editInlineModele.disabled = true;
+        });
+    });
+  }
+
+  // Delete modal fill data
+  const modalDeleteVoiture = document.getElementById('modalDeleteVoiture');
+  if (modalDeleteVoiture) {
+    modalDeleteVoiture.addEventListener('show.bs.modal', function(event) {
+      const btn = event.relatedTarget;
+      document.getElementById('delete_voiture_id').value = btn.getAttribute('data-voiture-id');
+      document.getElementById('delete_voiture_marque').textContent = btn.getAttribute('data-voiture-marque');
+      document.getElementById('delete_voiture_modele').textContent = btn.getAttribute('data-voiture-modele');
+    });
+  }
+
+  // Filtrage côté client (conservé pour l'expérience utilisateur)
+  const inputSearch = document.getElementById('search-immatriculation');
+  const selectMarque = document.getElementById('search-marque');
+  const selectStatut = document.getElementById('search-statut');
+  const tableRows = document.querySelectorAll('#searchableTable tbody tr.main-row');
+
+  function filterTable() {
+    const searchText = inputSearch.value.trim().toLowerCase();
+    const selectedMarque = selectMarque.value;
+    const selectedStatut = selectStatut.value;
+
+    console.log('Filtrage - Recherche:', searchText, 'Marque:', selectedMarque, 'Statut:', selectedStatut);
+
+    tableRows.forEach(row => {
+      const immatriculation = row.cells[1]?.textContent.toLowerCase() || '';
+      const marqueId = row.cells[2]?.getAttribute('data-marque-id') || '';
+      const statut = row.cells[7]?.textContent.trim() || '';
+
+      const matchesSearch = immatriculation.includes(searchText);
+      const matchesMarque = selectedMarque === '' || marqueId === selectedMarque;
+      const matchesStatut = selectedStatut === '' || statut.toLowerCase().includes(selectedStatut.toLowerCase());
+
+      console.log('Ligne:', immatriculation, 'Marque ID:', marqueId, 'Statut:', statut, 'Match:', matchesSearch && matchesMarque && matchesStatut);
+
+      if (matchesSearch && matchesMarque && matchesStatut) {
+        row.style.display = '';
+        // Afficher aussi la ligne de détails si elle existe
+        const detailsRow = row.nextElementSibling;
+        if (detailsRow && detailsRow.classList.contains('collapse')) {
+          detailsRow.style.display = '';
+        }
+      } else {
+        row.style.display = 'none';
+        // Masquer aussi la ligne de détails si elle existe
+        const detailsRow = row.nextElementSibling;
+        if (detailsRow && detailsRow.classList.contains('collapse')) {
+          detailsRow.style.display = 'none';
+        }
+      }
+    });
+  }
+
+  if (inputSearch) {
+    inputSearch.addEventListener('input', filterTable);
+  }
+  if (selectMarque) {
+    selectMarque.addEventListener('change', filterTable);
+  }
+  if (selectStatut) {
+    selectStatut.addEventListener('change', filterTable);
+  }
+
+  // Gestion du select all
+  const selectAllCheckbox = document.getElementById('selectAll');
+  const rowCheckboxes = document.querySelectorAll('.row-check');
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      rowCheckboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+    });
+  }
+
+  // Mise à jour du select all quand les checkboxes individuelles changent
+  rowCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
+      const someChecked = Array.from(rowCheckboxes).some(cb => cb.checked);
+      
+      selectAllCheckbox.checked = allChecked;
+      selectAllCheckbox.indeterminate = someChecked && !allChecked;
+    });
+  });
+
+
+});
+</script>
+{% endblock %}

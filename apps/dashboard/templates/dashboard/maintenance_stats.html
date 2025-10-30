@@ -1,0 +1,1301 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Statistiques - MiniERP{% endblock %}
+{% block menu %}
+{% include "dashboard/dashboard_menu.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-chart-line me-2"></i>
+            Tableau de Bord des Statistiques
+        </div>
+        <div class="card-body">
+            <ul class="nav nav-tabs flex-column flex-sm-row mb-3" id="statisticsTabs">
+                <li class="nav-item flex-sm-fill text-sm-center">
+                    <a class="nav-link active border-bottom-0" data-bs-toggle="tab" href="#conventions-tab">
+                        <i class="fas fa-file-contract me-2"></i>Conventions
+                    </a>
+                </li>
+                <li class="nav-item flex-sm-fill text-sm-center">
+                    <a class="nav-link border-bottom-0" data-bs-toggle="tab" href="#visiteurs-tab">
+                        <i class="fas fa-users me-2"></i>Visiteurs
+                    </a>
+                </li>
+                <li class="nav-item flex-sm-fill text-sm-center">
+                    <a class="nav-link border-bottom-0" data-bs-toggle="tab" href="#incidents-tab">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Incidents
+                    </a>
+                </li>
+                <li class="nav-item flex-sm-fill text-sm-center">
+                    <a class="nav-link border-bottom-0" data-bs-toggle="tab" href="#interventions-tab">
+                        <i class="fas fa-tools me-2"></i>Interventions
+                    </a>
+                </li>
+            </ul>
+
+            <div class="tab-content p-3 border border-top-0" style="min-height: 600px;">
+                <!-- Tab Conventions -->
+                <div class="tab-pane fade show active" id="conventions-tab">
+                    <h4 class="mb-4">
+                        <i class="fas fa-file-contract text-primary me-2"></i>
+                        Statistiques des Conventions
+                    </h4>
+
+                    <!-- KPI Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-file-contract fa-xl text-primary"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-primary mb-0">{{ total_conventions }}</h3>
+                                        <p class="text-muted mb-0">Total Conventions</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-check-circle fa-xl text-success"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-success mb-0">{{ conventions_actives }}</h3>
+                                        <p class="text-muted mb-0">Conventions Actives</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-clock fa-xl text-warning"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-warning mb-0">{{ conventions_expirees }}</h3>
+                                        <p class="text-muted mb-0">Conventions Expirées</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-money-bill-wave fa-xl text-info"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-info mb-0">{{ cout_total_conventions|floatformat:0 }}</h3>
+                                        <p class="text-muted mb-0">Coût Total (MAD)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Charts Row -->
+                    <div class="row mb-4">
+                        <!-- Conventions par Prestataire -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Conventions Par Prestataire</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="conventionsPrestataireChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Conventions par Type -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Conventions Par Type</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="conventionsTypeChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conventions par Période -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Évolution Conventions (Mois)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="conventionsPeriodeChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Visiteurs -->
+                <div class="tab-pane fade" id="visiteurs-tab">
+                    <h4 class="mb-4">
+                        <i class="fas fa-users text-primary me-2"></i>
+                        Statistiques des Visiteurs
+                    </h4>
+
+                    <!-- KPI Cards Visiteurs -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-users fa-xl text-primary"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-primary mb-0">{{ total_visiteurs }}</h3>
+                                        <p class="text-muted mb-0">Total Visiteurs</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-calendar-day fa-xl text-success"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-success mb-0">{{ visiteurs_aujourd_hui }}</h3>
+                                        <p class="text-muted mb-0">Visiteurs Aujourd'hui</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-calendar-week fa-xl text-warning"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-warning mb-0">{{ visiteurs_semaine }}</h3>
+                                        <p class="text-muted mb-0">Cette Semaine</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-calendar-alt fa-xl text-info"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-info mb-0">{{ visiteurs_mois }}</h3>
+                                        <p class="text-muted mb-0">Ce Mois</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Graphiques Row -->
+                    <div class="row mb-4">
+                        <!-- Graphique Visiteurs par Motif -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Visiteurs Par Motif</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="visiteursMotifChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Graphique Durée Moyenne des Visites -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Durée Moyenne Visites (7j)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="visiteursDureeChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Incidents -->
+                <div class="tab-pane fade" id="incidents-tab">
+                    <h4 class="mb-4">
+                        <i class="fas fa-exclamation-triangle text-primary me-2"></i>
+                        Statistiques des Incidents
+                    </h4>
+
+                    <!-- KPI Cards Incidents -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-exclamation-triangle fa-xl text-primary"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-primary mb-0">{{ total_incidents }}</h3>
+                                        <p class="text-muted mb-0">Total Incidents</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-clock fa-xl text-warning"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-warning mb-0">{{ incidents_ouverts }}</h3>
+                                        <p class="text-muted mb-0">Incidents Ouverts</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-check-circle fa-xl text-success"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-success mb-0">{{ incidents_resolus }}</h3>
+                                        <p class="text-muted mb-0">Incidents Résolus</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-times-circle fa-xl text-danger"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-danger mb-0">{{ incidents_non_resolus }}</h3>
+                                        <p class="text-muted mb-0">Non Résolus</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deuxième ligne de KPI Cards Incidents -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-calendar-day fa-xl text-info"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-info mb-0">{{ incidents_aujourd_hui }}</h3>
+                                        <p class="text-muted mb-0">Aujourd'hui</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-calendar-week fa-xl text-warning"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-warning mb-0">{{ incidents_semaine }}</h3>
+                                        <p class="text-muted mb-0">Cette Semaine</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-calendar-alt fa-xl text-primary"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-primary mb-0">{{ incidents_mois }}</h3>
+                                        <p class="text-muted mb-0">Ce Mois</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-calendar fa-xl text-success"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-success mb-0">{{ incidents_par_annee|length }}</h3>
+                                        <p class="text-muted mb-0">Années</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Graphiques Row pour Incidents -->
+                    <div class="row mb-4">
+                        <!-- Graphique Incidents par Statut -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Incidents Par Statut</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="incidentsStatutChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Graphique Incidents par Type -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Incidents Par Type</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="incidentsTypeChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deuxième ligne de graphiques -->
+                    <div class="row mb-4">
+                        <!-- Graphique Incidents par Gravité -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Incidents Par Gravité</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="incidentsGraviteChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Graphique Incidents par Équipement -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Top 10 Équipements Défaillants</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="incidentsEquipementChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Graphique Évolution temporelle -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Évolution Incidents (Année)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="incidentsAnneeChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Interventions -->
+                <div class="tab-pane fade" id="interventions-tab">
+                    <h4 class="mb-4">
+                        <i class="fas fa-tools text-primary me-2"></i>
+                        Statistiques des Interventions
+                    </h4>
+
+                    <!-- KPI Cards Interventions - 4 cards principales -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-tools fa-xl text-primary"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-primary mb-0">{{ total_interventions }}</h3>
+                                        <p class="text-muted mb-0">Total Interventions</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-calendar-alt fa-xl text-warning"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-warning mb-0">{{ interventions_planifiees }}</h3>
+                                        <p class="text-muted mb-0">Planifiées</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-play-circle fa-xl text-info"></i>
+                                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-info mb-0">{{ interventions_en_cours }}</h3>
+                                        <p class="text-muted mb-0">En Cours</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="kpi-card-light bg-light h-100">
+                                <div class="kpi-content d-flex align-items-center">
+                                    <div class="kpi-icon me-3">
+                                        <i class="fas fa-check-double fa-xl text-success"></i>
+                    </div>
+                                    <div class="kpi-text">
+                                        <h3 class="text-success mb-0">{{ interventions_terminees }}</h3>
+                                        <p class="text-muted mb-0">Terminées</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+                    <!-- Graphiques Row pour Interventions -->
+                    <div class="row mb-4">
+                        <!-- Interventions par Statut -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Interventions Par Statut</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="interventionsStatutChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interventions par Type -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Interventions Par Type</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="interventionsTypeChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deuxième ligne de graphiques -->
+                    <div class="row mb-4">
+                        <!-- Interventions par Criticité -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Interventions Par Criticité</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="interventionsCriticiteChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interventions par Prestataire -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Interventions Par Prestataire</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="interventionsPrestataireChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Troisième ligne de graphiques -->
+                    <div class="row mb-4">
+                        <!-- Interventions par Équipement -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Interventions Par Équipement</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="interventionsEquipementChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interventions par Période -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Évolution Interventions (Mois)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="interventionsPeriodeChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quatrième ligne de graphiques -->
+                    <div class="row mb-4">
+                        <!-- Interventions par Période (Jour, Semaine, Mois) -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Interventions Par Période</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="interventionsPeriodeDetailChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interventions par Type et Criticité -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Interventions Par Type Et Criticité</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="interventionsTypeCriticiteChart" width="300" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Variables globales pour les données des graphiques -->
+<script>
+// Données des conventions
+window.conventionsPrestataireData = {{ conventions_par_supplier_json|default:'[]'|safe }};
+window.conventionsTypeData = {{ conventions_par_type_json|default:'[]'|safe }};
+window.conventionsPeriodeData = {{ conventions_par_mois_json|default:'[]'|safe }};
+
+// Données des visiteurs
+window.visiteursMotifData = {{ visiteurs_par_motif_json|default:'[]'|safe }};
+window.visiteursDureeData = {{ visiteurs_duree_periode_json|default:'[]'|safe }};
+
+// Données des incidents
+window.incidentsStatutData = {{ incidents_par_statut_json|default:'[]'|safe }};
+window.incidentsTypeData = {{ incidents_par_type_json|default:'[]'|safe }};
+window.incidentsGraviteData = {{ incidents_par_gravite_json|default:'[]'|safe }};
+window.incidentsEquipementData = {{ incidents_par_equipement_json|default:'[]'|safe }};
+window.incidentsAnneeData = {{ incidents_par_annee_json|default:'[]'|safe }};
+
+// Données des interventions
+window.interventionsStatutData = {{ interventions_par_statut_json|default:'[]'|safe }};
+window.interventionsTypeData = {{ interventions_par_type_json|default:'[]'|safe }};
+window.interventionsCriticiteData = {{ interventions_par_criticite_json|default:'[]'|safe }};
+window.interventionsPrestataireData = {{ interventions_par_supplier_json|default:'[]'|safe }};
+window.interventionsEquipementData = {{ interventions_par_equipement_json|default:'[]'|safe }};
+window.interventionsPeriodeData = {{ interventions_par_mois_json|default:'[]'|safe }};
+
+// Données des interventions par période
+window.interventionsAujourdHui = {{ interventions_aujourd_hui|default:0 }};
+window.interventionsSemaine = {{ interventions_semaine|default:0 }};
+window.interventionsMois = {{ interventions_mois|default:0 }};
+
+// Données des interventions par type et criticité
+window.interventionsPreventivesFaible = {{ interventions_preventives_faible|default:0 }};
+window.interventionsPreventivesMoyenne = {{ interventions_preventives_moyenne|default:0 }};
+window.interventionsPreventivesHaute = {{ interventions_preventives_haute|default:0 }};
+window.interventionsCorrectivesFaible = {{ interventions_correctives_faible|default:0 }};
+window.interventionsCorrectivesMoyenne = {{ interventions_correctives_moyenne|default:0 }};
+window.interventionsCorrectivesHaute = {{ interventions_correctives_haute|default:0 }};
+</script>
+
+<!-- Initialisation des graphiques -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== INITIALISATION DES GRAPHIQUES ===');
+    
+    // Vérifier Chart.js
+    if (typeof Chart === 'undefined') {
+        console.error('❌ Chart.js n\'est PAS chargé !');
+        return;
+    }
+    console.log('✅ Chart.js est chargé !');
+    
+    try {
+        // Initialiser les graphiques des conventions
+        initializeConventionCharts();
+        
+        // Initialiser les graphiques des visiteurs
+        initializeVisiteurCharts();
+        
+        // Initialiser les graphiques des incidents
+        initializeIncidentCharts();
+        
+        // Initialiser les graphiques des interventions
+        initializeInterventionCharts();
+        
+        console.log('✅ Tous les graphiques ont été initialisés avec succès !');
+    } catch (error) {
+        console.error('❌ Erreur lors de l\'initialisation des graphiques:', error);
+    }
+});
+
+// Fonction utilitaire pour créer un graphique de manière sécurisée
+function createChart(canvasId, chartConfig) {
+    try {
+        const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+            console.warn(`⚠️ Canvas ${canvasId} non trouvé`);
+            return null;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+            console.warn(`⚠️ Contexte 2D non disponible pour ${canvasId}`);
+            return null;
+        }
+        
+        return new Chart(ctx, chartConfig);
+    } catch (error) {
+        console.error(`❌ Erreur lors de la création du graphique ${canvasId}:`, error);
+        return null;
+    }
+}
+
+// Fonction pour initialiser les graphiques des conventions
+function initializeConventionCharts() {
+    const conventionsData = {{ conventions_par_supplier_json|default:'[]'|safe }};
+    const conventionsTypeData = {{ conventions_par_type_json|default:'[]'|safe }};
+    const conventionsMoisData = {{ conventions_par_mois_json|default:'[]'|safe }};
+    
+    console.log('Données des conventions:', conventionsData);
+    
+    // Graphique des conventions par prestataire
+    if (conventionsData && conventionsData.length > 0) {
+        createChart('conventionsPrestataireChart', {
+                type: 'bar',
+                data: {
+                labels: conventionsData.map(item => item.supplier_nom || 'N/A'),
+                    datasets: [{
+                        label: 'Nombre de Conventions',
+                        data: conventionsData.map(item => item.count),
+                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+    }
+    
+    // Graphique des conventions par type
+    if (conventionsTypeData && conventionsTypeData.length > 0) {
+        createChart('conventionsTypeChart', {
+            type: 'doughnut',
+            data: {
+                labels: conventionsTypeData.map(item => item.type_convention || 'N/A'),
+                datasets: [{
+                    data: conventionsTypeData.map(item => item.count),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+    
+    // Graphique des conventions par mois
+    if (conventionsMoisData && conventionsMoisData.length > 0) {
+        createChart('conventionsPeriodeChart', {
+            type: 'line',
+            data: {
+                labels: conventionsMoisData.map(item => {
+                    const date = new Date(item.mois);
+                    return date.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+                }),
+                datasets: [{
+                    label: 'Nombre de Conventions',
+                    data: conventionsMoisData.map(item => item.count),
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Fonction pour initialiser les graphiques des visiteurs
+function initializeVisiteurCharts() {
+    const visiteursMotifData = {{ visiteurs_par_motif_json|default:'[]'|safe }};
+    const visiteursDureeData = {{ visiteurs_duree_periode_json|default:'[]'|safe }};
+    
+    console.log('Données des visiteurs:', visiteursMotifData, visiteursDureeData);
+    
+    // Graphique des visiteurs par motif (en barres horizontales)
+    if (visiteursMotifData && visiteursMotifData.length > 0) {
+        createChart('visiteursMotifChart', {
+            type: 'bar',
+            data: {
+                labels: visiteursMotifData.map(item => item.motif_visite || 'N/A'),
+                datasets: [{
+                    label: 'Nombre de Visiteurs',
+                    data: visiteursMotifData.map(item => item.count),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 205, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Barres horizontales
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 },
+                        title: {
+                            display: true,
+                            text: 'Nombre de Visiteurs'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Motifs de Visite'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique de la durée moyenne des visites
+    if (visiteursDureeData && visiteursDureeData.length > 0) {
+        createChart('visiteursDureeChart', {
+            type: 'line',
+            data: {
+                labels: visiteursDureeData.map(item => {
+                    const date = new Date(item.date);
+                    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+                }),
+                datasets: [{
+                    label: 'Durée Moyenne (minutes)',
+                    data: visiteursDureeData.map(item => item.duree_moyenne),
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Durée (minutes)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Fonction pour initialiser les graphiques des incidents
+function initializeIncidentCharts() {
+    const incidentsStatutData = {{ incidents_par_statut_json|default:'[]'|safe }};
+    const incidentsTypeData = {{ incidents_par_type_json|default:'[]'|safe }};
+    const incidentsGraviteData = {{ incidents_par_gravite_json|default:'[]'|safe }};
+    const incidentsEquipementData = {{ incidents_par_equipement_json|default:'[]'|safe }};
+    const incidentsAnneeData = {{ incidents_par_annee_json|default:'[]'|safe }};
+    
+    console.log('Données des incidents:', incidentsStatutData, incidentsTypeData, incidentsGraviteData, incidentsEquipementData, incidentsAnneeData);
+    
+    // Graphique des incidents par statut
+    if (incidentsStatutData && incidentsStatutData.length > 0) {
+        createChart('incidentsStatutChart', {
+            type: 'bar',
+            data: {
+                labels: incidentsStatutData.map(item => item.statut || 'N/A'),
+                datasets: [{
+                    label: 'Nombre d\'Incidents',
+                    data: incidentsStatutData.map(item => item.count),
+                    backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique des incidents par type
+    if (incidentsTypeData && incidentsTypeData.length > 0) {
+        createChart('incidentsTypeChart', {
+            type: 'doughnut',
+            data: {
+                labels: incidentsTypeData.map(item => item.type || 'N/A'),
+                datasets: [{
+                    data: incidentsTypeData.map(item => item.count),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+    
+    // Graphique des incidents par gravité
+    if (incidentsGraviteData && incidentsGraviteData.length > 0) {
+        createChart('incidentsGraviteChart', {
+            type: 'bar',
+            data: {
+                labels: incidentsGraviteData.map(item => item.gravite || 'N/A'),
+                datasets: [{
+                    label: 'Nombre d\'Incidents',
+                    data: incidentsGraviteData.map(item => item.count),
+                    backgroundColor: 'rgba(255, 159, 64, 0.8)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique des incidents par équipement
+    if (incidentsEquipementData && incidentsEquipementData.length > 0) {
+        createChart('incidentsEquipementChart', {
+            type: 'bar',
+            data: {
+                labels: incidentsEquipementData.map(item => item.equipement_nom || 'N/A'),
+                datasets: [{
+                    label: 'Nombre d\'Incidents',
+                    data: incidentsEquipementData.map(item => item.count),
+                    backgroundColor: 'rgba(153, 102, 255, 0.8)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique des incidents par année
+    if (incidentsAnneeData && incidentsAnneeData.length > 0) {
+        createChart('incidentsAnneeChart', {
+            type: 'line',
+            data: {
+                labels: incidentsAnneeData.map(item => item.annee || 'N/A'),
+                datasets: [{
+                    label: 'Nombre d\'Incidents',
+                    data: incidentsAnneeData.map(item => item.count),
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Fonction pour initialiser les graphiques des interventions
+function initializeInterventionCharts() {
+    const interventionsStatutData = {{ interventions_par_statut_json|default:'[]'|safe }};
+    const interventionsTypeData = {{ interventions_par_type_json|default:'[]'|safe }};
+    const interventionsCriticiteData = {{ interventions_par_criticite_json|default:'[]'|safe }};
+    const interventionsPrestataireData = {{ interventions_par_supplier_json|default:'[]'|safe }};
+    const interventionsEquipementData = {{ interventions_par_equipement_json|default:'[]'|safe }};
+    const interventionsPeriodeData = {{ interventions_par_mois_json|default:'[]'|safe }};
+    
+    console.log('Données des interventions:', interventionsStatutData, interventionsTypeData, interventionsCriticiteData, interventionsPrestataireData, interventionsEquipementData, interventionsPeriodeData);
+    
+    // Graphique des interventions par statut
+    if (interventionsStatutData && interventionsStatutData.length > 0) {
+        createChart('interventionsStatutChart', {
+            type: 'doughnut',
+            data: {
+                labels: interventionsStatutData.map(item => item.statut || 'N/A'),
+                datasets: [{
+                    data: interventionsStatutData.map(item => item.count),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+    
+    // Graphique des interventions par type
+    if (interventionsTypeData && interventionsTypeData.length > 0) {
+        createChart('interventionsTypeChart', {
+            type: 'pie',
+            data: {
+                labels: interventionsTypeData.map(item => item.type_intervention || 'N/A'),
+                datasets: [{
+                    data: interventionsTypeData.map(item => item.count),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+    
+    // Graphique des interventions par criticité
+    if (interventionsCriticiteData && interventionsCriticiteData.length > 0) {
+        createChart('interventionsCriticiteChart', {
+            type: 'bar',
+            data: {
+                labels: interventionsCriticiteData.map(item => item.criticite || 'N/A'),
+                datasets: [{
+                    label: 'Nombre d\'Interventions',
+                    data: interventionsCriticiteData.map(item => item.count),
+                    backgroundColor: 'rgba(255, 159, 64, 0.8)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique des interventions par prestataire
+    if (interventionsPrestataireData && interventionsPrestataireData.length > 0) {
+        createChart('interventionsPrestataireChart', {
+            type: 'bar',
+            data: {
+                labels: interventionsPrestataireData.map(item => item.supplier_nom || 'N/A'),
+                datasets: [{
+                    label: 'Nombre d\'Interventions',
+                    data: interventionsPrestataireData.map(item => item.count),
+                    backgroundColor: 'rgba(153, 102, 255, 0.8)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique des interventions par équipement
+    if (interventionsEquipementData && interventionsEquipementData.length > 0) {
+        createChart('interventionsEquipementChart', {
+            type: 'bar',
+            data: {
+                labels: interventionsEquipementData.map(item => item.equipement_nom || 'N/A'),
+                datasets: [{
+                    label: 'Nombre d\'Interventions',
+                    data: interventionsEquipementData.map(item => item.count),
+                    backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique des interventions par mois
+    if (interventionsPeriodeData && interventionsPeriodeData.length > 0) {
+        createChart('interventionsPeriodeChart', {
+            type: 'line',
+            data: {
+                labels: interventionsPeriodeData.map(item => {
+                    const date = new Date(item.mois);
+                    return date.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+                }),
+                datasets: [{
+                    label: 'Nombre d\'Interventions',
+                    data: interventionsPeriodeData.map(item => item.count),
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique des interventions par période (jour, semaine, mois)
+    const interventionsAujourdHui = {{ interventions_aujourd_hui|default:0 }};
+    const interventionsSemaine = {{ interventions_semaine|default:0 }};
+    const interventionsMois = {{ interventions_mois|default:0 }};
+    
+    createChart('interventionsPeriodeDetailChart', {
+        type: 'bar',
+        data: {
+            labels: ['Aujourd\'hui', 'Cette Semaine', 'Ce Mois'],
+            datasets: [{
+                label: 'Nombre d\'Interventions',
+                data: [interventionsAujourdHui, interventionsSemaine, interventionsMois],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 205, 86, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 205, 86, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+    
+    // Graphique des interventions par type et criticité
+    const interventionsPreventivesFaible = {{ interventions_preventives_faible|default:0 }};
+    const interventionsPreventivesMoyenne = {{ interventions_preventives_moyenne|default:0 }};
+    const interventionsPreventivesHaute = {{ interventions_preventives_haute|default:0 }};
+    const interventionsCorrectivesFaible = {{ interventions_correctives_faible|default:0 }};
+    const interventionsCorrectivesMoyenne = {{ interventions_correctives_moyenne|default:0 }};
+    const interventionsCorrectivesHaute = {{ interventions_correctives_haute|default:0 }};
+    
+    createChart('interventionsTypeCriticiteChart', {
+        type: 'bar',
+        data: {
+            labels: ['Préventive Faible', 'Préventive Moyenne', 'Préventive Haute', 'Corrective Faible', 'Corrective Moyenne', 'Corrective Haute'],
+            datasets: [{
+                label: 'Nombre d\'Interventions',
+                data: [
+                    interventionsPreventivesFaible,
+                    interventionsPreventivesMoyenne,
+                    interventionsPreventivesHaute,
+                    interventionsCorrectivesFaible,
+                    interventionsCorrectivesMoyenne,
+                    interventionsCorrectivesHaute
+                ],
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(255, 205, 86, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                    'rgba(255, 159, 64, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(255, 205, 86, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

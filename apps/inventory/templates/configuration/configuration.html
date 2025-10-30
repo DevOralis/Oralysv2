@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Configuration{% endblock %}
+
+{% block menu %}
+  {% include 'inventory_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-gear text-primary me-2"></i>
+    Configuration
+  </h3>
+  <div>
+    <ul class="nav nav-tabs mb-3" id="configTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if request.GET.tab == 'uom' or not request.GET.tab %}active{% endif %}" id="units-tab" data-bs-toggle="tab" data-bs-target="#units" type="button" role="tab">Unités de mesure</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if request.GET.tab == 'category' %}active{% endif %}" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categories" type="button" role="tab">Catégories</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if request.GET.tab == 'product-type' %}active{% endif %}" id="product-types-tab" data-bs-toggle="tab" data-bs-target="#product-types" type="button" role="tab">Types de produits</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if request.GET.tab == 'operation-type' %}active{% endif %}" id="operation-types-tab" data-bs-toggle="tab" data-bs-target="#operation-types" type="button" role="tab">Types d'opérations</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if request.GET.tab == 'location-type' %}active{% endif %}" id="location-types-tab" data-bs-toggle="tab" data-bs-target="#location-types" type="button" role="tab">Types d'emplacement</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if request.GET.tab == 'location' %}active{% endif %}" id="locations-tab" data-bs-toggle="tab" data-bs-target="#locations" type="button" role="tab">Emplacements</button>
+      </li>
+    </ul>
+    <div class="tab-content" id="configTabsContent">
+      <!-- Unités -->
+      <div class="tab-pane fade {% if request.GET.tab == 'uom' or not request.GET.tab %}show active{% endif %}" id="units" role="tabpanel">
+        {% include 'configuration/partials/uom_table.html' %}
+        {% include 'configuration/partials/uom_form.html' %}
+      </div>
+      <!-- Catégories -->
+      <div class="tab-pane fade {% if request.GET.tab == 'category' %}show active{% endif %}" id="categories" role="tabpanel">
+        {% include 'configuration/partials/category_table.html' %}
+        {% include 'configuration/partials/category_form.html' %}
+      </div>
+      <!-- Types de produit -->
+      <div class="tab-pane fade {% if request.GET.tab == 'product-type' %}show active{% endif %}" id="product-types" role="tabpanel">
+        {% include 'configuration/partials/product_type_table.html' %}
+        {% include 'configuration/partials/product_type_form.html' %}
+      </div>
+      <!-- Types d'operation -->
+      <div class="tab-pane fade {% if request.GET.tab == 'operation-type' %}show active{% endif %}" id="operation-types" role="tabpanel">
+        {% include 'configuration/partials/operation_type_table.html' %}
+        {% include 'configuration/partials/operation_type_form.html' %}
+      </div>
+      <!-- Types d'emplacement -->
+      <div class="tab-pane fade {% if request.GET.tab == 'location-type' %}show active{% endif %}" id="location-types" role="tabpanel">
+        {% include 'configuration/partials/location_type_table.html' %}
+        {% include 'configuration/partials/location_type_form.html' %}
+      </div>
+      <!-- Emplacements -->
+      <div class="tab-pane fade {% if request.GET.tab == 'location' %}show active{% endif %}" id="locations" role="tabpanel">
+        {% include 'configuration/partials/location_table.html' %}
+        {% include 'configuration/partials/location_form.html' %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/inventory_configuration.js' %}"></script>
+{% endblock %}

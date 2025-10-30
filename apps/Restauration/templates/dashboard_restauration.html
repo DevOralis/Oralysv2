@@ -1,0 +1,1490 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Restauration - ERP Oralys{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.kpi-card-light {
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card-light:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.kpi-content {
+    height: 100%;
+}
+
+.kpi-icon {
+    flex-shrink: 0;
+}
+
+.kpi-text h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.kpi-text p {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.alert {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: none;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.list-group-item {
+    border: none;
+    padding: 12px 16px;
+    transition: background-color 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.list-group-item i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Styles pour le calendrier */
+.calendar-event {
+    background-color: #007bff !important;
+    color: white !important;
+    border: 1px solid #0056b3 !important;
+}
+
+.calendar-event:hover {
+    background-color: #0056b3 !important;
+    border-color: #004085 !important;
+}
+
+.programme-badge {
+    background-color: #007bff !important;
+    color: white !important;
+    border: 1px solid #0056b3 !important;
+}
+
+.programme-badge:hover {
+    background-color: #0056b3 !important;
+    border-color: #004085 !important;
+}
+
+/* Remplacer table-warning par une couleur bleue pour le jour actuel */
+.table-warning {
+    background-color: #e3f2fd !important;
+    border-color: #bbdefb !important;
+}
+
+.table-warning:hover {
+    background-color: #bbdefb !important;
+    border-color: #90caf9 !important;
+}
+</style>
+{% endblock %}
+
+{% block menu %}
+{% include "menu_restauration.html" %}
+{% endblock %}
+
+{% block content %}
+
+    {% if messages %}
+        {% for message in messages %}
+          {% if message.tags == 'success' %}
+            <div class="alert alert-success d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-check-circle me-2 fw-bold"></i>
+              <div><strong>Succès :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'error' %}
+            <div class="alert alert-danger d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-times-circle me-2 fw-bold"></i>
+              <div><strong>Erreur :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'warning' %}
+            <div class="alert alert-warning d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+              <div><strong>Attention :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'info' %}
+            <div class="alert alert-info d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-info-circle me-2 fw-bold"></i>
+              <div><strong>Information :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% else %}
+            <div class="alert alert-{{ message.tags }} d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-bell me-2 fw-bold"></i>
+              <div><strong>Info :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
+        {% endfor %}
+    {% endif %}
+
+<div class="content">
+  
+  
+
+    <!-- Menu de navigation des sections -->
+    <ul class="nav nav-tabs flex-column flex-sm-row mb-4" id="restaurationTabs">
+        <li class="nav-item flex-sm-fill text-sm-center">
+            <a class="nav-link active" href="#plats" data-bs-toggle="tab">
+                <i class="fas fa-list me-2"></i>Plats
+            </a>
+        </li>
+        <li class="nav-item flex-sm-fill text-sm-center">
+            <a class="nav-link" href="#menus" data-bs-toggle="tab">
+                <i class="fas fa-utensils me-2"></i>Menus
+            </a>
+        </li>
+        <li class="nav-item flex-sm-fill text-sm-center">
+            <a class="nav-link" href="#programmes" data-bs-toggle="tab">
+                <i class="fas fa-calendar-alt me-2"></i>Programmes
+            </a>
+        </li>
+        <li class="nav-item flex-sm-fill text-sm-center">
+            <a class="nav-link" href="#calendrier" data-bs-toggle="tab">
+                <i class="fas fa-calendar me-2"></i>Calendrier
+            </a>
+        </li>
+    </ul>
+
+    <!-- Contenu des onglets -->
+    <div class="tab-content">
+        <!-- Onglet Plats -->
+        <div class="tab-pane fade show active" id="plats">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-utensils fa-xl text-success"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-success mb-0">{{ total_plats }}</h3>
+                                <p class="text-muted mb-0">Total Plats</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-book-open fa-xl text-info"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-info mb-0">{{ total_recettes }}</h3>
+                                <p class="text-muted mb-0">Recettes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-carrot fa-xl text-warning"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-warning mb-0">{{ total_ingredients }}</h3>
+                                <p class="text-muted mb-0">Ingrédients</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-tags fa-xl text-primary"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-primary mb-0">{{ total_categories }}</h3>
+                                <p class="text-muted mb-0">Catégories</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alertes et informations importantes -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>{{ stock_faible }}</strong> produits en stock faible
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i>
+                        <strong>{{ stock_rupture }}</strong> produits en rupture
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphiques et Charts -->
+            <div class="row">
+                <!-- Graphique en Barres - Top 5 plats les plus complexes -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Top 5 Plats les Plus Complexes</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="complexPlatsChart" width="300" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique Secteurs - Répartition des ingrédients par catégorie -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Répartition des Ingrédients par Catégorie</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <canvas id="ingredientsCategoryChart" width="200" height="200"></canvas>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="chart-legend">
+                                        {% for cat in ingredients_par_categorie %}
+                                        <div class="legend-item">
+                                            <span class="legend-color" style="background-color: {% cycle '#FF6384' '#36A2EB' '#FFCE56' '#4BC0C0' '#9966FF' '#FF9F40' '#FF6384' '#C9CBCF' as colors %};"></span>
+                                            <span>{{ cat.name }} ({{ cat.product_count }})</span>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique Linéaire - Évolution des plats créés -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Évolution des Plats Créés (6 derniers mois)</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="platsEvolutionChart" width="300" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique Donut - Statut des plats -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Statut des Plats</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="platsStatusChart" width="200" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique en Aire - Stock des ingrédients -->
+                <div class="col-md-12 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Niveaux de Stock des Ingrédients</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="stockLevelsChart" width="600" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liens rapides -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-link me-2"></i>Liens Rapides</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                <a href="{% url 'restauration_home' %}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-list me-2"></i>Gérer les Plats
+                                </a>
+                                <a href="{% url 'restauration_config' %}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-cog me-2"></i>Configuration des Ingrédients
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-chart-bar me-2"></i>Rapports Détaillés
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations Clés</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="border-end">
+                                        <h4 class="text-primary mb-1">{{ plats_avec_ingredients }}</h4>
+                                        <small class="text-muted">Plats avec recette</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-success mb-1">{{ moyenne_ingredients_par_plat|floatformat:1 }}</h4>
+                                    <small class="text-muted">Moy. ingrédients/plat</small>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="border-end">
+                                        <h4 class="text-warning mb-1">{{ stock_faible }}</h4>
+                                        <small class="text-muted">Stock faible</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-danger mb-1">{{ stock_rupture }}</h4>
+                                    <small class="text-muted">En rupture</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Menus -->
+        <div class="tab-pane fade" id="menus">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-utensils fa-xl text-primary"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-primary mb-0">{{ total_menus_standards }}</h3>
+                                <p class="text-muted mb-0">Menus Standards</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-user-edit fa-xl text-success"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-success mb-0">{{ total_menus_personnalises }}</h3>
+                                <p class="text-muted mb-0">Menus Personnalisés</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-plus-circle fa-xl text-warning"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-warning mb-0">{{ total_menus_supplementaires }}</h3>
+                                <p class="text-muted mb-0">Menus Supplémentaires</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-calendar-times fa-xl text-danger"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-danger mb-0">{{ jours_sans_menu }}</h3>
+                                <p class="text-muted mb-0">Jours Sans Menu</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liens rapides -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-link me-2"></i>Liens Rapides
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                <a href="{% url 'menu_standard_list' %}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-list me-2"></i>Gérer les Menus Standards
+                                </a>
+                                <a href="{% url 'menu_personnalise_list' %}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-user-edit me-2"></i>Gérer les Menus Personnalisés
+                                </a>
+                                <a href="{% url 'menu_supplementaire_list' %}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-plus-circle me-2"></i>Gérer les Menus Supplémentaires
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-line me-2"></i>Statistiques Temporelles
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-primary">{{ menus_standards_aujourd_hui }}</h4>
+                                        <small class="text-muted">Standards Aujourd'hui</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-success">{{ menus_personnalises_aujourd_hui }}</h4>
+                                        <small class="text-muted">Personnalisés Aujourd'hui</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-warning">{{ menus_supplementaires_aujourd_hui }}</h4>
+                                        <small class="text-muted">Supplémentaires Aujourd'hui</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-info">{{ total_personnes_hebergees }}</h4>
+                                        <small class="text-muted">Personnes Hébergées</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphiques et statistiques détaillées -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-pie me-2"></i>Répartition par Type de Repas
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="menusRepasChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-line me-2"></i>Évolution des Menus (6 mois)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="menusEvolutionChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top des plats et clients -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-star me-2"></i>Top des Plats Populaires (Standards)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                {% for plat in plats_populaires_standards %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ plat.nom }}</span>
+                                    <span class="badge bg-primary rounded-pill">{{ plat.usage_count }}</span>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">Aucun plat utilisé dans les menus standards</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-users me-2"></i>Top des Clients (Personnalisés)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                {% for client in clients_plus_commandes %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ client.name }}</span>
+                                    <span class="badge bg-success rounded-pill">{{ client.commandes_count }}</span>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">Aucun client avec des commandes personnalisées</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Répartition par chambre -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-bed me-2"></i>Top des Chambres (Personnalisés)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                {% for chambre in chambres_plus_commandes %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Chambre {{ chambre.num_chambre }}</span>
+                                    <span class="badge bg-info rounded-pill">{{ chambre.count }}</span>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">Aucune chambre avec des commandes personnalisées</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-plus-circle me-2"></i>Top des Clients (Suppléments)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                {% for client in clients_plus_supplements %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ client.name }}</span>
+                                    <span class="badge bg-warning rounded-pill">{{ client.supplements_count }}</span>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">Aucun client avec des demandes de suppléments</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </div>
+
+        <!-- Onglet Programmes -->
+        <div class="tab-pane fade" id="programmes">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-calendar-alt fa-xl text-info"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-info mb-0">{{ total_programmes }}</h3>
+                                <p class="text-muted mb-0">Total Programmes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-play-circle fa-xl text-success"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-success mb-0">{{ programmes_actifs }}</h3>
+                                <p class="text-muted mb-0">Programmes Actifs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-check-circle fa-xl text-secondary"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-secondary mb-0">{{ programmes_termines }}</h3>
+                                <p class="text-muted mb-0">Programmes Terminés</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-clock fa-xl text-warning"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-warning mb-0">{{ programmes_a_venir }}</h3>
+                                <p class="text-muted mb-0">Programmes à Venir</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liens rapides -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-link me-2"></i>Liens Rapides
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                <a href="{% url 'programme_list' %}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-list me-2"></i>Liste des Programmes
+                                </a>
+                                <a href="{% url 'programme_create' %}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-plus me-2"></i>Nouveau Programme
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-line me-2"></i>Statistiques Temporelles
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-info">{{ programmes_ce_mois }}</h4>
+                                        <small class="text-muted">Ce Mois</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-success">{{ programmes_ce_trimestre }}</h4>
+                                        <small class="text-muted">Ce Trimestre</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-warning">{{ programmes_cette_annee }}</h4>
+                                        <small class="text-muted">Cette Année</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-primary">{{ duree_moyenne_jours }}</h4>
+                                        <small class="text-muted">Durée Moyenne (jours)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphiques et statistiques détaillées -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-line me-2"></i>Évolution des Programmes (6 mois)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="programmesEvolutionChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-pie me-2"></i>Répartition par Population
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="programmesPopulationChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top des programmes et lieux -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-star me-2"></i>Top des Lieux Populaires
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                {% for lieu in lieux_populaires %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ lieu.lieu }}</span>
+                                    <span class="badge bg-primary rounded-pill">{{ lieu.count }}</span>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">Aucun lieu avec des programmes</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-calendar-plus me-2"></i>Programmes les Plus Longs
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                {% for programme in programmes_plus_longs %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ programme.nom }}</span>
+                                    <span class="badge bg-success rounded-pill">{{ programme.duree.days }} jours</span>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">Aucun programme avec durée calculée</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques des menus de programme -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-utensils me-2"></i>Menus de Programme
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <h4 class="text-info">{{ total_menus_programme }}</h4>
+                                    <small class="text-muted">Total Menus</small>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-success">{{ menus_programme_avec_description }}</h4>
+                                    <small class="text-muted">Avec Description</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-star me-2"></i>Plats Populaires (Programmes)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                {% for plat in plats_populaires_programmes %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ plat.nom }}</span>
+                                    <span class="badge bg-warning rounded-pill">{{ plat.usage_count }}</span>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">Aucun plat utilisé dans les programmes</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Calendrier -->
+        <div class="tab-pane fade" id="calendrier">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-calendar me-2"></i>
+                    Calendrier des Programmes
+                </div>
+                <div class="card-body">
+                        <!-- Contrôles de navigation -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                                    <!-- Sélection de vue -->
+                                    <div class="btn-group me-3" role="group">
+                                        <a href="?view=week&date={{ selected_date|date:'Y-m-d' }}" 
+                                           class="btn btn-sm {% if view_type == 'week' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                            Semaine
+                                        </a>
+                                        <a href="?view=month&date={{ selected_date|date:'Y-m-d' }}" 
+                                           class="btn btn-sm {% if view_type == 'month' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                            Mois
+                                        </a>
+                                    </div>
+                                    
+                                    <!-- Navigation temporelle -->
+                                    <div class="btn-group me-3" role="group">
+                                        <a href="?view={{ view_type }}&date={{ selected_date|date:'Y-m-d' }}&nav=prev" 
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                        <a href="?view={{ view_type }}&date={{ selected_date|date:'Y-m-d' }}&nav=today" 
+                                           class="btn btn-sm btn-primary">
+                                            Aujourd'hui
+                                        </a>
+                                        <a href="?view={{ view_type }}&date={{ selected_date|date:'Y-m-d' }}&nav=next" 
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </div>
+                                    
+                                    <!-- Informations de période -->
+                                    <div class="me-3">
+                                        <span class="text-muted">
+                                            {{ start_of_period|date:"d/m/Y" }} - {{ end_of_period|date:"d/m/Y" }}
+                                        </span>
+                                    </div>
+                            
+                                    <!-- Lien vers tous les programmes -->
+                                    <a href="{% url 'programme_list' %}" class="btn btn-primary">
+                                        <i class="fas fa-list me-2"></i>Tous les programmes
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    
+                        <!-- Calendrier -->
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" width="100%" cellspacing="0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-center" style="width: 14.28%;">Lundi</th>
+                                        <th class="text-center" style="width: 14.28%;">Mardi</th>
+                                        <th class="text-center" style="width: 14.28%;">Mercredi</th>
+                                        <th class="text-center" style="width: 14.28%;">Jeudi</th>
+                                        <th class="text-center" style="width: 14.28%;">Vendredi</th>
+                                        <th class="text-center" style="width: 14.28%;">Samedi</th>
+                                        <th class="text-center" style="width: 14.28%;">Dimanche</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if view_type == 'week' %}
+                                        <!-- Vue semaine -->
+                                        <tr>
+                                            {% for jour in calendrier %}
+                                            <td class="text-center {% if jour.is_today %}table-warning{% endif %}" style="height: 120px; vertical-align: top;">
+                                                <div class="mb-2">
+                                                    <strong>{{ jour.date|date:"d/m" }}</strong>
+                                                </div>
+                                                {% if jour.programmes %}
+                                                    {% for programme in jour.programmes %}
+                                                    <div class="mb-1">
+                                                        <a href="{% url 'programme_detail' programme.pk %}" 
+                                                           class="btn btn-sm btn-outline-primary w-100 text-start"
+                                                           title="{{ programme.nom }} - {{ programme.lieu }}">
+                                                            <small>
+                                                                <i class="fas fa-calendar-alt"></i>
+                                                                {{ programme.nom|truncatechars:15 }}
+                                                            </small>
+                                                        </a>
+                                                    </div>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <div class="text-muted">
+                                                        <small>Aucun programme</small>
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% else %}
+                                        <!-- Vue mois -->
+                                        {% for semaine in semaines %}
+                                        <tr>
+                                            {% for jour in semaine %}
+                                            <td class="text-center {% if jour.is_today %}table-warning{% endif %} {% if not jour.is_current_month %}text-muted{% endif %}" style="height: 80px; vertical-align: top;">
+                                                <div class="mb-1">
+                                                    <small>{{ jour.date|date:"d" }}</small>
+                                                </div>
+                                                {% if jour.programmes %}
+                                                    {% for programme in jour.programmes %}
+                                                    <div class="mb-1">
+                                                        <a href="{% url 'programme_detail' programme.pk %}" 
+                                                           class="btn btn-sm btn-outline-primary w-100 text-start"
+                                                           title="{{ programme.nom }} - {{ programme.lieu }}">
+                                                            <small>
+                                                                <i class="fas fa-calendar-alt"></i>
+                                                                {{ programme.nom|truncatechars:8 }}
+                                                            </small>
+                                                        </a>
+                                                    </div>
+                                                    {% endfor %}
+                                                {% endif %}
+                                            </td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    
+                    <!-- Statistiques du calendrier -->
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript pour les graphiques et charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration globale de Chart.js
+    Chart.defaults.font.family = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    Chart.defaults.color = '#6c757d';
+    
+    // 1. Graphique en Barres - Top 5 plats les plus complexes
+    const complexPlatsCtx = document.getElementById('complexPlatsChart');
+    if (complexPlatsCtx) {
+        new Chart(complexPlatsCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for plat in plats_plus_complexes %}
+                        '{{ plat.name|escapejs }}',
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Nombre d\'ingrédients',
+                    data: [
+                        {% for plat in plats_plus_complexes %}
+                            {{ plat.ingredient_count }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre d\'ingrédients'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Graphique Secteurs - Répartition des ingrédients par catégorie
+    const ingredientsCategoryCtx = document.getElementById('ingredientsCategoryChart');
+    if (ingredientsCategoryCtx) {
+        new Chart(ingredientsCategoryCtx, {
+            type: 'pie',
+            data: {
+                labels: [
+                    {% for cat in ingredients_par_categorie %}
+                        '{{ cat.name|escapejs }}',
+                    {% endfor %}
+                ],
+                datasets: [{
+                    data: [
+                        {% for cat in ingredients_par_categorie %}
+                            {{ cat.product_count }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: [
+                        '#FF6384',
+                        '#36A2EB',
+                        '#FFCE56',
+                        '#4BC0C0',
+                        '#9966FF',
+                        '#FF9F40',
+                        '#FF6384',
+                        '#C9CBCF'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. Graphique Linéaire - Évolution des plats créés
+    const platsEvolutionCtx = document.getElementById('platsEvolutionChart');
+    if (platsEvolutionCtx) {
+        new Chart(platsEvolutionCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
+                datasets: [{
+                    label: 'Plats créés',
+                    data: [12, 19, 15, 25, 22, 30],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre de plats'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 4. Graphique Donut - Statut des plats
+    const platsStatusCtx = document.getElementById('platsStatusChart');
+    if (platsStatusCtx) {
+        new Chart(platsStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Avec recette', 'Sans recette'],
+                datasets: [{
+                    data: [
+                        {{ plats_avec_ingredients }},
+                        {{ total_plats|add:"-"|add:plats_avec_ingredients }}
+                    ],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(255, 99, 132, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    // 5. Graphique en Aire - Stock des ingrédients
+    const stockLevelsCtx = document.getElementById('stockLevelsChart');
+    if (stockLevelsCtx) {
+        new Chart(stockLevelsCtx, {
+            type: 'line',
+            data: {
+                labels: [
+                    {% for ingredient in top_ingredients_stock %}
+                        '{{ ingredient.name|escapejs }}',
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Stock actuel',
+                    data: [
+                        {% for ingredient in top_ingredients_stock %}
+                            {{ ingredient.total_quantity_cached }},
+                        {% endfor %}
+                    ],
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }, {
+                    label: 'Stock minimum',
+                    data: [
+                        {% for ingredient in top_ingredients_stock %}
+                            {{ ingredient.stock_minimal }},
+                        {% endfor %}
+                    ],
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    backgroundColor: 'rgba(255, 206, 86, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    borderDash: [5, 5]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Quantité en stock'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Graphique des menus par type de repas
+    const menusRepasCtx = document.getElementById('menusRepasChart').getContext('2d');
+    
+    // Préparer les données pour le graphique
+    const repasLabels = [];
+    const repasData = [];
+    const repasColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
+    
+    // Utiliser les données du contexte Django
+    {% for repas_code, repas_info in menus_par_repas.items %}
+        repasLabels.push('{{ repas_info.nom|escapejs }}');
+        repasData.push({{ repas_info.count }});
+    {% endfor %}
+    
+    const menusRepasChart = new Chart(menusRepasCtx, {
+        type: 'doughnut',
+        data: {
+            labels: repasLabels,
+            datasets: [{
+                data: repasData,
+                backgroundColor: repasColors.slice(0, repasLabels.length),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+
+    // Graphique d'évolution des menus
+    const menusEvolutionCtx = document.getElementById('menusEvolutionChart').getContext('2d');
+    const menusEvolutionChart = new Chart(menusEvolutionCtx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for item in menus_evolution %}
+                    '{{ item.month }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Menus Standards',
+                data: [
+                    {% for item in menus_evolution %}
+                        {{ item.standards }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#36A2EB',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Menus Personnalisés',
+                data: [
+                    {% for item in menus_evolution %}
+                        {{ item.personnalises }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#4BC0C0',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Menus Supplémentaires',
+                data: [
+                    {% for item in menus_evolution %}
+                        {{ item.supplementaires }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#FFCE56',
+                backgroundColor: 'rgba(255, 206, 86, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Graphique d'évolution des programmes
+    const programmesEvolutionCtx = document.getElementById('programmesEvolutionChart').getContext('2d');
+    const programmesEvolutionChart = new Chart(programmesEvolutionCtx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for item in programmes_evolution %}
+                    '{{ item.month }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Programmes Actifs',
+                data: [
+                    {% for item in programmes_evolution %}
+                        {{ item.actifs }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#36A2EB',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Programmes Terminés',
+                data: [
+                    {% for item in programmes_evolution %}
+                        {{ item.termines }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#FF6384',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Programmes à Venir',
+                data: [
+                    {% for item in programmes_evolution %}
+                        {{ item.a_venir }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#4BC0C0',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Graphique de répartition par population
+    const programmesPopulationCtx = document.getElementById('programmesPopulationChart').getContext('2d');
+    const programmesPopulationChart = new Chart(programmesPopulationCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Actifs', 'Terminés', 'À Venir'],
+            datasets: [{
+                data: [
+                    {{ programmes_actifs }},
+                    {{ programmes_termines }},
+                    {{ programmes_a_venir }}
+                ],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(75, 192, 192, 0.8)'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

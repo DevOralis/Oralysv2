@@ -1,0 +1,1330 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Évaluation des Salariés - MiniERP{% endblock %}
+
+{% block content %}
+{% include 'menu_recruitment.html' %}
+
+<div class="content">
+
+  <!-- Section Informations Générales -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-user me-2"></i>
+      Informations Générales du Salarié
+    </div>
+    <div class="card-body">
+      <form method="post" id="evaluationForm">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="evaluation_type" class="form-label">Type d'Évaluation <span class="text-danger">*</span></label>
+            <select class="form-select" id="evaluation_type" name="evaluation_type" required>
+              <option value="">Choisir un type...</option>
+              <option value="annual" title="Bilan global de l'année avec critères généraux (qualité du travail, respect des délais, esprit d'équipe, initiative). Note calculée par pondération des critères.">Évaluation annuelle - Bilan global de l'année</option>
+              <option value="trial" title="Évaluation de l'adaptation du nouveau salarié (adaptation à l'équipe, motivation, capacité d'apprentissage, discipline). Critères personnalisables par poste.">Évaluation en période d'essai - Adaptation du salarié</option>
+              <option value="mbo" title="Évaluation par objectifs avec pondération (ex: Ventes 40%, Satisfaction Client 30%, Formation 30%). Score calculé automatiquement.">Évaluation par objectifs (MBO) - Suivi des objectifs</option>
+              <option value="skills" title="Évaluation des compétences techniques, comportementales et managériales. Grille personnalisable par département/métier.">Évaluation des compétences - Compétences techniques et soft skills</option>
+              <option value="project" title="Évaluation post-projet (délais, qualité, travail d'équipe, gestion des imprévus). Grilles adaptées selon le type de projet.">Évaluation après projet - Contribution spécifique</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="department" class="form-label">Département</label>
+            <select class="form-select" id="department" name="department">
+              <option value="">Tous les départements</option>
+              {% for department in departments %}
+              <option value="{{ department.id }}">{{ department.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="employee" class="form-label">Sélectionner un Salarié <span class="text-danger">*</span></label>
+            <select class="form-select" id="employee" name="employee" required>
+              <option value="">Choisir un salarié...</option>
+              {% for employee in employees %}
+              <option value="{{ employee.id }}" data-department="{{ employee.department.id|default:'' }}">
+                {{ employee.full_name }} - {{ employee.employee_id }}
+                {% if employee.department %}
+                  ({{ employee.department.name }})
+                {% endif %}
+                {% if employee.status == 'A' %}
+                  (Actif)
+                {% elif employee.status == 'I' %}
+                  (Inactif)
+                {% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="evaluator" class="form-label">Évaluateur <span class="text-danger">*</span></label>
+            <select class="form-select" id="evaluator" name="evaluator" required>
+              <option value="">Choisir l'évaluateur...</option>
+              {% for employee in employees %}
+              <option value="{{ employee.id }}">{{ employee.full_name }} - {{ employee.employee_id }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Section Saisie de l'Évaluation -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Saisie de l'Évaluation
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <!-- Grille d'évaluation -->
+        <div class="col-md-6">
+          <h5 class="border-bottom pb-2">
+            <i class="fas fa-star text-warning me-2"></i>
+            Grille d'Évaluation
+          </h5>
+
+          <!-- Grille Évaluation Annuelle -->
+          <div id="annual_grid" class="evaluation-grid" style="display: none;">
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th>Critère</th>
+                    <th>Poids (%)</th>
+                    <th>Note (1-5)</th>
+                    <th>Score calculé</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Qualité du travail</td>
+                    <td>25%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="annual_quality" data-weight="0.25">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Respect des délais</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="annual_deadlines" data-weight="0.15">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Esprit d'équipe</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="annual_team" data-weight="0.15">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Initiative / Innovation</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="annual_initiative" data-weight="0.15">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Respect des procédures</td>
+                    <td>10%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="annual_procedures" data-weight="0.1">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Adaptabilité au changement</td>
+                    <td>10%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="annual_adaptability" data-weight="0.1">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Communication</td>
+                    <td>10%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="annual_communication" data-weight="0.1">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr class="table-light">
+                    <td><strong>Total</strong></td>
+                    <td><strong>100%</strong></td>
+                    <td></td>
+                    <td><strong class="total-score">-/100</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+              <button type="button" class="btn btn-sm mt-2 add-criteria-btn" data-grid="annual" style="border-color: #1e90ff; color: #1e90ff;">
+                <i class="fas fa-plus"></i> Ajouter un critère
+              </button>
+            </div>
+          </div>
+
+          <!-- Grille Période d'Essai -->
+          <div id="trial_grid" class="evaluation-grid" style="display: none;">
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th>Critère</th>
+                    <th>Poids (%)</th>
+                    <th>Note (1-5)</th>
+                    <th>Score calculé</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Adaptation au poste</td>
+                    <td>25%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="trial_adaptation" data-weight="0.25">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Compétences techniques</td>
+                    <td>20%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="trial_technical" data-weight="0.2">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Intégration à l'équipe</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="trial_integration" data-weight="0.15">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Autonomie</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="trial_autonomy" data-weight="0.15">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Ponctualité et assiduité</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="trial_punctuality" data-weight="0.15">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Capacité d'apprentissage</td>
+                    <td>10%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="trial_learning" data-weight="0.1">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr class="table-light">
+                    <td><strong>Total</strong></td>
+                    <td><strong>100%</strong></td>
+                    <td></td>
+                    <td><strong class="total-score">-/100</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+              <button type="button" class="btn btn-sm mt-2 add-criteria-btn" data-grid="trial" style="border-color: #1e90ff; color: #1e90ff;">
+                <i class="fas fa-plus"></i> Ajouter un critère
+              </button>
+            </div>
+          </div>
+
+          <!-- Grille Évaluation par Objectifs (MBO) -->
+          <div id="mbo_grid" class="evaluation-grid" style="display: none;">
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th>Objectif</th>
+                    <th>Poids (%)</th>
+                    <th>Réalisation (%)</th>
+                    <th>Score calculé</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <input type="text" class="form-control" name="mbo_objective1" placeholder="Objectif 1" value="Augmenter le chiffre d'affaires">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control objective-weight" name="mbo_weight1" min="0" max="100" value="30">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control objective-completion criteria-select" name="mbo_completion1" min="0" max="100" value="0" data-weight="0.3">
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <input type="text" class="form-control" name="mbo_objective2" placeholder="Objectif 2" value="Améliorer la satisfaction client">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control objective-weight" name="mbo_weight2" min="0" max="100" value="25">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control objective-completion criteria-select" name="mbo_completion2" min="0" max="100" value="0" data-weight="0.25">
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <input type="text" class="form-control" name="mbo_objective3" placeholder="Objectif 3" value="Former 2 nouveaux collaborateurs">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control objective-weight" name="mbo_weight3" min="0" max="100" value="25">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control objective-completion criteria-select" name="mbo_completion3" min="0" max="100" value="0" data-weight="0.25">
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <input type="text" class="form-control" name="mbo_objective4" placeholder="Objectif 4">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control objective-weight" name="mbo_weight4" min="0" max="100" value="20">
+                    </td>
+                    <td>
+                      <input type="number" class="form-control objective-completion criteria-select" name="mbo_completion4" min="0" max="100" value="0" data-weight="0.2">
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr class="table-light">
+                    <td><strong>Total</strong></td>
+                    <td><strong class="total-weight">100%</strong></td>
+                    <td></td>
+                    <td><strong class="total-score">-/100</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+              <button type="button" class="btn btn-sm mt-2 add-criteria-btn" data-grid="mbo" style="border-color: #1e90ff; color: #1e90ff;">
+                <i class="fas fa-plus"></i> Ajouter un objectif
+              </button>
+            </div>
+          </div>
+
+          <!-- Grille Compétences -->
+          <div id="skills_grid" class="evaluation-grid" style="display: none;">
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th>Compétence</th>
+                    <th>Poids (%)</th>
+                    <th>Niveau (1-5)</th>
+                    <th>Score calculé</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Compétences techniques métier</td>
+                    <td>20%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="skills_technical" data-weight="0.2">
+                        <option value="1">1 - Débutant</option>
+                        <option value="2">2 - Intermédiaire</option>
+                        <option value="3" selected>3 - Confirmé</option>
+                        <option value="4">4 - Avancé</option>
+                        <option value="5">5 - Expert</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Communication</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="skills_communication" data-weight="0.15">
+                        <option value="1">1 - Débutant</option>
+                        <option value="2">2 - Intermédiaire</option>
+                        <option value="3" selected>3 - Confirmé</option>
+                        <option value="4">4 - Avancé</option>
+                        <option value="5">5 - Expert</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Leadership / Gestion d'équipe</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="skills_leadership" data-weight="0.15">
+                        <option value="1">1 - Débutant</option>
+                        <option value="2">2 - Intermédiaire</option>
+                        <option value="3" selected>3 - Confirmé</option>
+                        <option value="4">4 - Avancé</option>
+                        <option value="5">5 - Expert</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Résolution de problèmes</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="skills_problem_solving" data-weight="0.15">
+                        <option value="1">1 - Débutant</option>
+                        <option value="2">2 - Intermédiaire</option>
+                        <option value="3" selected>3 - Confirmé</option>
+                        <option value="4">4 - Avancé</option>
+                        <option value="5">5 - Expert</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Adaptabilité</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="skills_adaptability" data-weight="0.15">
+                        <option value="1">1 - Débutant</option>
+                        <option value="2">2 - Intermédiaire</option>
+                        <option value="3" selected>3 - Confirmé</option>
+                        <option value="4">4 - Avancé</option>
+                        <option value="5">5 - Expert</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Travail en équipe</td>
+                    <td>20%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="skills_teamwork" data-weight="0.2">
+                        <option value="1">1 - Débutant</option>
+                        <option value="2">2 - Intermédiaire</option>
+                        <option value="3" selected>3 - Confirmé</option>
+                        <option value="4">4 - Avancé</option>
+                        <option value="5">5 - Expert</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr class="table-light">
+                    <td><strong>Total</strong></td>
+                    <td><strong>100%</strong></td>
+                    <td></td>
+                    <td><strong class="total-score">-/100</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+              <button type="button" class="btn btn-sm mt-2 add-criteria-btn" data-grid="skills" style="border-color: #1e90ff; color: #1e90ff;">
+                <i class="fas fa-plus"></i> Ajouter une compétence
+              </button>
+            </div>
+          </div>
+
+          <!-- Grille Projet -->
+          <div id="project_grid" class="evaluation-grid" style="display: none;">
+            <div class="mb-3">
+              <label for="project_title" class="form-label">Titre du projet</label>
+              <input type="text" class="form-control" id="project_title" name="project_title" placeholder="Entrez le titre du projet...">
+            </div>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th>Critère</th>
+                    <th>Poids (%)</th>
+                    <th>Note (1-5)</th>
+                    <th>Score calculé</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Respect des délais du projet</td>
+                    <td>20%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="project_deadlines" data-weight="0.2">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Qualité des livrables</td>
+                    <td>20%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="project_quality" data-weight="0.2">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Collaboration avec l'équipe</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="project_teamwork" data-weight="0.15">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Gestion des imprévus</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="project_issues" data-weight="0.15">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Contribution à l'innovation</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="project_innovation" data-weight="0.15">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr>
+                    <td>Communication avec les parties prenantes</td>
+                    <td>15%</td>
+                    <td>
+                      <select class="form-select criteria-select" name="project_communication" data-weight="0.15">
+                        <option value="1">1 - Insuffisant</option>
+                        <option value="2">2 - À améliorer</option>
+                        <option value="3" selected>3 - Satisfaisant</option>
+                        <option value="4">4 - Bon</option>
+                        <option value="5">5 - Excellent</option>
+                      </select>
+                    </td>
+                    <td class="score-display">-</td>
+                  </tr>
+                  <tr class="table-light">
+                    <td><strong>Total</strong></td>
+                    <td><strong>100%</strong></td>
+                    <td></td>
+                    <td><strong class="total-score">-/100</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+              <button type="button" class="btn btn-sm mt-2 add-criteria-btn" data-grid="project" style="border-color: #1e90ff; color: #1e90ff;">
+                <i class="fas fa-plus"></i> Ajouter un critère
+              </button>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Note Globale Calculée</label>
+            <div class="form-control-plaintext bg-light" id="overall_score_display">0.00</div>
+          </div>
+        </div>
+
+        <!-- Appréciation libre -->
+        <div class="col-md-6">
+          <h5 class="border-bottom pb-2">
+            <i class="fas fa-comments text-info me-2"></i>
+            Appréciation Libre
+          </h5>
+          <div class="mb-3">
+            <label for="comments" class="form-label">Commentaires du Supérieur</label>
+            <textarea class="form-control" id="comments" name="comments" rows="4" placeholder="Saisissez vos commentaires..." form="evaluationForm"></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="improvement_plan" class="form-label">Plan d'Amélioration</label>
+            <textarea class="form-control" id="improvement_plan" name="improvement_plan" rows="4" placeholder="Proposez un plan d'amélioration..." form="evaluationForm"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Actions -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <button type="submit" form="evaluationForm" class="btn w-100 text-white" name="action" value="create_evaluation" style="background-color: #1e90ff; border-color: #1e90ff;">
+        <i class="fas fa-save me-2"></i>Enregistrer l'Évaluation
+      </button>
+    </div>
+  </div>
+
+  <!-- Section Historique des Évaluations -->
+  <div class="card">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-history me-2"></i>
+      Historique des Évaluations
+    </div>
+    <div class="card-body">
+      {% if evaluations %}
+        <div class="table-responsive">
+          <table class="table table-striped table-hover">
+            <thead class="table-light borderless">
+              <tr>
+                <th>Date</th>
+                <th>Type d'évaluation</th>
+                <th>Titre du projet</th>
+                <th>Employé</th>
+                <th>Évaluateur</th>
+                <th>Note Globale</th>
+                <th>Statut</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for evaluation in evaluations %}
+              <tr data-evaluation-id="{{ evaluation.id }}">
+                <td>{{ evaluation.evaluation_date|date:"d/m/Y" }}</td>
+                <td>
+                  {% if evaluation.evaluation_type == 'annual' %}
+                    <span class="badge bg-info">Annuelle</span>
+                  {% elif evaluation.evaluation_type == 'trial' %}
+                    <span class="badge bg-warning">Période d'essai</span>
+                  {% elif evaluation.evaluation_type == 'mbo' %}
+                    <span class="badge text-white" style="background-color: #1e90ff;">Objectifs (MBO)</span>
+                  {% elif evaluation.evaluation_type == 'skills' %}
+                    <span class="badge bg-secondary">Compétences</span>
+                  {% elif evaluation.evaluation_type == 'project' %}
+                    <span class="badge bg-dark">Projet</span>
+                  {% else %}
+                    <span class="badge bg-light text-dark">Standard</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if evaluation.project_title %}
+                    {{ evaluation.project_title }}
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    {% if evaluation.employee.photo %}
+                      <img src="{{ evaluation.employee.photo.url }}" alt="Photo" class="rounded-circle me-2" width="32" height="32">
+                    {% else %}
+                      <div class="rounded-circle bg-secondary me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                        <i class="fas fa-user text-white"></i>
+                      </div>
+                    {% endif %}
+                    <div>
+                      <strong>{{ evaluation.employee.full_name }}</strong>
+                      <br><small class="text-muted">{{ evaluation.employee.employee_id }} - {{ evaluation.employee.department.name|default:"Département non défini" }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ evaluation.evaluator.full_name|default:"-" }}</td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="progress me-2" style="width: 60px; height: 8px;">
+                      <div class="progress-bar custom-blue" role="progressbar" aria-valuenow="{{ evaluation.get_percentage_score|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <span class="badge text-white" style="background-color: #1e90ff;">{{ evaluation.overall_score|floatformat:1 }}/5 ({{ evaluation.get_percentage_score|floatformat:0 }}%)</span>
+                  </div>
+                </td>
+                <td>
+                  {% if evaluation.status == 'validated' %}
+                    <span class="badge bg-success">Validé</span>
+                  {% else %}
+                    <span class="badge bg-danger">Non validé</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="d-flex gap-1 justify-content-end">
+                    <button class="btn btn-sm btn-light border text-info" onclick="showEvaluationDetails('{{ evaluation.id }}')" title="Voir">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light border text-dark" onclick="showEditEvaluationForm('{{ evaluation.id }}')" title="Modifier">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <a class="btn btn-sm btn-light border" href="{% url 'download_evaluation_pdf' evaluation.id %}" target="_blank" title="Télécharger PDF" style="color: #1e90ff;">
+                      <i class="fas fa-download"></i>
+                    </a>
+                                         <button type="button" class="btn btn-sm btn-light border text-danger" title="Supprimer" 
+                             onclick="confirmDeleteEvaluation('{{ evaluation.id }}', '{{ evaluation.employee.full_name }}')">
+                       <i class="fas fa-trash-alt"></i>
+                     </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-4">
+          <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+          <h5 class="text-muted">Aucune évaluation</h5>
+          <p class="text-muted">Commencez par créer votre première évaluation d'employé.</p>
+        </div>
+      {% endif %}
+  </div>
+</div>
+
+  <!-- Section Détails de l'évaluation -->
+  <div id="evaluation-details-section" class="mt-4" style="display: none;">
+    <div class="card">
+      <div class="card-header" style="background-color: #1e90ff; color: #fff;">
+        <h6 class="mb-0">
+          <i class="fas fa-eye me-2"></i>
+          Détails de l'évaluation
+        </h6>
+    </div>
+      <div class="card-body" id="evaluation-details-content">
+        <!-- Le contenu sera chargé dynamiquement -->
+      </div>
+      <div class="card-footer">
+        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="hideEvaluationDetails()">
+          <i class="fas fa-times"></i>
+          <span class="d-none d-lg-inline ms-1">Fermer</span>
+        </button>
+    </div>
+  </div>
+</div>
+
+  <!-- Section Modification de l'évaluation -->
+  <div id="edit-evaluation-section" class="mt-4" style="display: none;">
+    <div class="card">
+      <div class="card-header" style="background-color: #1e90ff; color: #fff;">
+        <h6 class="mb-0">
+          <i class="fas fa-edit me-2"></i>
+          Modifier l'évaluation
+        </h6>
+      </div>
+          <div class="card-body">
+        <form id="editEvaluationForm" method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit_evaluation">
+          <input type="hidden" name="evaluation_id" id="edit_evaluation_id">
+          
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="form-label">Type d'évaluation</label>
+                  <select class="form-select" name="evaluation_type" id="edit_evaluation_type">
+                    <option value="annual">Annuelle</option>
+                    <option value="trial">Période d'essai</option>
+                    <option value="mbo">Objectifs (MBO)</option>
+                    <option value="skills">Compétences</option>
+                    <option value="project">Projet</option>
+                  </select>
+                </div>
+                <div class="col-md-6" id="project_title_container" style="display: none;">
+                  <label class="form-label">Titre du projet</label>
+                  <input type="text" class="form-control" name="project_title" id="edit_project_title">
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Qualité du travail</label>
+                <select class="form-select" name="work_quality" id="edit_work_quality">
+                  <option value="1">1 / 5</option>
+                  <option value="2">2 / 5</option>
+                  <option value="3">3 / 5</option>
+                  <option value="4">4 / 5</option>
+                  <option value="5">5 / 5</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Respect des délais</label>
+                <select class="form-select" name="deadline_respect" id="edit_deadline_respect">
+                  <option value="1">1 / 5</option>
+                  <option value="2">2 / 5</option>
+                  <option value="3">3 / 5</option>
+                  <option value="4">4 / 5</option>
+                  <option value="5">5 / 5</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Esprit d'équipe</label>
+                <select class="form-select" name="team_spirit" id="edit_team_spirit">
+                  <option value="1">1 / 5</option>
+                  <option value="2">2 / 5</option>
+                  <option value="3">3 / 5</option>
+                  <option value="4">4 / 5</option>
+                  <option value="5">5 / 5</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Autonomie</label>
+                <select class="form-select" name="autonomy" id="edit_autonomy">
+                  <option value="1">1 / 5</option>
+                  <option value="2">2 / 5</option>
+                  <option value="3">3 / 5</option>
+                  <option value="4">4 / 5</option>
+                  <option value="5">5 / 5</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Capacité d'initiative</label>
+                <select class="form-select" name="initiative" id="edit_initiative">
+                  <option value="1">1 / 5</option>
+                  <option value="2">2 / 5</option>
+                  <option value="3">3 / 5</option>
+                  <option value="4">4 / 5</option>
+                  <option value="5">5 / 5</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="edit_comments" class="form-label">Commentaires du Supérieur</label>
+                <textarea class="form-control" id="edit_comments" name="comments" rows="4"></textarea>
+              </div>
+              <div class="mb-3">
+                <label for="edit_improvement_plan" class="form-label">Plan d'Amélioration</label>
+                <textarea class="form-control" id="edit_improvement_plan" name="improvement_plan" rows="4"></textarea>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-3 d-flex justify-content-end gap-2">
+            <button type="submit" class="btn text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+              <i class="fas fa-save me-1"></i>Enregistrer les modifications
+          </button>
+            <button type="button" class="btn btn-secondary" onclick="hideEditEvaluationForm()">
+              <i class="fas fa-times me-1"></i>Annuler
+          </button>
+        </div>
+      </form>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- Messages d'alerte -->
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999;" role="alert">
+      <i class="fas fa-info-circle me-2"></i>
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+              {% endfor %}
+{% endif %}
+
+
+<style>
+.progress-bar.custom-blue {
+  background-color: #1e90ff !important;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+  // Appliquer les largeurs des barres de progression
+  $('.progress-bar.custom-blue').each(function() {
+    const percentage = $(this).attr('aria-valuenow');
+    $(this).css('width', percentage + '%');
+  });
+  
+  // Fonction pour calculer et afficher les scores
+  function updateScores() {
+    $('.evaluation-grid:visible').each(function() {
+      let totalScore = 0;
+      let totalWeight = 0;
+      
+      // Calcul pour chaque critère
+      $(this).find('.criteria-select').each(function() {
+        const weight = parseFloat($(this).data('weight'));
+        const value = parseInt($(this).val());
+        const score = weight * value * 20; // Conversion en score sur 100
+        
+        // Affichage du score individuel
+        $(this).closest('tr').find('.score-display').text(score.toFixed(1));
+        
+        totalScore += score;
+        totalWeight += weight;
+      });
+      
+      // Vérifier que le total des poids est égal à 100%
+      if (Math.abs(totalWeight - 1) > 0.01) {
+        console.warn('Attention: La somme des poids n\'est pas égale à 100% (' + (totalWeight * 100).toFixed(0) + '%)');
+      }
+      
+      // Affichage du score total
+      $(this).find('.total-score').text(totalScore.toFixed(1) + '/100');
+      
+      // Affichage de la note globale calculée
+      $('#overall_score_display').text((totalScore / 20).toFixed(2) + '/5');
+    });
+  }
+  
+  // Gestion de l'affichage du champ titre du projet dans le formulaire principal
+  $('#evaluation_type').change(function() {
+    const selectedType = $(this).val();
+    
+    // Masquer toutes les grilles d'évaluation
+    $('.evaluation-grid').hide();
+    
+    // Afficher la grille correspondante au type sélectionné
+    if (selectedType) {
+      $('#' + selectedType + '_grid').show();
+      updateScores();
+    }
+  });
+  
+  // Gestion de l'affichage du champ titre du projet dans les modales d'édition
+  $('[id^="edit_evaluation_type"]').change(function() {
+    const evaluationId = $(this).attr('id').replace('edit_evaluation_type', '');
+    const selectedType = $(this).val();
+    
+    if (selectedType === 'project') {
+      $('#project_title_container' + evaluationId).show();
+    } else {
+      $('#project_title_container' + evaluationId).hide();
+    }
+  });
+  
+  // Fonction pour ajouter un nouveau critère
+  $('.add-criteria-btn').click(function() {
+    const gridType = $(this).data('grid');
+    let newRow = '';
+    let criteriaCount = 0;
+    let tableBody = null;
+    
+    // Déterminer le tableau cible et le nombre actuel de critères
+    switch(gridType) {
+      case 'annual':
+        tableBody = $('#annual_grid table tbody');
+        criteriaCount = tableBody.find('tr').length - 1; // -1 pour exclure la ligne de total
+        newRow = `
+          <tr>
+            <td>
+              <input type="text" class="form-control" name="annual_custom_criteria_${criteriaCount}" placeholder="Nouveau critère">
+            </td>
+            <td>
+              <input type="number" class="form-control criteria-weight" name="annual_custom_weight_${criteriaCount}" min="0" max="100" value="10">
+            </td>
+            <td>
+              <select class="form-select criteria-select" name="annual_custom_value_${criteriaCount}" data-weight="0.1">
+                <option value="1">1 - Insuffisant</option>
+                <option value="2">2 - À améliorer</option>
+                <option value="3" selected>3 - Satisfaisant</option>
+                <option value="4">4 - Bon</option>
+                <option value="5">5 - Excellent</option>
+              </select>
+            </td>
+            <td class="score-display">-</td>
+          </tr>
+        `;
+        break;
+      case 'trial':
+        tableBody = $('#trial_grid table tbody');
+        criteriaCount = tableBody.find('tr').length - 1;
+        newRow = `
+          <tr>
+            <td>
+              <input type="text" class="form-control" name="trial_custom_criteria_${criteriaCount}" placeholder="Nouveau critère">
+            </td>
+            <td>
+              <input type="number" class="form-control criteria-weight" name="trial_custom_weight_${criteriaCount}" min="0" max="100" value="10">
+            </td>
+            <td>
+              <select class="form-select criteria-select" name="trial_custom_value_${criteriaCount}" data-weight="0.1">
+                <option value="1">1 - Insuffisant</option>
+                <option value="2">2 - À améliorer</option>
+                <option value="3" selected>3 - Satisfaisant</option>
+                <option value="4">4 - Bon</option>
+                <option value="5">5 - Excellent</option>
+              </select>
+            </td>
+            <td class="score-display">-</td>
+          </tr>
+        `;
+        break;
+      case 'mbo':
+        tableBody = $('#mbo_grid table tbody');
+        criteriaCount = tableBody.find('tr').length - 1;
+        newRow = `
+          <tr>
+            <td>
+              <input type="text" class="form-control" name="mbo_objective${criteriaCount+1}" placeholder="Objectif ${criteriaCount+1}">
+            </td>
+            <td>
+              <input type="number" class="form-control objective-weight" name="mbo_weight${criteriaCount+1}" min="0" max="100" value="10">
+            </td>
+            <td>
+              <input type="number" class="form-control objective-completion criteria-select" name="mbo_completion${criteriaCount+1}" min="0" max="100" value="0" data-weight="0.1">
+            </td>
+            <td class="score-display">-</td>
+          </tr>
+        `;
+        break;
+      case 'skills':
+        tableBody = $('#skills_grid table tbody');
+        criteriaCount = tableBody.find('tr').length - 1;
+        newRow = `
+          <tr>
+            <td>
+              <input type="text" class="form-control" name="skills_custom_criteria_${criteriaCount}" placeholder="Nouvelle compétence">
+            </td>
+            <td>
+              <input type="number" class="form-control criteria-weight" name="skills_custom_weight_${criteriaCount}" min="0" max="100" value="10">
+            </td>
+            <td>
+              <select class="form-select criteria-select" name="skills_custom_value_${criteriaCount}" data-weight="0.1">
+                <option value="1">1 - Débutant</option>
+                <option value="2">2 - Intermédiaire</option>
+                <option value="3" selected>3 - Confirmé</option>
+                <option value="4">4 - Avancé</option>
+                <option value="5">5 - Expert</option>
+              </select>
+            </td>
+            <td class="score-display">-</td>
+          </tr>
+        `;
+        break;
+      case 'project':
+        tableBody = $('#project_grid table tbody');
+        criteriaCount = tableBody.find('tr').length - 1;
+        newRow = `
+          <tr>
+            <td>
+              <input type="text" class="form-control" name="project_custom_criteria_${criteriaCount}" placeholder="Nouveau critère">
+            </td>
+            <td>
+              <input type="number" class="form-control criteria-weight" name="project_custom_weight_${criteriaCount}" min="0" max="100" value="10">
+            </td>
+            <td>
+              <select class="form-select criteria-select" name="project_custom_value_${criteriaCount}" data-weight="0.1">
+                <option value="1">1 - Insuffisant</option>
+                <option value="2">2 - À améliorer</option>
+                <option value="3" selected>3 - Satisfaisant</option>
+                <option value="4">4 - Bon</option>
+                <option value="5">5 - Excellent</option>
+              </select>
+            </td>
+            <td class="score-display">-</td>
+          </tr>
+        `;
+        break;
+    }
+    
+    // Insérer la nouvelle ligne avant la ligne de total
+    if (tableBody) {
+      const totalRow = tableBody.find('tr.table-light');
+      $(newRow).insertBefore(totalRow);
+      
+      // Mettre à jour les poids et recalculer les scores
+      updateWeights(tableBody);
+      updateScores();
+      
+      // Ajouter les événements aux nouveaux éléments
+      $('.criteria-select').off('change').on('change', function() {
+        updateScores();
+      });
+      
+      $('.criteria-weight').off('change').on('change', function() {
+        updateWeights($(this).closest('tbody'));
+        updateScores();
+      });
+    }
+  });
+  
+  // Fonction pour mettre à jour les poids des critères
+  function updateWeights(tableBody) {
+    const rows = tableBody.find('tr:not(.table-light)');
+    const totalRows = rows.length;
+    
+    if (totalRows > 0) {
+      // Récupérer tous les poids actuels
+      let weights = [];
+      rows.each(function() {
+        const weightInput = $(this).find('.criteria-weight, .objective-weight');
+        if (weightInput.length) {
+          weights.push(parseFloat(weightInput.val()) || 0);
+        }
+      });
+      
+      // Calculer la somme des poids
+      const totalWeight = weights.reduce((a, b) => a + b, 0);
+      
+      // Mettre à jour les attributs data-weight pour le calcul des scores
+      rows.each(function(index) {
+        const weightInput = $(this).find('.criteria-weight, .objective-weight');
+        const criteriaSelect = $(this).find('.criteria-select');
+        
+        if (weightInput.length && criteriaSelect.length) {
+          const weight = parseFloat(weightInput.val()) || 0;
+          const normalizedWeight = totalWeight > 0 ? weight / totalWeight : 0;
+          criteriaSelect.attr('data-weight', normalizedWeight.toFixed(2));
+        }
+      });
+      
+      // Mettre à jour l'affichage du poids total
+      tableBody.find('.total-weight').text(totalWeight.toFixed(0) + '%');
+    }
+  }
+  
+  // Mise à jour des scores lors du changement de type d'évaluation
+  $('#evaluation_type').change(function() {
+    const selectedType = $(this).val();
+    
+    // Cacher toutes les grilles
+    $('.evaluation-grid').hide();
+    
+    // Afficher la grille correspondante
+    switch(selectedType) {
+      case 'annual':
+        $('#annual_grid').show();
+        break;
+      case 'trial':
+        $('#trial_grid').show();
+        break;
+      case 'mbo':
+        $('#mbo_grid').show();
+        break;
+      case 'skills':
+        $('#skills_grid').show();
+        break;
+      case 'project':
+        $('#project_grid').show();
+        break;
+    }
+    
+    // Calculer les scores initiaux
+    updateScores();
+  });
+  
+  // Mise à jour des scores lors du changement d'une note
+  $('.criteria-select').change(function() {
+    updateScores();
+  });
+  
+  // Mise à jour des poids lors du changement d'un poids
+  $('.criteria-weight, .objective-weight').change(function() {
+    updateWeights($(this).closest('tbody'));
+    updateScores();
+  });
+  
+  // Fonction pour confirmer la suppression d'une évaluation
+  window.confirmDeleteEvaluation = function(evaluationId, employeeName) {
+    $('#delete_evaluation_id').val(evaluationId);
+    $('#delete_evaluation_employee').text(employeeName);
+    $('#modalDeleteEvaluation').modal('show');
+  };
+  
+  // Calcul initial des scores
+  updateScores();
+  
+  // Gestion de l'affichage du champ titre du projet dans le formulaire d'édition
+  $('#edit_evaluation_type').change(function() {
+    const selectedType = $(this).val();
+    const projectContainer = $('#project_title_container');
+    
+    if (selectedType === 'project') {
+      projectContainer.show();
+    } else {
+      projectContainer.hide();
+    }
+  });
+});
+
+// Fonctions pour gérer l'affichage des sections en bas
+function showEvaluationDetails(evaluationId) {
+  // Masquer la section d'édition si elle est ouverte
+  document.getElementById('edit-evaluation-section').style.display = 'none';
+  
+  // Afficher la section de détails
+  const detailsSection = document.getElementById('evaluation-details-section');
+  detailsSection.style.display = 'block';
+  
+  // Trouver la ligne de l'évaluation dans le tableau
+  const evaluationRow = document.querySelector(`tr[data-evaluation-id="${evaluationId}"]`);
+  if (evaluationRow) {
+    // Extraire les données de la ligne
+    const cells = evaluationRow.querySelectorAll('td');
+    const date = cells[0].textContent.trim();
+    const type = cells[1].textContent.trim();
+    const projectTitle = cells[2].textContent.trim();
+    const employee = cells[3].textContent.trim();
+    const evaluator = cells[4].textContent.trim();
+    const score = cells[5].textContent.trim();
+    const status = cells[6].textContent.trim();
+    
+    // Construire le contenu HTML
+    const detailsContent = `
+      <div class="card mb-3">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="fas fa-user me-2"></i>Informations de l'évaluation</h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Date:</strong> ${date}</p>
+              <p><strong>Type d'évaluation:</strong> ${type}</p>
+              <p><strong>Employé:</strong> ${employee}</p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Évaluateur:</strong> ${evaluator}</p>
+              <p><strong>Note globale:</strong> ${score}</p>
+              <p><strong>Statut:</strong> ${status}</p>
+            </div>
+          </div>
+          ${projectTitle !== '-' ? `<p><strong>Titre du projet:</strong> ${projectTitle}</p>` : ''}
+        </div>
+      </div>
+      <div class="text-center">
+        <a class="btn text-white" href="/rc/evaluation/pdf/${evaluationId}/" target="_blank" style="background-color: #1e90ff; border-color: #1e90ff;">
+          <i class="fas fa-download me-2"></i>Télécharger PDF
+        </a>
+      </div>
+    `;
+    
+    document.getElementById('evaluation-details-content').innerHTML = detailsContent;
+  }
+  
+  // Faire défiler vers la section
+  detailsSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+function hideEvaluationDetails() {
+  document.getElementById('evaluation-details-section').style.display = 'none';
+}
+
+function showEditEvaluationForm(evaluationId) {
+  // Masquer la section de détails si elle est ouverte
+  document.getElementById('evaluation-details-section').style.display = 'none';
+  
+  // Afficher la section d'édition
+  const editSection = document.getElementById('edit-evaluation-section');
+  editSection.style.display = 'block';
+  
+  // Pré-remplir le formulaire avec des valeurs par défaut
+  document.getElementById('edit_evaluation_id').value = evaluationId;
+  document.getElementById('edit_evaluation_type').value = 'annual';
+  document.getElementById('edit_work_quality').value = '3';
+  document.getElementById('edit_deadline_respect').value = '3';
+  document.getElementById('edit_team_spirit').value = '3';
+  document.getElementById('edit_autonomy').value = '3';
+  document.getElementById('edit_initiative').value = '3';
+  document.getElementById('edit_comments').value = '';
+  document.getElementById('edit_improvement_plan').value = '';
+  document.getElementById('edit_project_title').value = '';
+  
+  // Masquer le champ titre du projet par défaut
+  const projectContainer = document.getElementById('project_title_container');
+  projectContainer.style.display = 'none';
+  
+  // Faire défiler vers la section
+  editSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+function hideEditEvaluationForm() {
+  document.getElementById('edit-evaluation-section').style.display = 'none';
+  // Réinitialiser le formulaire
+  document.getElementById('editEvaluationForm').reset();
+}
+</script>
+
+{% endblock %}

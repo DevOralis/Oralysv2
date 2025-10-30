@@ -1,0 +1,609 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block menu %}
+  {% include 'therapeutic_activities_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-running text-primary me-2"></i>
+    Activités
+  </h3>
+  <div id="success-message" style="display: none;"></div>
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-list me-2"></i>
+      Liste des activités
+    </div>
+    <div class="card-body">
+      <!-- Search and Filter Form -->
+      <form method="get" class="mb-3">
+        <div class="row g-1 mb-3 align-items-center">
+          <div class="col-12 col-md-5 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" name="q" class="form-control border-primary"
+                     placeholder="Recherche par titre, description, type, coach..."
+                     id="searchActivity">
+            </div>
+          </div>
+          <div class="col-6 col-md-2 order-2">
+            <select name="activity_type" class="form-select" title="Filtrer par type" id="filterActivityType">
+              <option value="">Tous les types</option>
+              {% for type in activity_types %}
+                <option value="{{ type.name }}">
+                  {{ type.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-3 col-md-2 order-3">
+            <button type="button" class="btn btn-light border w-100 d-flex align-items-center justify-content-center" id="export-import-btn-activities" title="Import/Export">
+              <i class="fas fa-file-import" id="export-import-icon-activities"></i>
+              <span class="d-none d-xl-inline ms-1" id="export-import-text-activities">Importer</span>
+            </button>
+          </div>
+          {% if request.session.user.permissions.therapeutic_activities.write %}
+            <div class="col-3 col-md-3 order-4">
+              <a href="{% url 'therapeutic_activities:activity_list' %}?form=create#activity-form"
+                 class="btn btn-primary w-100 d-flex align-items-center justify-content-center text-nowrap" title="Nouvelle activité">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-xl-inline ms-1">Nouvelle activité</span>
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </form>
+      <!-- Activities Table -->
+      <table id="activities-table" class="table table-hover table-responsive">
+        <thead class="table-light borderless">
+          <tr class="main-row">
+            <th class="d-none d-md-table-cell">
+              <input type="checkbox" id="selectAllActivities">
+            </th>
+            <th class="sortable" data-sort="title" style="cursor: pointer;">
+              <div class="d-flex align-items-center justify-content-between">
+                <span>Titre</span>
+                <i class="fas fa-sort sort-icon text-muted"></i>
+              </div>
+            </th>
+            <th class="d-none d-md-table-cell sortable" data-sort="type" style="cursor: pointer;">
+              <div class="d-flex align-items-center justify-content-between">
+                <span>Type</span>
+                <i class="fas fa-sort sort-icon text-muted"></i>
+              </div>
+            </th>
+            <th class="d-none d-lg-table-cell sortable" data-sort="coach" style="cursor: pointer;">
+              <div class="d-flex align-items-center justify-content-between">
+                <span>Coach</span>
+                <i class="fas fa-sort sort-icon text-muted"></i>
+              </div>
+            </th>
+            <th class="d-none d-lg-table-cell sortable" data-sort="status" style="cursor: pointer;">
+              <div class="d-flex align-items-center justify-content-between">
+                <span>Statut</span>
+                <i class="fas fa-sort sort-icon text-muted"></i>
+              </div>
+            </th>
+            <th class="d-none d-lg-table-cell sortable" data-sort="sessions_count" style="cursor: pointer;">
+              <div class="d-flex align-items-center justify-content-between">
+                <span>Sessions</span>
+                <i class="fas fa-sort sort-icon text-muted"></i>
+              </div>
+            </th>
+              <th class="text-center action-column no-sort">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for activity in activities %}
+            <tr id="activity-row-{{ activity.pk }}">
+              <td data-label="Sélection" class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td data-label="Titre">
+                <div>
+                  <strong>{{ activity.title }}</strong>
+                  {% if activity.description %}
+                    <br><small class="text-muted">{{ activity.description|truncatechars:20 }}</small>
+                  {% endif %}
+                </div>
+              </td>
+              <td data-label="Type" class="d-none d-md-table-cell">
+                {{ activity.type.name }}
+              </td>
+              <td data-label="Coach" class="d-none d-lg-table-cell">{{ activity.coach.full_name|default:"Non assigné" }}</td>
+              <td data-label="Statut" class="d-none d-lg-table-cell text-center">
+                {% if activity.is_active %}
+                  <span class="badge bg-success">Actif</span>
+                {% else %}
+                  <span class="badge bg-danger">Inactif</span>
+                {% endif %}
+              </td>
+              <td data-label="Sessions" class="d-none d-lg-table-cell text-center">{{ activity.total_sessions }}</td>
+              <td data-label="Actions" class="actions-cell text-end">
+                <div class="d-flex gap-1 justify-content-end">
+                  <button type="button" class="btn btn-sm btn-light border text-info view-activity-details"
+                          title="Voir détails" 
+                          data-activity-id="{{ activity.pk }}"
+                          data-title="{{ activity.title }}"
+                          data-type="{{ activity.type.name }}"
+                          data-coach="{{ activity.coach.full_name|default:'Non assigné' }}"
+                          data-status="{% if activity.is_active %}Actif{% else %}Inactif{% endif %}"
+                          data-sessions="{{ activity.total_sessions }}"
+                          data-description="{{ activity.description|default:'Aucune description' }}"
+                          data-bs-toggle="modal" 
+                          data-bs-target="#activityDetailsModal">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  {% if request.session.user.permissions.therapeutic_activities.update %}
+                    <a href="{% url 'therapeutic_activities:activity_list' %}?form=edit&id={{ activity.pk }}#activity-form"
+                       class="btn btn-sm btn-light border text-dark" title="Modifier">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                  {% endif %}
+                  {% if request.session.user.permissions.therapeutic_activities.delete %}
+                    <button type="button" class="btn btn-sm btn-light border text-danger btn-delete-activity"
+                            title="Supprimer" data-id="{{ activity.pk }}"
+                            data-title="{{ activity.title|escapejs }}">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted">Aucune activité trouvée</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <!-- Pagination for Activities -->
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap" id="activityPagination">
+          <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Précédent" id="prevPageActivity">
+              <i class="fas fa-chevron-left d-block d-sm-none"></i>
+              <span class="d-none d-sm-block">&laquo; Préc</span>
+            </a>
+          </li>
+          <!-- Les numéros de page seront générés dynamiquement -->
+          <li class="page-item">
+            <a class="page-link" href="#" aria-label="Suivant" id="nextPageActivity">
+              <i class="fas fa-chevron-right d-block d-sm-none"></i>
+              <span class="d-none d-sm-block">Suiv &raquo;</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+  {% if show_form %}
+    {% include 'activity_form_card.html' %}
+  {% endif %}
+
+  <!-- Activity Details Modal -->
+  <div class="modal fade" id="activityDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header" style="background-color: #1e90ff; color: white;">
+          <h5 class="modal-title">
+            <i class="fas fa-eye me-2"></i>
+            Détails de l'activité
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <strong>Titre:</strong>
+              <p id="modal-activity-title" class="mb-2"></p>
+            </div>
+            <div class="col-md-6">
+              <strong>Type:</strong>
+              <p id="modal-activity-type" class="mb-2"></p>
+            </div>
+            <div class="col-md-6">
+              <strong>Coach:</strong>
+              <p id="modal-activity-coach" class="mb-2"></p>
+            </div>
+            <div class="col-md-6">
+              <strong>Statut:</strong>
+              <p id="modal-activity-status" class="mb-2"></p>
+            </div>
+            <div class="col-md-6">
+              <strong>Nombre de sessions:</strong>
+              <p id="modal-activity-sessions" class="mb-2"></p>
+            </div>
+            <div class="col-12">
+              <strong>Description:</strong>
+              <p id="modal-activity-description" class="mb-2"></p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/activity_list.js' %}"></script>
+<script>
+window.activityListConfig = {
+  showForm: {{ show_form|yesno:"true,false" }}
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration pour les activités
+    const activityTable = document.getElementById('activities-table');
+    const activityRows = Array.from(activityTable.querySelector('tbody').querySelectorAll('tr'));
+    const activitySearch = document.getElementById('searchActivity');
+    const activityTypeFilter = document.getElementById('filterActivityType');
+    let filteredActivityRows = [...activityRows];
+    
+    // Pagination côté client - 5 éléments par page
+    const itemsPerPage = 5;
+    let currentActivityPage = 1;
+    let totalActivityPages = Math.ceil(filteredActivityRows.length / itemsPerPage);
+    
+    // Fonction de tri pour les activités
+    function setupActivitySorting() {
+        const sortableHeaders = document.querySelectorAll('#activities-table .sortable');
+        
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const sortField = this.dataset.sort;
+                const currentDirection = this.dataset.direction || 'asc';
+                const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+                
+                // Mettre à jour l'icône de tri
+                updateActivitySortIcons(this, newDirection);
+                
+                // Trier le tableau
+                sortActivityTable(sortField, newDirection);
+                
+                // Réappliquer la pagination
+                showActivityPage(1);
+                currentActivityPage = 1;
+                
+                // Sauvegarder la direction
+                this.dataset.direction = newDirection;
+            });
+        });
+    }
+
+    function sortActivityTable(sortField, direction) {
+        filteredActivityRows.sort((a, b) => {
+            let aValue, bValue;
+            
+            switch(sortField) {
+                case 'title':
+                    aValue = a.querySelector('td:nth-child(2) strong')?.textContent.trim() || '';
+                    bValue = b.querySelector('td:nth-child(2) strong')?.textContent.trim() || '';
+                    break;
+                case 'type':
+                    aValue = a.querySelector('td:nth-child(3)')?.textContent.trim() || '';
+                    bValue = b.querySelector('td:nth-child(3)')?.textContent.trim() || '';
+                    break;
+                case 'coach':
+                    aValue = a.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+                    bValue = b.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+                    break;
+                case 'status':
+                    aValue = a.querySelector('td:nth-child(5) .badge')?.textContent.trim() || '';
+                    bValue = b.querySelector('td:nth-child(5) .badge')?.textContent.trim() || '';
+                    break;
+                case 'sessions_count':
+                    aValue = a.querySelector('td:nth-child(6)')?.textContent.replace(/[^\d]/g, '') || '0';
+                    bValue = b.querySelector('td:nth-child(6)')?.textContent.replace(/[^\d]/g, '') || '0';
+                    aValue = parseInt(aValue);
+                    bValue = parseInt(bValue);
+                    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+                default:
+                    return 0;
+            }
+            
+            if (typeof aValue === 'string') {
+                const comparison = aValue.localeCompare(bValue, 'fr', { numeric: true });
+                return direction === 'asc' ? comparison : -comparison;
+            }
+            return 0;
+        });
+    }
+
+    function updateActivitySortIcons(activeHeader, direction) {
+        // Réinitialiser toutes les icônes
+        document.querySelectorAll('#activities-table .sort-icon').forEach(icon => {
+            icon.className = 'fas fa-sort sort-icon text-muted';
+        });
+        
+        // Mettre à jour l'icône active
+        const activeIcon = activeHeader.querySelector('.sort-icon');
+        if (activeIcon) {
+            if (direction === 'asc') {
+                activeIcon.className = 'fas fa-sort-up sort-icon text-primary';
+            } else {
+                activeIcon.className = 'fas fa-sort-down sort-icon text-primary';
+            }
+        }
+    }
+    
+    // Fonction de recherche et filtrage pour les activités
+    function searchAndFilterActivities() {
+        const query = activitySearch.value.toLowerCase().trim();
+        const typeFilter = activityTypeFilter.value.toLowerCase().trim();
+        
+        filteredActivityRows = activityRows.filter(row => {
+            if (row.querySelector('td[colspan]')?.textContent.includes('Aucune activité')) return false;
+            
+            const title = row.querySelector('td:nth-child(2) strong')?.textContent.toLowerCase() || '';
+            const description = row.querySelector('td:nth-child(2) small')?.textContent.toLowerCase() || '';
+            const type = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase().trim() || '';
+            const coach = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase().trim() || '';
+            const status = row.querySelector('td:nth-child(5)')?.textContent.toLowerCase() || '';
+            
+            // Filtrage par recherche générale
+            const matchesSearch = !query || title.includes(query) || description.includes(query) || type.includes(query) || coach.includes(query) || status.includes(query);
+            
+            // Filtrage par type
+            const matchesType = !typeFilter || type.includes(typeFilter);
+            
+            
+            return matchesSearch && matchesType;
+        });
+        
+        totalActivityPages = Math.ceil(filteredActivityRows.length / itemsPerPage);
+        currentActivityPage = 1;
+        showActivityPage(1);
+    }
+    
+    // Affichage des pages pour les activités
+    function showActivityPage(page) {
+        const start = (page - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        
+        // Masquer toutes les lignes
+        activityRows.forEach(row => row.style.display = 'none');
+        
+        // Afficher les lignes filtrées pour la page actuelle
+        for (let i = start; i < end && i < filteredActivityRows.length; i++) {
+            filteredActivityRows[i].style.display = '';
+        }
+        
+        updateActivityPagination(page);
+    }
+    
+    // Mise à jour de la pagination pour les activités
+    function updateActivityPagination(page) {
+        const pagination = document.getElementById('activityPagination');
+        const prevBtn = document.getElementById('prevPageActivity');
+        const nextBtn = document.getElementById('nextPageActivity');
+        
+        prevBtn.parentElement.classList.toggle('disabled', page === 1);
+        nextBtn.parentElement.classList.toggle('disabled', page === totalActivityPages);
+        
+        // Nettoyer les anciens numéros de page
+        const pageNumbers = pagination.querySelectorAll('.page-number');
+        pageNumbers.forEach(num => num.remove());
+        
+        // Ajouter les numéros de page
+        for (let i = 1; i <= totalActivityPages; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.className = 'page-item page-number';
+            if (i === page) pageItem.classList.add('active');
+            
+            const pageLink = document.createElement('a');
+            pageLink.className = 'page-link';
+            pageLink.href = '#';
+            pageLink.textContent = i;
+            pageLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentActivityPage = i;
+                showActivityPage(i);
+            });
+            
+            pageItem.appendChild(pageLink);
+            pagination.insertBefore(pageItem, nextBtn.parentElement);
+        }
+        
+        // Masquer la pagination si pas assez d'éléments
+        pagination.style.display = totalActivityPages <= 1 ? 'none' : 'flex';
+    }
+    
+    // Event listeners pour la recherche et les filtres
+    activitySearch.addEventListener('input', searchAndFilterActivities);
+    activityTypeFilter.addEventListener('change', searchAndFilterActivities);
+    
+    // Event listeners pour la pagination
+    document.getElementById('prevPageActivity').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentActivityPage > 1) {
+            currentActivityPage--;
+            showActivityPage(currentActivityPage);
+        }
+    });
+    
+    document.getElementById('nextPageActivity').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentActivityPage < totalActivityPages) {
+            currentActivityPage++;
+            showActivityPage(currentActivityPage);
+        }
+    });
+    
+    // Gestion des boutons d'import/export
+    let isImportMode = true;
+    const exportImportBtn = document.getElementById('export-import-btn-activities');
+    const exportImportIcon = document.getElementById('export-import-icon-activities');
+    const exportImportText = document.getElementById('export-import-text-activities');
+    
+    exportImportBtn.addEventListener('click', function() {
+        if (isImportMode) {
+            // Mode Import - créer un input file pour importer
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.csv';
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    console.log('Fichier sélectionné pour import:', e.target.files[0].name);
+                    // Ici on pourrait ajouter la logique d'import
+                    alert('Fonctionnalité d\'import à implémenter');
+                }
+            });
+            fileInput.click();
+        } else {
+            // Mode Export
+            exportActivitiesData();
+        }
+    });
+    
+    function updateImportExportButton() {
+        if (isImportMode) {
+            exportImportIcon.className = 'fas fa-file-import';
+            exportImportText.textContent = 'Importer';
+            exportImportBtn.title = 'Importer des activités';
+        } else {
+            exportImportIcon.className = 'fas fa-file-export';
+            exportImportText.textContent = 'Exporter';
+            exportImportBtn.title = 'Exporter les activités sélectionnées';
+        }
+    }
+    
+    function exportActivitiesData() {
+        const selectedRows = document.querySelectorAll('#activities-table tbody tr input.row-check:checked');
+        if (selectedRows.length === 0) {
+            alert('Veuillez sélectionner au moins une activité à exporter.');
+            return;
+        }
+        
+        const exportData = [];
+        selectedRows.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const title = row.querySelector('td:nth-child(2) strong')?.textContent.trim() || '';
+            const description = row.querySelector('td:nth-child(2) small')?.textContent.trim() || '';
+            const type = row.querySelector('td:nth-child(3)')?.textContent.trim() || '';
+            const coach = row.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+            const status = row.querySelector('td:nth-child(5) .badge')?.textContent.trim() || '';
+            const sessions = row.querySelector('td:nth-child(6)')?.textContent.trim() || '0';
+            
+            exportData.push({
+                'Titre': title,
+                'Description': description,
+                'Type': type,
+                'Coach': coach,
+                'Statut': status,
+                'Sessions': sessions
+            });
+        });
+        
+        const csvContent = convertToCSV(exportData);
+        downloadCSV(csvContent, 'activites_export.csv');
+    }
+    
+    function convertToCSV(data) {
+        if (data.length === 0) return '';
+        
+        const headers = Object.keys(data[0]);
+        const csvRows = [
+            headers.join(','),
+            ...data.map(row => 
+                headers.map(header => 
+                    `"${String(row[header]).replace(/"/g, '""')}"`
+                ).join(',')
+            )
+        ];
+        
+        return csvRows.join('\n');
+    }
+    
+    function downloadCSV(content, filename) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+    
+    // Gestion des cases à cocher
+    const selectAllCheckbox = document.getElementById('selectAllActivities');
+    
+    selectAllCheckbox.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('#activities-table tbody tr:not([style*="display: none"]) input.row-check');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+    
+    // Mettre à jour la case "Tout sélectionner" et le mode import/export
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('row-check') || e.target.id === 'selectAllActivities') {
+            const allCheckboxes = document.querySelectorAll('#activities-table tbody tr:not([style*="display: none"]) input.row-check');
+            const checkedCheckboxes = document.querySelectorAll('#activities-table tbody tr:not([style*="display: none"]) input.row-check:checked');
+            
+            // Mettre à jour la case "Tout sélectionner"
+            if (e.target.classList.contains('row-check')) {
+                selectAllCheckbox.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
+                selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+            }
+            
+            // Basculer automatiquement vers export si des éléments sont sélectionnés
+            if (checkedCheckboxes.length > 0 && isImportMode) {
+                isImportMode = false;
+                updateImportExportButton();
+            } else if (checkedCheckboxes.length === 0 && !isImportMode) {
+                isImportMode = true;
+                updateImportExportButton();
+            }
+        }
+    });
+    
+    // Initialiser le tri
+    setupActivitySorting();
+    
+    // Initialiser le bouton import/export
+    updateImportExportButton();
+    
+    // Initialiser l'affichage
+    showActivityPage(1);
+    
+    // Gestionnaire pour les boutons "Voir détails" activité
+    document.querySelectorAll('.view-activity-details').forEach(button => {
+        button.addEventListener('click', function() {
+            // Récupérer les données depuis les attributs data-*
+            const title = this.getAttribute('data-title');
+            const type = this.getAttribute('data-type');
+            const coach = this.getAttribute('data-coach');
+            const status = this.getAttribute('data-status');
+            const sessions = this.getAttribute('data-sessions');
+            const description = this.getAttribute('data-description');
+            
+            // Remplir les éléments de la modal
+            document.getElementById('modal-activity-title').textContent = title;
+            document.getElementById('modal-activity-type').textContent = type;
+            document.getElementById('modal-activity-coach').textContent = coach;
+            document.getElementById('modal-activity-status').textContent = status;
+            document.getElementById('modal-activity-sessions').textContent = sessions;
+            document.getElementById('modal-activity-description').textContent = description;
+        });
+    });
+});
+</script>
+{% endblock %}

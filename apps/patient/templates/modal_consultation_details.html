@@ -1,0 +1,19 @@
+<div class="modal-header">
+    <h5 class="modal-title">Détails de la consultation</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+        <p><strong>Patient:</strong> {% if c.patient %}{{ c.patient.last_name }} {{ c.patient.first_name }}{% else %}N/A{% endif %}</p>
+    <p><strong>Médecin:</strong> {% if c.medecin %}{{ c.medecin.full_name }}{% else %}N/A{% endif %}</p>
+    <p><strong>Date:</strong> {{ c.date|date:"d/m/Y H:i" }}</p>
+    <hr>
+    <h5>Constantes</h5>
+    <p><strong>Température:</strong> {{ c.temperature|default:"N/A" }} °C</p>
+    <p><strong>Pression artérielle:</strong> {{ c.pression|default:"N/A" }}</p>
+    <p><strong>Rythme cardiaque:</strong> {{ c.rythme_cardiaque|default:"N/A" }} bpm</p>
+    <p><strong>Hospitalisation:</strong> {% if c.hospitalisation %}Oui{% else %}Non{% endif %}</p>
+</div>
+<div class="modal-footer">
+    <a href="{% url 'patient:consultation_pdf' c.id %}" class="btn btn-primary" target="_blank">Imprimer PDF</a>
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+</div>

@@ -1,0 +1,36 @@
+{% for product in page_obj %}
+<tr data-product-id="{{ product.pk }}">  
+  <td data-label="Sélection"><input type="checkbox" class="row-check"></td>
+  <td data-label="Réf.">{{ product.default_code }}</td>
+  <td data-label="Nom">{{ product.name }}</td>
+  <td data-label="Catégorie">
+    {% if product.categ %}
+     {{ product.categ.label }}
+    {% else %}
+      <span class="text-muted">Aucune catégorie</span>
+    {% endif %}
+  </td>
+  <td data-label="Prix">{{ product.standard_price|floatformat:2 }}</td>
+  <td data-label="Stock min.">{{ product.stock_minimal }}</td>
+  <td data-label="U.Mesure">
+    {% if product.uom %}
+    {{ product.uom.symbole }}
+    {% else %}
+      <span class="text-muted">Aucune unité</span>
+    {% endif %}
+  </td>
+  <td data-label="Q.Totale">{{ product.total_quantity|floatformat:2 }}</td>
+  <td data-label="Actions" class="actions-cell text-center">
+    <div class="d-flex gap-1 justify-content-end">
+      {% if request.session.user.permissions.inventory.update %}
+      <a href="{% url 'product_edit' product.pk %}#product-form-card" class="btn btn-sm btn-light border text-dark" title="Modifier"><i class="fas fa-edit"></i></a>
+      {% endif %}
+      {% if request.session.user.permissions.inventory.delete %}
+      <button type="button" class="btn btn-sm btn-light border text-danger btn-delete-product" data-id="{{ product.pk }}" data-name="{{ product.name }}" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr><td colspan="9" class="text-center text-muted">Aucun produit trouvé</td></tr>
+{% endfor %}

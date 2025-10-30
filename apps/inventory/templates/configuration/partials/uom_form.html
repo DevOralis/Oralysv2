@@ -1,0 +1,28 @@
+{% if request.session.user.permissions.inventory.write %}
+<div class="card form-card mb-4 mt-4 p-0 d-none" id="uom-form-card" style="scroll-margin-top: 120px;">
+  <div class="card-header card-header-primary">
+    <i class="fa-solid fa-pen-to-square me-2"></i>
+    <span id="uom-form-title">Ajouter une unité de mesure</span>
+  </div>
+  <div class="card-body">
+    <form method="post" id="uom-form" action="{% url 'uom_add' %}">
+      {% csrf_token %}
+      <input type="hidden" name="id" value="">
+      <div class="row g-3">
+        <div class="col-md-6 form-label">
+          <label class="form-label" for="{{ uom_form.label.id_for_label }}">{{ uom_form.label.label }} :</label>
+          {{ uom_form.label }}
+        </div>
+        <div class="col-md-6 form-label">
+          <label class="form-label" for="{{ uom_form.symbole.id_for_label }}">{{ uom_form.symbole.label }} :</label>
+          {{ uom_form.symbole }}
+        </div>
+      </div>
+      <div class="mt-3 text-end">
+        <button type="button" class="btn btn-secondary btn-sm btn-cancel-form"><i class="fas fa-times"></i><span class="d-none d-sm-inline ms-1"> Annuler</span></button>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1"> Sauvegarder</span></button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}

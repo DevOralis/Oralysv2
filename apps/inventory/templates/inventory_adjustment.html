@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load inventory_filters %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'vendor\css\sweetalert2.min.css' %}">
+{% endblock %}
+
+{% block menu %}
+  {% include 'inventory_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-clipboard-list text-primary me-2"></i>
+    Gestion d'inventaire
+  </h3>
+  <form id="adjustment-form" method="post">
+    {% csrf_token %}
+    <div class="card mb-4">
+      <div class="card-header card-header-primary">
+        <i class="fas fa-adjust me-2"></i>
+        Ajustement d'inventaire
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-1">
+            <div class="input-group">
+              <span class="input-group-text input-group-text-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="text" id="search-input" class="form-control border-primary" placeholder="Recherche par référence, nom, emplacement, quantité..." value="{{ request.GET.q }}">
+            </div>
+          </div>
+
+          {% if request.session.user.permissions.inventory.write %}
+          <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+            <div class="d-flex gap-1">  
+              <button type="button" id="clear-inputs" class="btn btn-outline-primary w-100 text-nowrap px-2">
+                <i class="fas fa-eraser"></i><span class="d-none d-lg-inline ms-1">Effacer les quantités comptées</span> 
+              </button>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="col-12 col-sm-12  col-md-2 col-lg-2 order-3">
+            <div class="d-flex gap-1">
+              <a href="{% url 'inventory_adjustment_pdf' %}" class="btn btn-light border w-100 text-nowrap px-2" >
+                <i class="fas fa-file-pdf"></i><span class="d-none d-lg-inline ms-1">PDF</span>
+              </a>
+            </div>
+          </div>
+
+          {% if request.session.user.permissions.inventory.write %}
+          <div class="col-12 col-sm-12  col-md-3 col-lg-3 order-4">
+            <div class="d-flex gap-1">
+              <div id="adjustment-indicator" class="btn btn-primary  w-100 text-nowrap px-2" style="display: none;">
+                <i class="fas fa-clipboard-list"></i> 
+                <span id="adjustment-count">0</span> ajustement(s) stocké(s)
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <table class="table table-hover table-responsive">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th>
+                <a href="?sort_by=default_code&sort_order={% if sort_by == 'default_code' and sort_order == 'asc' %}desc{% else %}asc{% endif %}&q={{ query|urlencode }}" class="text-decoration-none text-dark">
+                  Réf.
+                  {% if sort_by == 'default_code' %}
+                    <i class="fas fa-sort-{{ sort_order|lower }}"></i>
+                  {% else %}
+                    <i class="fas fa-sort text-muted"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th>
+                <a href="?sort_by=product&sort_order={% if sort_by == 'product' and sort_order == 'asc' %}desc{% else %}asc{% endif %}&q={{ query|urlencode }}" class="text-decoration-none text-dark">
+                  Nom
+                  {% if sort_by == 'product' %}
+                    <i class="fas fa-sort-{{ sort_order|lower }}"></i>
+                  {% else %}
+                    <i class="fas fa-sort text-muted"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th>
+                <a href="?sort_by=location&sort_order={% if sort_by == 'location' and sort_order == 'asc' %}desc{% else %}asc{% endif %}&q={{ query|urlencode }}" class="text-decoration-none text-dark">
+                  Emplacement
+                  {% if sort_by == 'location' %}
+                    <i class="fas fa-sort-{{ sort_order|lower }}"></i>
+                  {% else %}
+                    <i class="fas fa-sort text-muted"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th>
+                <a href="?sort_by=quantity_stored&sort_order={% if sort_by == 'quantity_stored' and sort_order == 'asc' %}desc{% else %}asc{% endif %}&q={{ query|urlencode }}" class="text-decoration-none text-dark">
+                  Qté. Stockée
+                  {% if sort_by == 'quantity_stored' %}
+                    <i class="fas fa-sort-{{ sort_order|lower }}"></i>
+                  {% else %}
+                    <i class="fas fa-sort text-muted"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th>Qté. Comptée</th>
+              <th>Différence</th>
+              <th>
+                <a href="?sort_by=last_count_date&sort_order={% if sort_by == 'last_count_date' and sort_order == 'asc' %}desc{% else %}asc{% endif %}&q={{ query|urlencode }}" class="text-decoration-none text-dark">
+                  Dernier Comptage
+                  {% if sort_by == 'last_count_date' %}
+                    <i class="fas fa-sort-{{ sort_order|lower }}"></i>
+                  {% else %}
+                    <i class="fas fa-sort text-muted"></i>
+                  {% endif %}
+                </a>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+              {% for pl in locations %}
+              <tr>
+                <td data-label="Réf.">{{ pl.product.default_code }}</td>
+                <td data-label="Nom">{{ pl.product.name }}</td>
+                <td data-label="Emplacement">{{ pl.location.name }}</td>
+                <td data-label="Qté. Stockée">{{ pl.quantity_stored|floatformat:2 }}</td>
+                <td data-label="Qté. Comptée">
+                  <input type="number" step="0.01" name="counted_{{ pl.product_location_id }}"
+                         class="form-control counted-input"
+                         data-stored="{{ pl.quantity_stored }}"
+                         value="{% if pl.quantity_counted %}{{ pl.quantity_counted|number_input }}{% endif %}"
+                         {% if not request.session.user.permissions.inventory.write %}readonly{% endif %}>
+                </td>
+                <td class="diff-cell" data-label="Différence">
+                  <span id="difference_{{ pl.product_location_id }}">—</span>
+                </td>
+                <td data-label="Dernier Comptage">{{ pl.last_count_date|date:"d/m/Y"|default:"-" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" class="text-center text-muted">Aucun emplacement trouvé</td></tr>
+              {% endfor %}
+          </tbody>
+        </table>
+        <div class="text-end mt-3">
+          {% if request.session.user.permissions.inventory.write %}
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1">Sauvegarder les ajustements</span></button>
+          {% endif %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Pagination de l'ajustement d'inventaire" class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap">
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}&q={{ query|urlencode }}" aria-label="Précédent">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i><span class="d-none d-sm-block">&laquo; Préc</span>
+                </a>
+              </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+              <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ num }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}&q={{ query|urlencode }}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}&q={{ query|urlencode }}" aria-label="Suivant">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i><span class="d-none d-sm-block">Suiv &raquo;</span>
+                </a>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+<script src="{% static 'js/inventory_adjustment.js' %}"></script>
+
+<script>
+let searchTimeout;
+
+function submitSearch() {
+  const searchInput = document.getElementById('search-input');
+  const currentUrl = new URL(window.location);
+  
+  if (searchInput.value.trim()) {
+    currentUrl.searchParams.set('q', searchInput.value.trim());
+  } else {
+    currentUrl.searchParams.delete('q');
+  }
+  
+  // Retourner à la première page lors d'une nouvelle recherche
+  currentUrl.searchParams.delete('page');
+  
+  window.location.href = currentUrl.toString();
+}
+
+// Recherche automatique avec délai
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    // Recherche automatique pendant la saisie
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        submitSearch();
+      }, 500); // Délai de 500ms après la dernière frappe
+    });
+    
+    // Recherche immédiate avec Enter
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(searchTimeout);
+        submitSearch();
+      }
+    });
+  }
+});
+</script>
+
+<!-- Messages SweetAlert -->
+{% if swal_success %}
+<script>
+  window.swalSuccess = "{{ swal_success }}";
+</script>
+{% endif %}
+{% if swal_error %}
+<script>
+  window.swalError = "{{ swal_error }}";
+</script>
+{% endif %}
+
+<script>
+  // Afficher les messages SweetAlert
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.swalSuccess) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès !',
+        text: window.swalSuccess,
+        confirmButtonColor: '#198754',
+        confirmButtonText: 'OK'
+      }).then(() => {
+        // Nettoyer TOUS les ajustements du localStorage après succès
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('counted_')) {
+            localStorage.removeItem(key);
+          }
+        }
+        // Mettre à jour l'indicateur pour qu'il disparaisse
+        const adjustmentIndicator = document.getElementById('adjustment-indicator');
+        if (adjustmentIndicator) {
+          adjustmentIndicator.style.display = 'none';
+        }
+      });
+      window.swalSuccess = null;
+    }
+    
+    if (window.swalError) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur !',
+        text: window.swalError,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'OK'
+      });
+      window.swalError = null;
+    }
+  });
+</script>
+{% endblock %}

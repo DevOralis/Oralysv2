@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="fr">
+{% load static %}
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liste des Fournisseurs - ERP Clinique</title>
+
+  <link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/css/sweetalert2.min.css' %}">
+
+  <!-- Add Chart.js for the order history chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* Modal styling */
+    .modal-content {
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    .modal-header {
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .modal-title {
+      font-weight: 600;
+    }
+    .order-history-card {
+      background-color: #e9ecef;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .order-history-card h5 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: #343a40;
+    }
+    .order-history-table {
+      font-size: 0.9rem;
+    }
+    .order-history-table th,
+    .order-history-table td {
+      padding: 8px;
+    }
+    .chart-container {
+      max-width: 400px;
+      margin: 0 auto 20px;
+    }
+    /* Responsive table styling */
+    .table-responsive {
+      overflow-x: auto;
+    }
+    .table-responsive table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .table-responsive th,
+    .table-responsive td {
+      white-space: nowrap;
+    }
+    @media (max-width: 991px) {
+      .table-responsive {
+        overflow-x: auto;
+      }
+      .table-responsive table {
+        min-width: 600px;
+      }
+      .order-history-table {
+        min-width: 500px;
+      }
+    }
+    @media (max-width: 576px) {
+      .chart-container {
+        max-width: 100%;
+      }
+      .order-history-table {
+        font-size: 0.8rem;
+      }
+      .order-history-table th,
+      .order-history-table td {
+        font-size: 0.85rem;
+      }
+      .order-history-card h5 {
+        font-size: 1.2rem;
+      }
+      .modal-dialog {
+        margin: 0.5rem;
+        max-width: 95vw !important;
+        width: 95vw !important;
+      }
+    }
+    /* Responsive modal adjustments */
+    @media (max-width: 768px) {
+      .modal-dialog {
+        max-width: 95vw !important;
+        width: 95vw !important;
+      }
+      .order-history-card {
+        padding: 10px;
+        margin-bottom: 15px;
+      }
+      .chart-container {
+        max-width: 100%;
+        padding: 0 10px;
+      }
+    }
+    .pagination-hidden {
+        display: none;
+    }
+  </style>
+  <link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/css/sweetalert2.min.css' %}">
+
+  <!-- Add Chart.js for the order history chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* Modal styling */
+    .modal-content {
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    .modal-header {
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .modal-title {
+      font-weight: 600;
+    }
+    .order-history-card {
+      background-color: #e9ecef;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .order-history-card h5 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: #343a40;
+    }
+    .order-history-table {
+      font-size: 0.9rem;
+    }
+    .order-history-table th,
+    .order-history-table td {
+      padding: 8px;
+    }
+    .chart-container {
+      max-width: 400px;
+      margin: 0 auto 20px;
+    }
+    /* Responsive table styling */
+    .table-responsive {
+      overflow-x: auto;
+    }
+    .table-responsive table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .table-responsive th,
+    .table-responsive td {
+      white-space: nowrap;
+    }
+    @media (max-width: 991px) {
+      .table-responsive {
+        overflow-x: auto;
+      }
+      .table-responsive table {
+        min-width: 600px;
+      }
+      .order-history-table {
+        min-width: 500px;
+      }
+    }
+    @media (max-width: 576px) {
+      .chart-container {
+        max-width: 100%;
+      }
+      .order-history-table {
+        font-size: 0.8rem;
+      }
+      .order-history-table th,
+      .order-history-table td {
+        font-size: 0.85rem;
+      }
+      .order-history-card h5 {
+        font-size: 1.2rem;
+      }
+      .modal-dialog {
+        margin: 0.5rem;
+        max-width: 95vw !important;
+        width: 95vw !important;
+      }
+    }
+    /* Responsive modal adjustments */
+    @media (max-width: 768px) {
+      .modal-dialog {
+        max-width: 95vw !important;
+        width: 95vw !important;
+      }
+      .order-history-card {
+        padding: 10px;
+        margin-bottom: 15px;
+      }
+      .chart-container {
+        max-width: 100%;
+        padding: 0 10px;
+      }
+    }
+    .pagination-hidden {
+        display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="content">
+    <!-- Liste des fournisseurs -->
+    <div class="card mb-4">
+      <div class="card-header text-white" style="background-color: #1e90ff;">
+        <i class="fas fa-user me-2"></i>
+        Liste des Fournisseurs
+      </div>
+      <div class="card-body">
+        <input type="hidden" id="total-suppliers" value="{{ total_suppliers|default:0 }}">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white" style="background-color: #1e90ff; border: 1px solid #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input id="searchInput" type="search" name="q" class="form-control" style="border: 1px solid #1e90ff;" placeholder="Rechercher par nom, email, téléphone ou adresse..." value="{{ request.GET.q|default:'' }}">
+              </div>
+            </div>
+            <!-- Boutons d'action -->
+            <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" id="importExportBtn" class="btn btn-light border w-100 text-nowrap px-2">
+                  <i id="importExportIcon" class="fas fa-file-import"></i>
+                  <span id="importExportText" class="d-none d-lg-inline ms-1">Importer</span>
+                </button>
+              </div>
+            </div>
+            <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+              <div class="d-flex gap-1">
+                {% if request.session.user.permissions.purchases.write %}
+                <button id="scrollToForm" type="button" class="btn btn-primary w-100 text-nowrap px-2">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="searchableTable">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th>
+                  <input type="checkbox" id="selectAll">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Logo</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Nom</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="d-none d-lg-table-cell">
+                  <div class="d-flex align-items-center">
+                    <span>Email</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="d-none d-lg-table-cell">
+                  <div class="d-flex align-items-center">
+                    <span>Téléphone</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="d-none d-lg-table-cell">
+                  <div class="d-flex align-items-center">
+                    <span>Adresse</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="supplierTable">
+              {% for supplier in suppliers %}
+              <tr class="main-row" data-supplier-id="{{ supplier.pk }}">
+                <td data-label="Sélection">
+                  <input type="checkbox" class="row-check">
+                </td>
+                <td data-label="Logo">
+                  {% if supplier.logo %}
+                  <img src="{{ supplier.logo.url }}" alt="Logo {{ supplier.name }}" width="50" height="50" style="object-fit: contain;" />
+                  {% else %}
+                  <span class="text-muted">N/A</span>
+                  {% endif %}
+                </td>
+                <td data-label="Nom">{{ supplier.name }}</td>
+                <td data-label="Email" class="d-none d-lg-table-cell">{{ supplier.email }}</td>
+                <td data-label="Téléphone" class="d-none d-lg-table-cell">{{ supplier.phone }}</td>
+                <td data-label="Adresse" class="d-none d-lg-table-cell">
+                  {{ supplier.street }} {{ supplier.street2 }}<br>
+                  {% if supplier.country %}{{ supplier.country.name }}{% endif %}
+                </td>
+                <td data-label="Actions" class="actions-cell">
+                  <button class="btn btn-sm btn-primary d-lg-none" data-bs-toggle="collapse" data-bs-target="#details-{{ supplier.pk }}">
+                    Voir détails
+                  </button>
+                  <div class="d-none d-lg-flex gap-1 justify-content-end">
+                    <button class="btn btn-sm btn-light border text-info btn-details" data-id="{{ supplier.pk }}" data-bs-toggle="modal" data-bs-target="#orderHistoryModal" title="Voir">
+                      <i class="fas fa-eye"></i>
+                    </button>
+              {% if request.session.user.permissions.purchases.update %}
+                    <a href="{% url 'supplier_list' %}?edit={{ supplier.pk }}" class="btn btn-sm btn-light border text-dark" title="Modifier">
+                      <i class="fas fa-edit"></i>
+                    </a>
+             {% endif %}
+             {% if request.session.user.permissions.purchases.delete %}
+                    <button class="btn btn-sm btn-light border text-danger btn-delete" data-id="{{ supplier.pk }}" title="Supprimer">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+            {% endif %}
+                  </div>
+
+                </td>
+              </tr>
+              <tr class="collapse bg-light" id="details-{{ supplier.pk }}">
+                <td colspan="8" class="p-3">
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="mb-2"><strong>Logo:</strong>
+                        {% if supplier.logo %}
+                        <img src="{{ supplier.logo.url }}" alt="Logo {{ supplier.name }}" width="50" height="50" style="object-fit: contain;" />
+                        {% else %}
+                        <span class="text-muted">N/A</span>
+                        {% endif %}
+                      </p>
+                      <p class="mb-2"><strong>Email:</strong> {{ supplier.email }}</p>
+                      <p class="mb-2"><strong>Téléphone:</strong> {{ supplier.phone }}</p>
+                      <p class="mb-2"><strong>Adresse:</strong> {{ supplier.street }} {{ supplier.street2 }}<br>
+                        {% if supplier.country %}{{ supplier.country.name }}{% endif %}</p>
+                      <p class="mb-2"><strong>Ville:</strong> {% if supplier.city %}{{ supplier.city.name }}{% endif %}</p>
+                    </div>
+                    <div class="col-12 mt-3">
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-light border text-info btn-details" data-id="{{ supplier.pk }}" data-bs-toggle="modal" data-bs-target="#orderHistoryModal" title="Voir">
+                          <i class="fas fa-eye me-1"></i>
+                        </button>
+                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                        <a href="{% url 'supplier_list' %}?edit={{ supplier.pk }}" class="btn btn-sm btn-light border text-dark" title="Modifier">
+                          <i class="fas fa-edit me-1"></i>
+                        </a>
+                        <button class="btn btn-sm btn-light border text-danger btn-delete" data-id="{{ supplier.pk }}" title="Supprimer">
+                          <i class="fas fa-trash-alt me-1"></i>
+                        </button>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Component -->
+        <nav class="mt-3" id="pagination-nav">
+          <ul class="pagination justify-content-center flex-wrap" id="pagination-controls">
+            <!-- Pagination controls will be generated by JavaScript -->
+          </ul>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Order History Modal -->
+    <div class="modal fade" id="orderHistoryModal" tabindex="-1" aria-labelledby="orderHistoryModalLabel" aria-hidden="true">
+      <div class="modal-dialog" style="max-width: 70vw !important; width: 70vw !important; margin: 1rem auto !important;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="orderHistoryModalLabel">Historique des commandes</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <!-- Total Orders Card -->
+              <div class="col-12 col-md-6">
+                <div class="order-history-card">
+                  <h5 id="totalOrders">0</h5>
+                  <p>Commandes totales</p>
+                </div>
+              </div>
+              <!-- Turnover Card -->
+              <div class="col-12 col-md-6">
+                <div class="order-history-card">
+                  <h5 id="turnover">0.00 MAD</h5>
+                  <p>Chiffre d'affaires</p>
+                </div>
+              </div>
+            </div>
+            <!-- Chart -->
+            <div class="chart-container">
+              <canvas id="ordersByStateChart"></canvas>
+            </div>
+            <!-- Orders Table -->
+            <div class="table-responsive">
+              <table class="table table-bordered order-history-table">
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th class="d-none d-md-table-cell">Date</th>
+                    <th>Montant Total</th>
+                    <th class="d-none d-md-table-cell">État</th>
+                    <th class="d-none d-md-table-cell">Devise</th>
+                  </tr>
+                </thead>
+                <tbody id="orderHistoryTable">
+                  {% for order in orders %}
+                  <tr>
+                    <td data-label="Nom">{{ order.name }}</td>
+                    <td data-label="Date" class="d-none d-md-table-cell">{{ order.date_order }}</td>
+                    <td data-label="Montant Total">{{ order.amount_total|floatformat:2 }}</td>
+                    <td data-label="État" class="d-none d-md-table-cell">{{ order.state }}</td>
+                    <td data-label="Devise" class="d-none d-md-table-cell">MAD</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            <button type="button" class="btn btn-primary btn-print" data-id="">
+              <i class="fas fa-print"></i> Imprimer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+  <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Pagination variables
+        const rowsPerPage = 5;
+        let currentPage = 1;
+        const supplierTable = document.getElementById('supplierTable');
+        const rows = supplierTable.querySelectorAll('tr.main-row');
+        const totalRows = rows.length;
+        const totalPages = Math.ceil(totalRows / rowsPerPage);
+        const paginationControls = document.getElementById('pagination-controls');
+        const paginationNav = document.getElementById('pagination-nav');
+
+        // Function to display rows for the current page
+        function displayRows() {
+            // Hide all rows
+            rows.forEach(row => row.style.display = 'none');
+            const collapsibleRows = supplierTable.querySelectorAll('tr.collapse');
+            collapsibleRows.forEach(row => row.style.display = 'none');
+
+            // Calculate start and end indices for the current page
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = Math.min(start + rowsPerPage, totalRows);
+
+            // Show rows for the current page
+            for (let i = start; i < end; i++) {
+                rows[i].style.display = '';
+                const collapsibleRow = supplierTable.querySelector(`#details-${rows[i].dataset.supplierId}`);
+                if (collapsibleRow && collapsibleRow.classList.contains('show')) {
+                    collapsibleRow.style.display = '';
+                }
+            }
+
+            // Update pagination controls
+            updatePagination();
+        }
+
+        // Function to generate pagination controls
+        function updatePagination() {
+            paginationControls.innerHTML = '';
+
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `
+                <button class="page-link" id="prev-page" aria-label="Précédent">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">&laquo; Préc</span>
+                </button>
+            `;
+            paginationControls.appendChild(prevLi);
+
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageLi.innerHTML = `<span class="page-link">${i}</span>`;
+                pageLi.addEventListener('click', () => {
+                    currentPage = i;
+                    displayRows();
+                });
+                paginationControls.appendChild(pageLi);
+            }
+
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `
+                <button class="page-link" id="next-page" aria-label="Suivant">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </button>
+            `;
+            paginationControls.appendChild(nextLi);
+
+            // Add event listeners for prev/next buttons
+            document.getElementById('prev-page').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayRows();
+                }
+            });
+            document.getElementById('next-page').addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayRows();
+                }
+            });
+
+            // Show/hide pagination based on total rows
+            if (totalRows > rowsPerPage) {
+                paginationNav.classList.remove('pagination-hidden');
+            } else {
+                paginationNav.classList.add('pagination-hidden');
+            }
+        }
+
+        // Initial display
+        displayRows();
+
+        // Gestion des checkboxes et bouton Import/Export
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const rowCheckboxes = document.querySelectorAll('.row-check');
+        const importExportBtn = document.getElementById('importExportBtn');
+        const importExportIcon = document.getElementById('importExportIcon');
+        const importExportText = document.getElementById('importExportText');
+
+        // Fonction pour mettre à jour le bouton selon l'état des checkboxes
+        function updateImportExportButton() {
+            const checkedBoxes = document.querySelectorAll('.row-check:checked');
+            
+            if (checkedBoxes.length > 0) {
+                // Mode Export
+                importExportIcon.className = 'fas fa-file-export';
+                importExportText.textContent = 'Exporter';
+            } else {
+                // Mode Import
+                importExportIcon.className = 'fas fa-file-import';
+                importExportText.textContent = 'Importer';
+            }
+        }
+
+        // Gestionnaire pour "Sélectionner tout"
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            rowCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            updateImportExportButton();
+        });
+
+        // Gestionnaires pour les checkboxes individuelles
+        rowCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                // Vérifier si toutes les checkboxes sont cochées
+                const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
+                const noneChecked = Array.from(rowCheckboxes).every(cb => !cb.checked);
+                
+                // Mettre à jour la checkbox "Sélectionner tout"
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+                
+                updateImportExportButton();
+            });
+        });
+
+        // Gestionnaire de clic sur le bouton Import/Export
+        importExportBtn.addEventListener('click', function() {
+            const checkedBoxes = document.querySelectorAll('.row-check:checked');
+            
+            if (checkedBoxes.length > 0) {
+                // Mode Export - récupérer les IDs sélectionnés
+                const selectedIds = Array.from(checkedBoxes).map(cb => {
+                    return cb.closest('tr').dataset.supplierId;
+                });
+                
+                // Ici vous pouvez ajouter la logique d'export
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Export en cours',
+                    text: `Export de ${selectedIds.length} fournisseur(s) sélectionné(s)...`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                
+                console.log('Export des fournisseurs:', selectedIds);
+                // TODO: Implémenter la logique d'export réelle
+                
+            } else {
+                // Mode Import
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Import',
+                    text: 'Fonctionnalité d\'import à implémenter...',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                
+                console.log('Mode Import activé');
+                // TODO: Implémenter la logique d'import réelle
+            }
+        });
+
+        // Handle search input
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchValue = this.value.toLowerCase();
+const filteredRows = Array.from(rows).filter(row => {
+    const name = row.querySelector('td[data-label="Nom"]').textContent.toLowerCase();
+    const email = row.querySelector('td[data-label="Email"]').textContent.toLowerCase();
+    const phone = row.querySelector('td[data-label="Téléphone"]').textContent.toLowerCase();
+    const address = row.querySelector('td[data-label="Adresse"]').textContent.toLowerCase();
+    
+    // Vérifier si le logo existe (recherche par "logo" ou "image")
+    const logoCell = row.querySelector('td[data-label="Logo"]');
+    const hasLogo = logoCell && !logoCell.textContent.includes('N/A');
+    const logoMatch = searchValue.includes('logo') || searchValue.includes('image');
+    
+    return name.includes(searchValue) || 
+           email.includes(searchValue) || 
+           phone.includes(searchValue) || 
+           address.includes(searchValue) ||
+           (logoMatch && hasLogo);
+});
+
+            // Reset pagination
+            currentPage = 1;
+            rows.forEach(row => row.style.display = 'none');
+            const collapsibleRows = supplierTable.querySelectorAll('tr.collapse');
+            collapsibleRows.forEach(row => row.style.display = 'none');
+
+            // Show filtered rows
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = Math.min(start + rowsPerPage, filteredRows.length);
+            for (let i = start; i < end; i++) {
+                filteredRows[i].style.display = '';
+                const collapsibleRow = supplierTable.querySelector(`#details-${filteredRows[i].dataset.supplierId}`);
+                if (collapsibleRow && collapsibleRow.classList.contains('show')) {
+                    collapsibleRow.style.display = '';
+                }
+            }
+
+            // Update pagination for filtered results
+            const filteredTotalPages = Math.ceil(filteredRows.length / rowsPerPage);
+            paginationControls.innerHTML = '';
+
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `
+                <button class="page-link" id="prev-page" aria-label="Précédent">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">&laquo; Préc</span>
+                </button>
+            `;
+            paginationControls.appendChild(prevLi);
+
+            // Page numbers
+            for (let i = 1; i <= filteredTotalPages; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageLi.innerHTML = `<span class="page-link">${i}</span>`;
+                pageLi.addEventListener('click', () => {
+                    currentPage = i;
+                    const start = (currentPage - 1) * rowsPerPage;
+                    const end = Math.min(start + rowsPerPage, filteredRows.length);
+                    rows.forEach(row => row.style.display = 'none');
+                    collapsibleRows.forEach(row => row.style.display = 'none');
+                    for (let j = start; j < end; j++) {
+                        filteredRows[j].style.display = '';
+                        const collapsibleRow = supplierTable.querySelector(`#details-${filteredRows[j].dataset.supplierId}`);
+                        if (collapsibleRow && collapsibleRow.classList.contains('show')) {
+                            collapsibleRow.style.display = '';
+                        }
+                    }
+                    updatePagination();
+                });
+                paginationControls.appendChild(pageLi);
+            }
+
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === filteredTotalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `
+                <button class="page-link" id="next-page" aria-label="Suivant">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </button>
+            `;
+            paginationControls.appendChild(nextLi);
+
+            // Add event listeners for prev/next buttons
+            document.getElementById('prev-page').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    const start = (currentPage - 1) * rowsPerPage;
+                    const end = Math.min(start + rowsPerPage, filteredRows.length);
+                    rows.forEach(row => row.style.display = 'none');
+                    collapsibleRows.forEach(row => row.style.display = 'none');
+                    for (let j = start; j < end; j++) {
+                        filteredRows[j].style.display = '';
+                        const collapsibleRow = supplierTable.querySelector(`#details-${filteredRows[j].dataset.supplierId}`);
+                        if (collapsibleRow && collapsibleRow.classList.contains('show')) {
+                            collapsibleRow.style.display = '';
+                        }
+                    }
+                    updatePagination();
+                }
+            });
+            document.getElementById('next-page').addEventListener('click', () => {
+                if (currentPage < filteredTotalPages) {
+                    currentPage++;
+                    const start = (currentPage - 1) * rowsPerPage;
+                    const end = Math.min(start + rowsPerPage, filteredRows.length);
+                    rows.forEach(row => row.style.display = 'none');
+                    collapsibleRows.forEach(row => row.style.display = 'none');
+                    for (let j = start; j < end; j++) {
+                        filteredRows[j].style.display = '';
+                        const collapsibleRow = supplierTable.querySelector(`#details-${filteredRows[j].dataset.supplierId}`);
+                        if (collapsibleRow && collapsibleRow.classList.contains('show')) {
+                            collapsibleRow.style.display = '';
+                        }
+                    }
+                    updatePagination();
+                }
+            });
+
+            // Show/hide pagination based on filtered rows
+            if (filteredRows.length > rowsPerPage) {
+                paginationNav.classList.remove('pagination-hidden');
+            } else {
+                paginationNav.classList.add('pagination-hidden');
+            }
+        });
+
+        // Handle scroll to form
+        document.getElementById('scrollToForm').addEventListener('click', function() {
+            const formElement = document.getElementById('formulaire-fournisseur');
+            if (formElement) {
+                formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                window.location.href = "{% url 'supplier_list' %}#formulaire-fournisseur";
+            }
+        });
+
+        // Handle details button click to fetch and display order history
+        document.querySelectorAll('.btn-details').forEach(button => {
+            button.addEventListener('click', function() {
+                const supplierId = this.getAttribute('data-id');
+                document.querySelector('.btn-print').setAttribute('data-id', supplierId);
+                fetch(`/purchases/suppliers/${supplierId}/order-history/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('totalOrders').textContent = data.total_orders;
+                            document.getElementById('turnover').textContent = `${data.turnover.toFixed(2)} MAD`;
+                            const ctx = document.getElementById('ordersByStateChart').getContext('2d');
+                            if (window.ordersChart) {
+                                window.ordersChart.destroy();
+                            }
+                            window.ordersChart = new Chart(ctx, {
+                                type: 'bar',
+                                data: {
+                                    labels: data.chart_data.labels,
+                                    datasets: [{
+                                        label: 'Nombre de commandes par état',
+                                        data: data.chart_data.data,
+                                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            ticks: {
+                                                stepSize: 1
+                                            }
+                                        }
+                                    },
+                                    plugins: {
+                                        legend: {
+                                            display: false
+                                        }
+                                    }
+                                }
+                            });
+
+                            const tableBody = document.getElementById('orderHistoryTable');
+                            tableBody.innerHTML = '';
+                            data.orders.forEach(order => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${order.name}</td>
+                                    <td>${order.date_order}</td>
+                                    <td>${order.amount_total.toFixed(2)}</td>
+                                    <td>${order.state}</td>
+                                    <td>MAD</td>
+                                `;
+                                tableBody.appendChild(row);
+                            });
+
+                            document.getElementById('orderHistoryModalLabel').textContent = `Historique des commandes`;
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur',
+                                text: data.error || 'Impossible de charger l\'historique des commandes.',
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            text: 'Une erreur s\'est produite lors du chargement des données.',
+                        });
+                        console.error('Error:', error);
+                    });
+            });
+        });
+
+        // Handle delete button click with SweetAlert confirmation
+        document.querySelectorAll('.btn-delete').forEach(button => {
+            button.addEventListener('click', function() {
+                const supplierId = this.getAttribute('data-id');
+                Swal.fire({
+                    title: 'Êtes-vous sûr ?',
+                    text: 'Voulez-vous vraiment supprimer ce fournisseur ? Cette action est irréversible.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Oui, supprimer',
+                    cancelButtonText: 'Annuler'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch(`/purchases/suppliers/${supplierId}/delete/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': '{{ csrf_token }}',
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Supprimé !',
+                                    text: 'Le fournisseur a été supprimé avec succès.',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    window.location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Erreur',
+                                    text: data.error || 'Impossible de supprimer le fournisseur.'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur',
+                                text: 'Une erreur s\'est produite lors de la suppression.'
+                            });
+                            console.error('Error:', error);
+                        });
+                    }
+                });
+            });
+        });
+
+        // Handle print button click to download PDF
+        document.querySelector('.btn-print').addEventListener('click', function() {
+            const supplierId = this.getAttribute('data-id');
+            window.location.href = `/purchases/suppliers/${supplierId}/order-history/pdf/`;
+        });
+    });
+  </script>
+</body>
+</html>

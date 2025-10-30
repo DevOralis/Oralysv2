@@ -1,0 +1,63 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    
+    <div class="menu-items">
+     
+
+      <a href="{% url 'recruitment_home' %}" class="menu-item {% if request.resolver_match.url_name == 'recruitment_home' %}active{% endif %}">
+          <i class="fas fa-clipboard-list"></i>
+          <span class="menu-text">Offres d'emploi</span>
+      </a>
+
+      <a href="{% url 'recruitment_candidates' %}" class="menu-item {% if request.resolver_match.url_name == 'recruitment_candidates' %}active{% endif %}">
+        <i class="fas fa-users"></i>
+        <span class="menu-text">Candidats</span>
+      </a>
+
+      <a href="{% url 'recruitment_applications' %}" class="menu-item {% if request.resolver_match.url_name == 'recruitment_applications' %}active{% endif %}">
+        <i class="fas fa-file-alt"></i>
+        <span class="menu-text">Candidatures</span>
+      </a>
+
+      <a href="{% url 'recruitment_interviews' %}" class="menu-item {% if request.resolver_match.url_name == 'recruitment_interviews' %}active{% endif %}">
+        <i class="fas fa-handshake"></i>
+        <span class="menu-text">Entretiens</span>
+      </a>
+
+      <div class="sub-menu">
+        <a href="{% url 'recruitment_pointage' %}" class="menu-item {% if request.resolver_match.url_name == 'recruitment_pointage' %}active{% endif %}">
+          <i class="fas fa-clipboard-list"></i>
+          <span class="menu-text">Pointage</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'recruitment_pointage' %}"><i class="fas fa-list"></i>Importation</a></li>
+          <li><a href="{% url 'recruitment_suivi' %}"><i class="fas fa-chart-line"></i>Suivi</a></li>
+        </ul>
+      </div>
+
+      <a href="{% url 'recruitment_evaluation' %}" class="menu-item {% if request.resolver_match.url_name == 'recruitment_evaluation' %}active{% endif %}">
+        <i class="fas fa-star"></i>
+        <span class="menu-text">Évaluation</span>
+      </a>
+
+      <a href="{% url 'recruitment_statistics' %}" class="menu-item {% if request.resolver_match.url_name == 'recruitment_statistics' %}active{% endif %}">
+        <i class="fas fa-chart-bar"></i>
+        <span class="menu-text">Statistiques</span>
+      </a>
+
+
+    </div>
+  </nav>
+</div>

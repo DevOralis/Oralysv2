@@ -1,0 +1,60 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    
+    <div class="menu-items">
+      <a href="{% url 'maintenance:Accueil' %}" class="menu-item">
+        <i class="fas fa-home"></i>
+        <span class="menu-text">Accueil</span>
+      </a>
+
+      <a href="{% url 'maintenance:convention_list' %}" class="menu-item {% if 'convention_' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="fas fa-file-contract"></i>
+          <span class="menu-text"> Convention</span>
+      </a>
+
+      <a href="{% url 'maintenance:visiteur_list' %}" class="menu-item {% if 'visiteur_list' in request.resolver_match.url_name %}active{% endif %}">
+
+        <i class="fas fa-user-tie"></i>
+        <span class="menu-text">Visiteur</span>
+      </a>
+
+      <a href="{% url 'maintenance:incident_list' %}" class="menu-item {% if 'incident_list' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fas fa-tools"></i>
+        <span class="menu-text">Incident</span>
+        {% if nb_incidents_ouverts > 0 %}
+                <span class="badge bg-danger ms-2">{{ nb_incidents_ouverts }}</span>
+                {% endif %}
+      </a>
+
+       <a href="{% url 'maintenance:intervention_list' %}" class="menu-item {% if 'intervention_list' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fas fa-tools"></i>
+        <span class="menu-text">Intervention</span>
+         {% if nb_interventions_ouvertes > 0 %}
+                <span class="badge bg-warning ms-2">{{ nb_interventions_ouvertes }}</span>
+                {% endif %}
+      </a>
+
+      <a href="{% url 'maintenance:statistiques' %}" class="menu-item {% if 'statistiques' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fas fa-chart-bar"></i>
+        <span class="menu-text">Statistiques</span>
+      </a>
+
+      <a href="{% url 'maintenance:configuration' %}" class="menu-item {% if 'configuration' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fas fa-cog"></i>
+        <span class="menu-text">Configuration</span>
+      </a>
+
+    </div>
+  </nav>
+</div>

@@ -1,0 +1,1613 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Oralys - Configuration{% endblock %}
+{% block menu %}
+  {% include 'hr_menu.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+    <link rel="stylesheet" href="{% static 'css/hr-capitalize.css' %}">
+    <!-- Librairies (une seule fois chacune) -->
+    <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+
+    <script>
+document.addEventListener('DOMContentLoaded', function () {
+  // 1) Sélecteur fiable du formulaire (s’il change d’URL, ça marche quand même)
+  const form = document.querySelector('form[method="POST"][enctype="multipart/form-data"]') || document.querySelector('form');
+  if (!form) return;
+
+  // 2) Basculer required uniquement sur l’onglet actif
+  const tabButtons = document.querySelectorAll('#employeeTabs [data-bs-target]');
+  const panes = document.querySelectorAll('.tab-pane');
+
+  function setRequiredInPane(pane, enable) {
+    if (!pane) return;
+    pane.querySelectorAll('[required]').forEach(el => {
+      if (enable) {
+        if (el.dataset._wasRequired === '1') el.required = true;
+      } else {
+        if (el.required) el.dataset._wasRequired = '1';
+        el.required = false;
+      }
+    });
+  }
+
+  panes.forEach(p => setRequiredInPane(p, p.classList.contains('active')));
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('shown.bs.tab', (e) => {
+      const targetSel = e.target.getAttribute('data-bs-target');
+      panes.forEach(p => setRequiredInPane(p, p.id === targetSel.slice(1)));
+    });
+  });
+
+  // 3) Contrat: end_date requis uniquement si CDD
+  function syncEndDateRequired() {
+    const typeSel = document.getElementById('contract-type');
+    const endDate = document.getElementById('end-date');
+    if (!typeSel || !endDate) return;
+    const label = (typeSel.options[typeSel.selectedIndex]?.text || '').toLowerCase();
+    const isCDD = label.includes('cdd');
+    endDate.disabled = !isCDD;
+    endDate.required = isCDD;
+    if (!isCDD) endDate.value = '';
+  }
+  syncEndDateRequired();
+  document.getElementById('contract-type')?.addEventListener('change', syncEndDateRequired);
+
+  // 4) Soumission: ouvrir l’onglet fautif et afficher le message
+  form.addEventListener('submit', function (ev) {
+    // Laisse HTML5 valider l’onglet actif; s’il y a un invalide ailleurs, on bascule dessus
+    if (!form.checkValidity()) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const firstInvalid = form.querySelector(':invalid');
+      if (firstInvalid) {
+        const pane = firstInvalid.closest('.tab-pane');
+        if (pane && !pane.classList.contains('active')) {
+          const trigger = document.querySelector(`[data-bs-target="#${pane.id}"]`);
+          if (trigger) new bootstrap.Tab(trigger).show();
+          setTimeout(() => firstInvalid.reportValidity(), 50);
+        } else {
+          firstInvalid.reportValidity();
+        }
+      }
+      return;
+    }
+
+    // Renumérote proprement les compétences avant l’envoi
+    form.querySelectorAll('.skill-input').forEach((input, i) => {
+      input.name = `skills_${i}`;
+      input.dataset.index = i;
+    });
+
+    // Submit normal si tout est OK
+  }, false);
+});
+</script>
+
+
+    <script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.querySelector('form[action*="{% url "add_employee" %}"], form[action*="add_employee"]') || document.querySelector('form');
+  if (!form) return;
+
+  const tabButtons = document.querySelectorAll('#employeeTabs [data-bs-target]');
+  const panes = document.querySelectorAll('.tab-pane');
+
+  // Helper: activer/désactiver required dans un pane
+  function setRequiredInPane(pane, enable) {
+    if (!pane) return;
+    pane.querySelectorAll('[required]').forEach(el => {
+      if (enable) {
+        if (el.dataset._wasRequired === '1') { el.required = true; }
+      } else {
+        if (el.required) { el.dataset._wasRequired = '1'; }
+        el.required = false;
+      }
+    });
+  }
+
+  // Au chargement : garder required UNIQUEMENT sur l’onglet actif
+  panes.forEach(p => setRequiredInPane(p, p.classList.contains('active')));
+  
+  // À chaque changement d’onglet, basculer les required
+  tabButtons.forEach(btn => {
+    btn.addEventListener('shown.bs.tab', (e) => {
+      const targetSel = e.target.getAttribute('data-bs-target');
+      panes.forEach(p => setRequiredInPane(p, p.id === targetSel.replace('#','')));
+    });
+  });
+
+  // Contrat: si pas CDD => end_date ignorée
+  function syncEndDateRequired() {
+    const typeSel = document.getElementById('contract-type');
+    const endDate = document.getElementById('end-date');
+    if (!typeSel || !endDate) return;
+    const label = (typeSel.options[typeSel.selectedIndex]?.text || '').toLowerCase();
+    const isCDD = label.includes('cdd');
+    endDate.disabled = !isCDD;
+    endDate.required = isCDD; // requis uniquement pour CDD
+    if (!isCDD) endDate.value = '';
+  }
+  syncEndDateRequired();
+  document.getElementById('contract-type')?.addEventListener('change', syncEndDateRequired);
+
+  // Soumission: si invalide, ouvrir le bon onglet et afficher l’erreur
+  form.addEventListener('submit', function (ev) {
+    // Laisser le navigateur valider ce qui est visible
+    if (!form.checkValidity()) {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      // Trouver le 1er champ invalide et ouvrir son onglet
+      const firstInvalid = form.querySelector(':invalid');
+      if (firstInvalid) {
+        const pane = firstInvalid.closest('.tab-pane');
+        if (pane && !pane.classList.contains('active')) {
+          const trigger = document.querySelector(`[data-bs-target="#${pane.id}"]`);
+          if (trigger) new bootstrap.Tab(trigger).show();
+          // Laisser un petit délai pour que l'onglet s'affiche puis montrer le message natif
+          setTimeout(() => firstInvalid.reportValidity(), 50);
+        } else {
+          firstInvalid.reportValidity();
+        }
+      }
+      return;
+    }
+
+    // Renumérotation propre des compétences AVANT l'envoi
+    form.querySelectorAll('.skill-input').forEach((input, i) => {
+      input.name = `skills_${i}`;
+      input.dataset.index = i;
+    });
+
+    // Si tu as des champs désactivés qu’il faut envoyer, réactive-les ici si nécessaire.
+    // (Par défaut: disabled => non envoyé, ce qui est souhaité pour end_date hors CDD)
+
+    // Laisser partir le submit normal
+  }, false);
+});
+</script>
+
+    <script src="{% static 'vendor/js/chart.js' %}"></script>
+    <script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+
+    <!-- JS projet -->
+    <script src="{% static 'js/hr.js' %}"></script>
+    <script src="{% static 'js/employee-form.js' %}"></script>
+
+    <script>
+/* ============================
+   0) Helpers & garde-fous
+============================ */
+window.getCookie = window.getCookie || function(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+};
+    </script>
+
+    <script>
+/* ==========================================================
+   1) ENFANTS — init fiable + IDs cohérents (nombre-enfants)
+========================================================== */
+(function() {
+  // Sécuriser le JSON
+  try {
+    window.existingChildren = JSON.parse('{{ children_json|escapejs }}' || '[]');
+  } catch(e) {
+    console.error('children_json parse error:', e);
+    window.existingChildren = [];
+  }
+
+  // Génération champs enfants
+  window.updateChildrenFields = function(count) {
+    count = parseInt(count) || 0;
+    const container = document.getElementById('enfants-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const c = (Array.isArray(window.existingChildren) ? window.existingChildren[i] : null) || {};
+      const html = `
+        <div class="col-md-4">
+          <label class="form-label">Nom de l'enfant</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-child"></i></span>
+            <input type="text" class="form-control" name="enfant_nom_${i}" placeholder="Nom de l'enfant" value="${c.name ?? ''}" required>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Genre</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-venus-mars"></i></span>
+            <select class="form-control" name="enfant_genre_${i}" required>
+              <option value="M" ${c.gender==='M'?'selected':''}>Masculin</option>
+              <option value="F" ${c.gender==='F'?'selected':''}>Féminin</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Date de naissance</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-birthday-cake"></i></span>
+            <input type="date" class="form-control" name="enfant_date_naissance_${i}" value="${c.birth_date || c.date_naissance || ''}" required>
+          </div>
+        </div>
+        <div class="col-md-12 mb-3">
+          <label class="form-label me-3">Scolarisé</label>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="enfant_is_scolarise_${i}" id="enfant_is_scolarise_oui_${i}" value="1" ${(c.is_scolarise===true||c.is_scolarise==1||c.is_scolarise=='1')?'checked':''}>
+            <label class="form-check-label" for="enfant_is_scolarise_oui_${i}">Oui</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="enfant_is_scolarise_${i}" id="enfant_is_scolarise_non_${i}" value="0" ${!(c.is_scolarise===true||c.is_scolarise==1||c.is_scolarise=='1')?'checked':''}>
+            <label class="form-check-label" for="enfant_is_scolarise_non_${i}">Non</label>
+          </div>
+        </div>
+        <hr>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+    }
+  };
+
+  window.addEventListener('load', function() {
+    const input = document.getElementById('nombre-enfants');
+    const initial = parseInt(input?.value) || (Array.isArray(window.existingChildren) ? window.existingChildren.length : 0) || 0;
+    if (input) input.value = initial;
+    window.updateChildrenFields(initial);
+    if (input) {
+      input.addEventListener('input', e => window.updateChildrenFields(e.target.value));
+      input.addEventListener('change', e => window.updateChildrenFields(e.target.value));
+    }
+  });
+})();
+    </script>
+
+    <script>
+/* ======================================================
+   2) Navigation d’onglets (Bootstrap.Tab)
+====================================================== */
+document.addEventListener('DOMContentLoaded', function() {
+  // Suivant
+  document.querySelectorAll('.next-tab').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const targetId = this.dataset.next;
+      const trigger = document.querySelector(`[data-bs-target="#${targetId}"]`);
+      if (trigger) new bootstrap.Tab(trigger).show();
+    });
+  });
+
+  // Précédent
+  document.querySelectorAll('.prev-tab').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const targetId = this.dataset.prev;
+      const trigger = document.querySelector(`[data-bs-target="#${targetId}"]`);
+      if (trigger) new bootstrap.Tab(trigger).show();
+    });
+  });
+});
+    </script>
+
+    <script>
+/* ======================================================
+   3) SweetAlert pour messages Django (unique)
+====================================================== */
+document.addEventListener('DOMContentLoaded', function() {
+  {% if messages %}
+    {% for message in messages %}
+      Swal.fire({
+        icon: '{% if message.tags == "success" %}success{% elif message.tags == "error" %}error{% else %}info{% endif %}',
+        title: '{% if message.tags == "success" %}Succès!{% elif message.tags == "error" %}Erreur{% else %}Information{% endif %}',
+        text: '{{ message|escapejs }}',
+        showConfirmButton: false,
+        timer: 2000
+      });
+    {% endfor %}
+  {% endif %}
+
+  // Succès d’ajout (via querystring ?success=add)
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('success') === 'add') {
+    Swal.fire({ icon: 'success', title: 'Succès', text: 'Employé ajouté avec succès', showConfirmButton: false, timer: 2000 });
+    params.delete('success');
+    window.history.replaceState({}, document.title, window.location.pathname + (params.toString() ? '?' + params.toString() : '') + window.location.hash);
+  }
+});
+    </script>
+
+    <script>
+/* ======================================================
+   4) Position / Spécialité / Responsable
+====================================================== */
+document.addEventListener('DOMContentLoaded', function () {
+  function toggleSpecialityField() {
+    const positionSelect = document.getElementById('position-select');
+    const specialityField = document.getElementById('speciality-field');
+    if (!positionSelect || !specialityField) return;
+
+    const selectedText = (positionSelect.options[positionSelect.selectedIndex]?.text || '').toLowerCase();
+    if (selectedText.includes('médecin') || selectedText.includes('medecin') || selectedText.includes('doctor')) {
+      specialityField.style.display = '';
+      document.getElementById('doctor-fields')?.style && (document.getElementById('doctor-fields').style.display = '');
+    } else {
+      specialityField.style.display = 'none';
+      specialityField.querySelector('select').value = '';
+      document.getElementById('doctor-fields')?.style && (document.getElementById('doctor-fields').style.display = 'none');
+    }
+  }
+
+  window.checkMedicalPosition = function() { toggleSpecialityField(); }
+
+  const positionSelect = document.getElementById('position-select');
+  if (positionSelect) {
+    positionSelect.addEventListener('change', toggleSpecialityField);
+    toggleSpecialityField();
+  }
+
+  // Filtrer responsables par département
+  function filterResponsiblesByDepartment() {
+    const departmentSelect = document.querySelector('select[name="department"]');
+    const responsibleSelect = document.getElementById('responsible-select');
+    if (!departmentSelect || !responsibleSelect) return;
+
+    const selectedDepartmentId = departmentSelect.value;
+    const options = responsibleSelect.querySelectorAll('option');
+
+    responsibleSelect.value = '';
+    options.forEach(function(option) {
+      if (option.value === '') { option.style.display = ''; return; }
+      const optionDepartmentId = option.getAttribute('data-department');
+      option.style.display = (!selectedDepartmentId || optionDepartmentId === selectedDepartmentId) ? '' : 'none';
+    });
+  }
+
+  const departmentSelect = document.querySelector('select[name="department"]');
+  if (departmentSelect) {
+    departmentSelect.addEventListener('change', filterResponsiblesByDepartment);
+    filterResponsiblesByDepartment();
+  }
+
+  // Afficher/cacher le select responsable hiérarchique
+  window.toggleResponsibleSelect = function() {
+    const isSupervisor = document.querySelector('input[name="is_supervisor"]:checked')?.value === '1';
+    const cont = document.getElementById('responsible-select-container');
+    if (cont) cont.style.display = isSupervisor ? 'none' : '';
+  }
+  toggleResponsibleSelect();
+});
+    </script>
+
+    <script>
+/* ======================================================
+   5) Suppression employé (SweetAlert + fetch)
+====================================================== */
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.delete-employee-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const employeeId = btn.getAttribute('data-id');
+      const employeeName = btn.getAttribute('data-name');
+      Swal.fire({
+        title: 'Supprimer l\'employé ?',
+        text: `Voulez-vous vraiment supprimer ${employeeName} ?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Non'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch('/hr/employees/delete/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `employee_id=${encodeURIComponent(employeeId)}`
+          })
+          .then(r => r.json())
+          .then(data => {
+            if (data.status === 'success') {
+              Swal.fire({ icon:'success', title:'Succès', text: data.message || 'Employé supprimé.', showConfirmButton:false, timer:1500 })
+              .then(() => window.location.reload());
+            } else {
+              Swal.fire({ icon:'error', title:'Erreur', text: data.message || 'Une erreur est survenue lors de la suppression.' });
+            }
+          })
+          .catch(() => {
+            Swal.fire({ icon:'error', title:'Erreur', text:'Une erreur est survenue lors de la communication avec le serveur.' });
+          });
+        }
+      });
+    });
+  });
+});
+    </script>
+
+    <script>
+/* ======================================================
+   6) Compétences — add/remove + renumérotation
+====================================================== */
+document.addEventListener('DOMContentLoaded', function() {
+  const addSkillBtn = document.getElementById('add-skill');
+  const skillsList = document.getElementById('skills-list');
+  const employeeForm = document.querySelector('form[action*="{% url 'add_employee' %}"], form[action*="add_employee"]') || document.querySelector('form');
+
+  function getNextSkillIndex() {
+    const inputs = document.querySelectorAll('.skill-input');
+    let maxIndex = -1;
+    inputs.forEach(input => {
+      const idx = parseInt(input.dataset.index);
+      if (!isNaN(idx) && idx > maxIndex) maxIndex = idx;
+    });
+    return maxIndex + 1;
+  }
+
+  function addNewSkill(value = '') {
+    const nextIndex = getNextSkillIndex();
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+      <span class="input-group-text"><i class="fas fa-star"></i></span>
+      <input type="text" class="form-control skill-input" name="skills_${nextIndex}" placeholder="Compétence" value="${value}" data-index="${nextIndex}">
+      <button type="button" class="btn btn-outline-danger remove-skill"><i class="fas fa-times"></i></button>
+    `;
+    skillsList.appendChild(div);
+    div.querySelector('.remove-skill').addEventListener('click', () => div.remove());
+  }
+
+  if (addSkillBtn) addSkillBtn.addEventListener('click', () => addNewSkill());
+
+  document.querySelectorAll('.remove-skill').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const parent = this.closest('.input-group');
+      if (parent) parent.remove();
+    });
+  });
+
+  if (employeeForm) {
+    employeeForm.addEventListener('submit', function() {
+      const inputs = document.querySelectorAll('.skill-input');
+      inputs.forEach((input, i) => { input.name = `skills_${i}`; input.dataset.index = i; });
+    });
+  }
+});
+    </script>
+
+    <script>
+/* ======================================================
+   7) Tableau employés — tri robuste + bouton export/import
+====================================================== */
+document.addEventListener('DOMContentLoaded', function() {
+  const table = document.getElementById('tableEmploye');
+  if (!table) return;
+
+  const tbody = table.querySelector('tbody');
+  const sortableHeaders = table.querySelectorAll('th.sortable');
+
+  let currentSort = { key: null, direction: 'asc' };
+
+  function getColumnIndexByHeader(headerEl) {
+    return headerEl.cellIndex;
+  }
+
+  function normalizeNumberFR(text) {
+    if (text == null) return 0;
+    return parseFloat(text.replace(/\s/g, '').replace(',', '.')) || 0;
+  }
+
+  function sortTable(headerEl, sortKey, direction) {
+    const colIndex = getColumnIndexByHeader(headerEl);
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.sort((a, b) => {
+      let aValue = a.cells[colIndex]?.textContent.trim() || '';
+      let bValue = b.cells[colIndex]?.textContent.trim() || '';
+
+      switch (sortKey) {
+        case 'salaire':
+          aValue = normalizeNumberFR(aValue);
+          bValue = normalizeNumberFR(bValue);
+          break;
+        case 'enfants':
+          aValue = parseInt(aValue) || 0;
+          bValue = parseInt(bValue) || 0;
+          break;
+        default:
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+      }
+
+      const cmp = (aValue > bValue) - (aValue < bValue);
+      return direction === 'asc' ? cmp : -cmp;
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+  }
+
+  function updateSortIcons(activeHeader, direction) {
+    sortableHeaders.forEach(h => {
+      const icon = h.querySelector('.sort-icon');
+      if (icon) icon.className = 'fas fa-sort sort-icon text-muted';
+    });
+    const icon = activeHeader.querySelector('.sort-icon');
+    if (icon) icon.className = direction === 'asc'
+      ? 'fas fa-sort-up sort-icon text-primary'
+      : 'fas fa-sort-down sort-icon text-primary';
+  }
+
+  sortableHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+      const sortKey = this.dataset.sort;
+      let direction = 'asc';
+      if (currentSort.key === sortKey && currentSort.direction === 'asc') direction = 'desc';
+      sortTable(this, sortKey, direction);
+      updateSortIcons(this, direction);
+      currentSort = { key: sortKey, direction };
+    });
+
+    header.addEventListener('mouseenter', function() {
+      this.style.backgroundColor = '#f8f9fa';
+    });
+    header.addEventListener('mouseleave', function() {
+      this.style.backgroundColor = '';
+    });
+  });
+
+  // Export/Import bouton dynamique
+  const exportImportBtn = document.getElementById('export-import-btn');
+  const exportImportIcon = document.getElementById('export-import-icon');
+  const exportImportText = document.getElementById('export-import-text');
+  const selectAllCheckbox = document.getElementById('selectAll');
+
+  function updateExportImportButton() {
+    const checked = document.querySelectorAll('.row-check:checked').length > 0;
+    if (!exportImportBtn || !exportImportIcon || !exportImportText) return;
+    if (checked) {
+      exportImportIcon.className = 'fas fa-file-export';
+      exportImportText.textContent = 'Exporter';
+    } else {
+      exportImportIcon.className = 'fas fa-file-import';
+      exportImportText.textContent = 'Importer';
+    }
+  }
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
+      updateExportImportButton();
+    });
+  }
+
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('row-check')) {
+      updateExportImportButton();
+      const all = document.querySelectorAll('.row-check');
+      const checked = document.querySelectorAll('.row-check:checked');
+      if (selectAllCheckbox) {
+        selectAllCheckbox.checked = all.length === checked.length;
+        selectAllCheckbox.indeterminate = checked.length > 0 && checked.length < all.length;
+      }
+    }
+  });
+
+  updateExportImportButton();
+});
+    </script>
+
+    <script>
+/* ======================================================
+   8) Contract Type (CDD => end-date activé)
+====================================================== */
+function checkContractType() {
+  const select = document.getElementById('contract-type');
+  const endDate = document.getElementById('end-date');
+  if (!select || !endDate) return;
+
+  const label = (select.options[select.selectedIndex]?.text || '').toLowerCase();
+  const isCDD = label.includes('cdd');
+  endDate.disabled = !isCDD;
+  if (!isCDD) endDate.value = '';
+}
+document.addEventListener('DOMContentLoaded', checkContractType);
+    </script>
+
+    <script>
+/* ======================================================
+   9) Visites médicales — init + numérotation stable
+====================================================== */
+(function() {
+  // Données des visites médicales existantes
+  try {
+    window.existingMedicalVisits = JSON.parse('{{ medical_visits_json|escapejs }}' || '[]');
+  } catch (e) {
+    console.error('Error parsing medical visits JSON:', e);
+    window.existingMedicalVisits = [];
+  }
+  // Données des médecins
+  try {
+    window.medecins = JSON.parse('{{ medecins_json|escapejs }}' || '[]');
+  } catch (e) {
+    console.error('Error parsing doctors JSON:', e);
+    window.medecins = [];
+  }
+  if (!Array.isArray(window.existingMedicalVisits)) window.existingMedicalVisits = [];
+  if (!Array.isArray(window.medecins)) window.medecins = [];
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const addMedicalVisitBtn = document.getElementById('add-medical-visit');
+    const medicalVisitsContainer = document.getElementById('medical-visits-container');
+    const noVisitsMessage = document.getElementById('no-visits-message');
+
+    function updateMedicalVisitCount() {
+      const count = medicalVisitsContainer.querySelectorAll('.medical-visit-card').length;
+      const countInput = document.getElementById('medical-visits-count');
+      if (countInput) countInput.value = count;
+      if (noVisitsMessage) noVisitsMessage.style.display = count > 0 ? 'none' : 'block';
+    }
+
+    function renumberCards() {
+      const cards = Array.from(medicalVisitsContainer.querySelectorAll('.medical-visit-card'));
+      cards.forEach((card, index) => {
+        card.dataset.visitId = index;
+        const numEl = card.querySelector('.visit-number');
+        if (numEl) numEl.textContent = index + 1;
+
+        const doctorSelect = card.querySelector('select[name^="medical_visit_doctor_"]');
+        const dateInput = card.querySelector('input[name^="medical_visit_date_"]');
+        const fileInput = card.querySelector('input[name^="medical_visit_result_"]');
+
+        if (doctorSelect) { doctorSelect.name = `medical_visit_doctor_${index}`; doctorSelect.id = `medical_visit_doctor_${index}`; }
+        if (dateInput) { dateInput.name = `medical_visit_date_${index}`; dateInput.id = `medical_visit_date_${index}`; }
+        if (fileInput) { fileInput.name = `medical_visit_result_${index}`; fileInput.id = `medical_visit_result_${index}`; }
+      });
+      updateMedicalVisitCount();
+    }
+
+    function buildDoctorSelectOptions(selectEl, selectedName = '') {
+      if (!selectEl) return;
+      selectEl.innerHTML = '<option value="">Sélectionnez un médecin</option>';
+      window.medecins.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.full_name;
+        opt.textContent = m.full_name;
+        if (m.full_name === selectedName) opt.selected = true;
+        selectEl.appendChild(opt);
+      });
+    }
+
+    function addMedicalVisit(doctorName = '', visitDate = '', isExisting = false, visitId = null, resultFile = null) {
+      const visitNumber = medicalVisitsContainer.querySelectorAll('.medical-visit-card').length;
+      const showDeleteButton = !isExisting;
+
+      const card = document.createElement('div');
+      card.className = 'card medical-visit-card mb-3';
+      card.dataset.isExisting = isExisting ? 'true' : 'false';
+      if (visitId) card.dataset.visitDatabaseId = visitId;
+      card.innerHTML = `
+        <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #1e90ff;">
+          <h6 class="mb-0"><i class="fas fa-user-md me-2"></i>Visite médicale #<span class="visit-number">${visitNumber + 1}</span></h6>
+          ${showDeleteButton ? '<button type="button" class="btn-close btn-close-white remove-medical-visit ms-2" aria-label="Close"></button>' : ''}
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label" for="medical_visit_doctor_${visitNumber}">Médecin</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-user-md"></i></span>
+                <select class="form-select" id="medical_visit_doctor_${visitNumber}" name="medical_visit_doctor_${visitNumber}"></select>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label" for="medical_visit_date_${visitNumber}">Date de visite</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                <input type="date" class="form-control" id="medical_visit_date_${visitNumber}" name="medical_visit_date_${visitNumber}" value="${visitDate}">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="medical_visit_result_${visitNumber}">Résultat (PDF)</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-file-pdf"></i></span>
+              <input type="file" class="form-control" id="medical_visit_result_${visitNumber}" name="medical_visit_result_${visitNumber}" accept=".pdf">
+            </div>
+            ${isExisting && resultFile ? `
+              <div class="mt-2">
+                <a href="${resultFile}" target="_blank" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-eye me-1"></i>Voir le document
+                </a>
+              </div>` : ''}
+            ${visitId ? `<input type="hidden" name="medical_visit_id_${visitNumber}" value="${visitId}">` : ''}
+          </div>
+        </div>
+      `;
+      medicalVisitsContainer.appendChild(card);
+      buildDoctorSelectOptions(card.querySelector('select'), doctorName);
+      renumberCards();
+    }
+
+    function removeMedicalVisit(visitId) {
+      const card = medicalVisitsContainer.querySelector(`.medical-visit-card[data-visit-id="${visitId}"]`);
+      if (!card) return;
+      const isExisting = card.dataset.isExisting === 'true';
+      if (isExisting) {
+        const dbId = card.dataset.visitDatabaseId || visitId;
+        let hidden = card.querySelector(`input[name="medical_visit_delete_${dbId}"]`);
+        if (!hidden) {
+          hidden = document.createElement('input');
+          hidden.type = 'hidden';
+          hidden.name = `medical_visit_delete_${dbId}`;
+          hidden.value = 'true';
+          card.appendChild(hidden);
+        }
+        card.style.opacity = '0.6';
+        Array.from(card.querySelectorAll('select, input')).forEach(el => { el.disabled = true; });
+      } else {
+        card.remove();
+      }
+      renumberCards();
+      if (medicalVisitsContainer.querySelectorAll('.medical-visit-card').length === 0) {
+        addMedicalVisit();
+      }
+    }
+
+    if (addMedicalVisitBtn) addMedicalVisitBtn.addEventListener('click', () => addMedicalVisit());
+
+    // init : visites existantes ou carte vierge
+    if (window.existingMedicalVisits.length > 0) {
+      window.existingMedicalVisits.forEach(v => {
+        addMedicalVisit(v.doctor_name || '', v.visit_date || '', true, v.id || null, v.result_file || null);
+      });
+    } else {
+      addMedicalVisit();
+    }
+
+    medicalVisitsContainer.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-medical-visit') || e.target.closest('.remove-medical-visit')) {
+        const card = e.target.closest('.medical-visit-card');
+        if (!card) return;
+        removeMedicalVisit(card.dataset.visitId);
+      }
+    });
+  });
+})();
+    </script>
+{% endblock %}
+
+{% block content %}
+<div class="content hr-capitalize">
+  <!-- Employee List -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-user me-2"></i>
+      Liste des employés
+    </div>
+    <div class="card-body">
+      <!-- Search Bar Component -->
+      <form method="get" id="search-form">
+        <div class="row g-2 mb-3">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" id="searchEmploye" name="q" class="form-control border-primary" placeholder="Rechercher un employé..." value="">
+            </div>
+          </div>
+          <!-- Filtre département -->
+          <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+            <select class="form-select" id="filterDepartement" title="Filtrer par département">
+              <option value="">Tous les départements</option>
+              {% for department in departments %}
+              <option value="{{ department.name }}">{{ department.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn">
+                <i class="fas fa-file-import" id="export-import-icon"></i>
+                <span class="d-none d-lg-inline ms-1" id="export-import-text">Importer</span>
+              </button>
+              <a href="/hr/#new-employee" class="btn btn-primary w-100 text-nowrap px-2" id="add-new-employee-btn">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouvel employé</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Table -->
+      <div class="table-responsive">
+        <table class="table table-striped table-hover" id="tableEmploye">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th class="sortable" data-sort="nom" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Nom</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell sortable" data-sort="departement" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Département</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell sortable" data-sort="poste" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Poste</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell sortable" data-sort="contrat" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Contrat</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell sortable" data-sort="enfants" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Enfants</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell sortable" data-sort="salaire" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Salaire</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for employee in employees %}
+            <tr>
+              <td data-label="Sélection" class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td data-label="Nom">{{ employee.full_name }}</td>
+              <td data-label="Département" class="d-none d-md-table-cell">
+                <span class="badge bg-primary">{{ employee.department.name|default:"Non défini" }}</span>
+              </td>
+              <td data-label="Poste" class="d-none d-lg-table-cell">{{ employee.position.name|default:"Non défini" }}</td>
+              <td data-label="Contrat" class="d-none d-md-table-cell">
+                {% if employee.contracts.first %}
+                  <span class="badge bg-success">{{ employee.contracts.first.contract_type.name }}</span>
+                {% else %}
+                  <span class="badge bg-secondary">Aucun contrat</span>
+                {% endif %}
+              </td>
+              <td data-label="Enfants" class="d-none d-lg-table-cell text-center">
+                <span class="badge bg-info">{{ employee.children.count }}</span>
+              </td>
+              <td data-label="Salaire" class="d-none d-lg-table-cell text-end">
+                <span class="fw-bold text-success">{{ employee.base_salary|floatformat:0 }} DH</span>
+              </td>
+              <td data-label="Actions" class="actions-cell">
+                <div class="d-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-primary" title="Imprimer" onclick="window.print()">
+                    <i class="fas fa-print"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-info view-details-btn d-lg-none" title="Voir détails" data-bs-toggle="modal" data-bs-target="#employeeDetailsModal" data-employee-id="{{ employee.id }}">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <a href="?employee_id={{ employee.id }}" class="btn btn-sm btn-light border text-dark edit-employee-btn" title="Modifier">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                  <button type="button" class="btn btn-sm btn-light border text-danger delete-employee-btn" data-id="{{ employee.id }}" data-name="{{ employee.full_name }}" title="Supprimer">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="text-center">Aucun employé enregistré</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination (si besoin côté JS/serveur) -->
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap" id="employePagination">
+          <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Précédent" id="prevPageEmployee">
+              <i class="fas fa-chevron-left d-block d-sm-none"></i>
+              <span class="d-none d-sm-block">&laquo; Préc</span>
+            </a>
+          </li>
+          <!-- Numéros dynamiques -->
+          <li class="page-item">
+            <a class="page-link" href="#" aria-label="Suivant" id="nextPageEmployee">
+              <i class="fas fa-chevron-right d-block d-sm-none"></i>
+              <span class="d-none d-sm-block">Suiv &raquo;</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+
+  <!-- New Employee Form -->
+  <div class="card mb-4" id="new-employee">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-user-plus me-2"></i>
+      {% if employee %}Modifier l'employé{% else %}Nouvel employé{% endif %}
+    </div>
+    <div class="card-body">
+
+      <!-- Error Display -->
+      {% if error %}
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Erreur :</strong> {{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+      {% endif %}
+
+      <!-- Django Messages (non-success seulement, success via Swal) -->
+      {% if messages %}
+        {% for message in messages %}
+          {% if message.tags != 'success' %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+
+      <!-- Single form for all tabs -->
+      <form method="POST" enctype="multipart/form-data" action="{% url 'add_employee' %}">
+        {% csrf_token %}
+        <input type="hidden" name="db_employee_id" id="db_employee_id" value="{% if employee %}{{ employee.id }}{% endif %}">
+
+        <!-- Data store -->
+        <div id="employee-data"
+             data-doctor-agreement="{% if employee.doctor_agreement %}{{ employee.doctor_agreement.url }}{% endif %}"
+             data-temporary-agreement="{% if employee.temporary_agreement %}{{ employee.temporary_agreement.url }}{% endif %}"
+             style="display: none;"></div>
+
+        <ul class="nav nav-tabs flex-column flex-sm-row mb-3" id="employeeTabs" role="tablist">
+          <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+            <button class="nav-link active border-bottom-0" data-bs-toggle="tab" data-bs-target="#personal" type="button">Informations personnelles</button>
+          </li>
+          <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#professional" type="button">Informations professionnelles</button>
+          </li>
+          <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#contract" type="button">Contrat</button>
+          </li>
+          <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#salary" type="button">Salaire</button>
+          </li>
+          <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#medical" type="button">Visite médicale</button>
+          </li>
+          <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#skills" type="button">Compétences</button>
+          </li>
+          <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#career" type="button">Évolution de carrière</button>
+          </li>
+        </ul>
+
+        <div class="tab-content mt-3">
+          <!-- Personal Info -->
+          <div class="tab-pane fade show active" id="personal">
+            <div class="row">
+              <div class="col-md-3 text-center">
+                <label class="form-label">Photo</label>
+                <div class="input-group mb-2">
+                  <span class="input-group-text"><i class="fas fa-camera"></i></span>
+                  <input type="file" class="form-control" accept="image/*" id="photoInput" name="photo" />
+                </div>
+                <img id="photoPreview"
+                     src="{% if employee.photo %}{{ employee.photo.url }}{% else %}{% static 'images/user-photo.svg' %}{% endif %}"
+                     alt="Aperçu photo" class="img-thumbnail" style="width: 100%; max-width: 150px" />
+              </div>
+              <div class="col-md-9">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Identification de l'employé</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-id-badge"></i></span>
+                      <input type="text" class="form-control" name="employee_id" placeholder="Ex: ER4366" required
+                             value="{{ employee.employee_id|default:'' }}" />
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">CIN</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                      <!-- IMPORTANT: name= national_id pour DB -->
+                      <input type="text" class="form-control" name="national_id" placeholder="Ex: AB123456" required
+                             pattern="^[A-Z0-9]{8,20}$" title="Le N° CIN doit contenir 8 à 20 caractères alphanumériques en MAJUSCULES."
+                             value="{{ employee.national_id|default:'' }}" />
+                    </div>
+                  </div>
+                  <div class="col-md-12">
+                    <label class="form-label">Nom complet</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-user"></i></span>
+                      <input type="text" class="form-control" name="full_name" required
+                             value="{{ employee.full_name|default:'' }}" />
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Date de naissance</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                      <input type="date" class="form-control" name="date_of_birth" required
+                             value="{% if employee and employee.birth_date %}{{ employee.birth_date|date:'Y-m-d' }}{% endif %}" />
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Situation familiale</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-heart"></i></span>
+                      <select class="form-select" name="marital_status" required>
+                        <option value="">Sélectionner</option>
+                        <option value="S" {% if employee and employee.marital_status == 'S' %}selected{% endif %}>Célibataire</option>
+                        <option value="M" {% if employee and employee.marital_status == 'M' %}selected{% endif %}>Marié(e)</option>
+                        <option value="D" {% if employee and employee.marital_status == 'D' %}selected{% endif %}>Divorcé(e)</option>
+                        <option value="W" {% if employee and employee.marital_status == 'W' %}selected{% endif %}>Veuf(ve)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Genre</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-venus-mars"></i></span>
+                      <select class="form-select" name="gender" required>
+                        <option value="">Sélectionner</option>
+                        <option value="M" {% if employee and employee.gender == 'M' %}selected{% endif %}>Masculin</option>
+                        <option value="F" {% if employee and employee.gender == 'F' %}selected{% endif %}>Féminin</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                      <input type="email" class="form-control" name="email" required
+                             value="{{ employee.email|default:'' }}" />
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Téléphone personnel</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                      <input type="tel" class="form-control" name="personal_phone"
+                             value="{{ employee.personal_phone|default:'' }}" />
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Téléphone de travail</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-phone-alt"></i></span>
+                      <input type="tel" class="form-control" name="work_phone"
+                             value="{{ employee.work_phone|default:'' }}" />
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Adresse personnelle</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-home"></i></span>
+                      <input type="text" class="form-control" id="personal-address" name="personal_address"
+                             value="{{ employee.personal_address|default:'' }}" />
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Adresse administrative</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-building"></i></span>
+                      <input type="text" class="form-control" id="work-address" name="work_address"
+                             value="{{ employee.work_address|default:'' }}" />
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Nombre d'enfants</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-child"></i></span>
+                      <input type="number" min="0" max="10" class="form-control"
+                             id="nombre-enfants" name="children_count"
+                             value="{{ children|length }}"
+                             onchange="updateChildrenFields(this.value)" />
+                    </div>
+                  </div>
+
+                  <!-- Liste des enfants -->
+                  <div class="col-12">
+                    <div id="enfants-container" class="row g-3">
+                      {% for child in children %}
+                      <div class="col-md-6">
+                        <label class="form-label">Nom de l'enfant {{ forloop.counter }}</label>
+                        <div class="input-group">
+                          <span class="input-group-text"><i class="fas fa-baby"></i></span>
+                          <input type="text" class="form-control" name="enfant_nom_{{ forloop.counter0 }}" value="{{ child.name }}" required>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Genre de l'enfant {{ forloop.counter }}</label>
+                        <div class="input-group">
+                          <span class="input-group-text"><i class="fas fa-child"></i></span>
+                          <select class="form-select" name="enfant_genre_{{ forloop.counter0 }}" required>
+                            <option value="">Sélectionner</option>
+                            <option value="M" {% if child.gender == 'M' %}selected{% endif %}>Masculin</option>
+                            <option value="F" {% if child.gender == 'F' %}selected{% endif %}>Féminin</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Date de naissance</label>
+                        <div class="input-group">
+                          <span class="input-group-text"><i class="fas fa-birthday-cake"></i></span>
+                          <input type="date" class="form-control" name="enfant_date_naissance_{{ forloop.counter0 }}" value="{{ child.birth_date|date:'Y-m-d' }}">
+                        </div>
+                      </div>
+                      <div class="col-md-6 d-flex align-items-center">
+                        <label class="form-label me-3">Scolarisé</label>
+                        <div class="form-check form-check-inline">
+                          <input class="form-check-input" type="radio" name="enfant_is_scolarise_{{ forloop.counter0 }}" id="enfant_is_scolarise_oui_{{ forloop.counter0 }}" value="1" {% if child.is_scolarise %}checked{% endif %}>
+                          <label class="form-check-label" for="enfant_is_scolarise_oui_{{ forloop.counter0 }}">Oui</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                          <input class="form-check-input" type="radio" name="enfant_is_scolarise_{{ forloop.counter0 }}" id="enfant_is_scolarise_non_{{ forloop.counter0 }}" value="0" {% if not child.is_scolarise %}checked{% endif %}>
+                          <label class="form-check-label" for="enfant_is_scolarise_non_{{ forloop.counter0 }}">Non</label>
+                        </div>
+                      </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label d-block">Statut</label>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="status" id="statusActive" value="A"
+                             {% if employee and employee.status == 'A' %}checked{% endif %} />
+                      <label class="form-check-label" for="statusActive">Actif</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="status" id="statusInactive" value="I"
+                             {% if employee and employee.status == 'I' %}checked{% endif %} />
+                      <label class="form-check-label" for="statusInactive">Inactif</label>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" id="cancel-form-btn">
+                <i class="fas fa-times"></i> <span class="d-none d-sm-inline">Annuler</span>
+              </button>
+              {% if employee %}
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Mise à jour
+              </button>
+              {% else %}
+              <button type="button" class="btn btn-primary next-tab" data-next="professional">
+                <i class="fas fa-arrow-right"></i> <span class="d-none d-sm-inline">Suivant</span>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Professional Info -->
+          <div class="tab-pane fade" id="professional">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Poste</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
+                  <select class="form-select" id="position-select" name="position" required onchange="checkMedicalPosition()">
+                    <option value="">Sélectionner</option>
+                    {% for position in positions %}
+                    <option value="{{ position.id }}" {% if employee and employee.position_id == position.id %}selected{% endif %}>{{ position.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <div class="col-md-6" id="speciality-field" style="display: none;">
+                <label class="form-label">Spécialité</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-stethoscope"></i></span>
+                  <select class="form-select" name="speciality">
+                    <option value="">Sélectionner une spécialité</option>
+                    {% for speciality in specialities %}
+                    <option value="{{ speciality.id }}" {% if employee.speciality and employee.speciality.id == speciality.id %}selected{% endif %}>{{ speciality.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <!-- Champs conditionnels pour médecins -->
+              <div id="doctor-fields" class="row g-3 mt-2" style="display: none;">
+                <div class="col-md-6" id="doctor-agreement-field">
+                  <label class="form-label">Convention de médecin</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-file-medical"></i></span>
+                    <input type="file" class="form-control" name="doctor_agreement" accept=".pdf,.doc,.docx" />
+                  </div>
+                  {% if employee and employee.doctor_agreement %}
+                  <div class="mt-2">
+                    <a href="{{ employee.doctor_agreement.url }}" target="_blank" class="btn btn-primary btn-sm">
+                      <i class="fas fa-file-pdf"></i> Voir la convention
+                    </a>
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6" id="temporary-agreement-field" style="display: none;">
+                  <label class="form-label">Convention sans domiciliation</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-file-signature"></i></span>
+                    <input type="file" class="form-control" name="temporary_agreement" accept=".pdf,.doc,.docx" />
+                  </div>
+                  {% if employee and employee.temporary_agreement %}
+                  <div class="mt-2">
+                    <a href="{{ employee.temporary_agreement.url }}" target="_blank" class="btn btn-primary btn-sm">
+                      <i class="fas fa-file-pdf"></i> Voir la convention
+                    </a>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div id="upload-dynamique"></div>
+
+              <div class="col-md-4">
+                <label class="form-label">Département</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-building"></i></span>
+                  <select class="form-select" name="department" required>
+                    <option value="">Sélectionner</option>
+                    {% for dep in departments %}
+                    <option value="{{ dep.id }}" {% if employee and employee.department_id == dep.id %}selected{% endif %}>{{ dep.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Responsable de département</label><br />
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="is_supervisor" id="roleYes" value="1" onchange="toggleResponsibleSelect()"
+                         {% if employee and employee.is_supervisor == 1 %}checked{% endif %} />
+                  <label class="form-check-label" for="roleYes">Oui</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="is_supervisor" id="roleNo" value="0" onchange="toggleResponsibleSelect()"
+                         {% if employee and employee.is_supervisor == 0 %}checked{% endif %} />
+                  <label class="form-check-label" for="roleNo">Non</label>
+                </div>
+              </div>
+
+              <div class="col-md-3" id="responsible-select-container" style="display: none">
+                <label class="form-label">Responsable hiérarchique</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                  <select class="form-select" name="responsible_select" id="responsible-select">
+                    <option value="">Sélectionner un responsable</option>
+                    {% for resp in supervisors %}
+                    <option value="{{ resp.id }}" data-department="{{ resp.department_id }}" {% if employee and employee.supervisor_id == resp.id %}selected{% endif %}>
+                      {{ resp.full_name }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2 prev-tab" data-prev="personal">
+                <i class="fas fa-arrow-left"></i> <span class="d-none d-sm-inline">Précédent</span>
+              </button>
+              {% if employee %}
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Mise à jour
+              </button>
+              {% else %}
+              <button type="button" class="btn btn-primary next-tab" data-next="contract">
+                <i class="fas fa-arrow-right"></i> <span class="d-none d-sm-inline">Suivant</span>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Contract -->
+          <div class="tab-pane fade" id="contract">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Type de contrat</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-file-contract"></i></span>
+                  <select class="form-select" name="contract_type" id="contract-type" required onchange="checkContractType()">
+                    <option value="">Sélectionner</option>
+                    {% for type in contract_types %}
+                    <option value="{{ type.id }}" {% if employee and employee.contracts.first and employee.contracts.first.contract_type_id == type.id %}selected{% endif %}>
+                      {{ type.name }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Date de début</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calendar-plus"></i></span>
+                  <input type="date" class="form-control" name="start_date" required
+                         value="{% if employee and employee.contracts.first %}{{ employee.contracts.first.start_date|date:'Y-m-d' }}{% endif %}" />
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Date de fin (si CDD)</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calendar-minus"></i></span>
+                  <input type="date" class="form-control" name="end_date" id="end-date"
+                         {% if not employee or not employee.contracts.first or not employee.contracts.first.end_date %}disabled{% endif %}
+                         value="{% if employee and employee.contracts.first and employee.contracts.first.end_date %}{{ employee.contracts.first.end_date|date:'Y-m-d' }}{% endif %}" />
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Documents à joindre (inclure Contrat légalisé, CIN, etc.)</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-file-upload"></i></span>
+                  <input type="file" class="form-control" name="legalized_contract" accept=".pdf,.doc,.docx" />
+                </div>
+                {% if employee and employee.legalized_contract %}
+                <div class="mt-2">
+                  <a href="{{ employee.legalized_contract.url }}" target="_blank" class="btn btn-primary btn-sm">
+                    <i class="fas fa-file-pdf"></i> Voir le contrat
+                  </a>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2 prev-tab" data-prev="professional">
+                <i class="fas fa-arrow-left"></i> <span class="d-none d-sm-inline">Précédent</span>
+              </button>
+              {% if employee %}
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Mise à jour
+              </button>
+              {% else %}
+              <button type="button" class="btn btn-primary next-tab" data-next="salary">
+                <i class="fas fa-arrow-right"></i> <span class="d-none d-sm-inline">Suivant</span>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Salary -->
+          <div class="tab-pane fade" id="salary">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Salaire de base (DH)</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-money-bill-wave"></i></span>
+                  <input type="number" step="100" class="form-control" name="base_salary" required
+                         value="{{ employee.base_salary|stringformat:'s' }}" />
+                </div>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">Modèle de Calcul</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calculator"></i></span>
+                  <select class="form-select" name="model_calcul" id="modelCalculSelect">
+                    <option value="">Sélectionner un modèle</option>
+                    {% for mc in model_calculs %}
+                      <option value="{{ mc.id }}" {% if employee and employee.model_calcul_id == mc.id %}selected{% endif %}>{{ mc.libelle }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2 prev-tab" data-prev="contract">
+                <i class="fas fa-arrow-left"></i> <span class="d-none d-sm-inline">Précédent</span>
+              </button>
+              {% if employee %}
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Mise à jour
+              </button>
+              {% else %}
+              <button type="button" class="btn btn-primary next-tab" data-next="medical">
+                <i class="fas fa-arrow-right"></i> <span class="d-none d-sm-inline">Suivant</span>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Medical Visit -->
+          <div class="tab-pane fade" id="medical">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h5 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Visites médicales</h5>
+              <button type="button" class="btn btn-primary btn-sm" id="add-medical-visit">
+                <i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">Ajouter une visite</span>
+              </button>
+            </div>
+
+            <div id="medical-visits-container">
+              <input type="hidden" name="medical_visits_count" id="medical-visits-count" value="0">
+            </div>
+
+            <div id="no-visits-message" class="text-center py-4">
+              <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
+              <p class="text-muted">Aucune visite médicale enregistrée</p>
+              <p class="text-muted">Cliquez sur "Ajouter une visite" pour commencer</p>
+            </div>
+
+            <!-- >>> FOOTER CORRIGÉ ICI <<< -->
+            <div class="mt-4 text-end">
+              <!-- Précédent = salary -->
+              <button type="button" class="btn btn-secondary me-2 prev-tab" data-prev="salary">
+                <i class="fas fa-arrow-left"></i> <span class="d-none d-sm-inline">Précédent</span>
+              </button>
+
+              {% if employee %}
+                <!-- En mode édition on peut enregistrer directement -->
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save"></i> Mise à jour
+                </button>
+              {% else %}
+                <!-- En mode ajout, continuer le wizard vers skills -->
+                <button type="button" class="btn btn-primary next-tab" data-next="skills">
+                  <i class="fas fa-arrow-right"></i> <span class="d-none d-sm-inline">Suivant</span>
+                </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Skills -->
+          <div class="tab-pane fade" id="skills">
+            <div class="mb-3">
+              <label class="form-label">Compétences</label>
+              <div id="skills-list">
+                {% if skills and skills|length > 0 %}
+                  {% for skill in skills %}
+                  <div class="input-group mb-2">
+                    <span class="input-group-text"><i class="fas fa-star"></i></span>
+                    <input type="text" class="form-control skill-input" name="skills_{{ forloop.counter0 }}" placeholder="Compétence" value="{{ skill }}" data-index="{{ forloop.counter0 }}">
+                    <button type="button" class="btn btn-outline-danger remove-skill"><i class="fas fa-times"></i></button>
+                  </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="input-group mb-2">
+                    <span class="input-group-text"><i class="fas fa-star"></i></span>
+                    <input type="text" class="form-control skill-input" name="skills_0" placeholder="Compétence" data-index="0">
+                    <button type="button" class="btn btn-outline-danger remove-skill"><i class="fas fa-times"></i></button>
+                  </div>
+                {% endif %}
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="add-skill">
+                <i class="fas fa-plus"></i> Ajouter une compétence
+              </button>
+            </div>
+
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2 prev-tab" data-prev="medical">
+                <i class="fas fa-arrow-left"></i> <span class="d-none d-sm-inline">Précédent</span>
+              </button>
+              {% if employee %}
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Mise à jour
+              </button>
+              {% else %}
+              <button type="button" class="btn btn-primary next-tab" data-next="career">
+                <i class="fas fa-arrow-right"></i> <span class="d-none d-sm-inline">Suivant</span>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Career Evolution -->
+          <div class="tab-pane fade" id="career">
+            <div class="mb-3">
+              <label class="form-label">Notes d'évolution</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-chart-line"></i></span>
+                <textarea class="form-control" rows="4" name="career_evolution">{{ employee.career_evolution|default:'' }}</textarea>
+              </div>
+            </div>
+
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2 prev-tab" data-prev="skills">
+                <i class="fas fa-arrow-left"></i> <span class="d-none d-sm-inline">Précédent</span>
+              </button>
+              {% if employee %}
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Mise à jour
+              </button>
+              {% else %}
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Sauvegarder
+              </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- (Un seul) upload-dynamique -->
+        <div id="upload-dynamique"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const cinInput = document.querySelector('input[name="national_id"]');
+  if (!cinInput) return;
+
+  const regex = /^[A-Z0-9]{8,20}$/;
+
+  function validateCin() {
+    cinInput.value = cinInput.value.toUpperCase();
+    const isEmpty = cinInput.value.trim() === '';
+    if (isEmpty) {
+      cinInput.classList.remove('is-invalid');
+      return;
+    }
+    if (regex.test(cinInput.value)) {
+      cinInput.classList.remove('is-invalid');
+    } else {
+      cinInput.classList.add('is-invalid');
+    }
+  }
+
+  cinInput.addEventListener('input', validateCin);
+  cinInput.addEventListener('blur', validateCin);
+  validateCin();
+});
+</script>
+
+<!-- Modal détails employé -->
+<div class="modal fade" id="employeeDetailsModal" tabindex="-1" aria-labelledby="employeeDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="employeeDetailsModalLabel">
+          <i class="fas fa-user me-2"></i>Détails de l'employé
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="employeeDetailsContent">
+        <div class="text-center">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+          <p class="mt-2">Chargement des détails...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Fermer
+        </button>
+        <button type="button" class="btn btn-primary" onclick="window.print()">
+          <i class="fas fa-print me-1"></i>Imprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

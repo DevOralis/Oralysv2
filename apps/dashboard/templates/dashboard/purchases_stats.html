@@ -1,0 +1,534 @@
+{% extends 'base.html' %}
+{% block menu %}
+  {% include 'dashboard/dashboard_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content ">
+
+    <div class="row g-4 mb-5">
+        <div class="col-xl-3 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-lg bg-primary bg-gradient rounded-3 me-3">
+                            <i class="fas fa-shopping-cart text-white fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-subtitle mb-1 text-muted">Commandes Totales</h6>
+                            <h2 class="card-title mb-0 text-primary fw-bold" id="total-orders">{{ total_orders }}</h2>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-lg bg-success bg-gradient rounded-3 me-3">
+                            <i class="fas fa-file-contract text-white fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-subtitle mb-1 text-muted">Conventions Totales</h6>
+                            <h2 class="card-title mb-0 text-success fw-bold" id="total-conventions">{{ total_conventions }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Suppliers Card -->
+        <div class="col-xl-3 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-lg bg-warning bg-gradient rounded-3 me-3">
+                            <i class="fas fa-users text-white fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-subtitle mb-1 text-muted">Fournisseurs</h6>
+                            <h2 class="card-title mb-0 text-warning fw-bold" id="total-suppliers">{{ total_suppliers }}</h2>
+                        </div>
+                    </div>
+                   
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Amount Card -->
+        <div class="col-xl-3 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-lg bg-info bg-gradient rounded-3 me-3">
+                            <i class="fas fa-dollar-sign text-white fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-subtitle mb-1 text-muted">Montant Total</h6>
+                            <h2 class="card-title mb-0 text-info fw-semibold">{{ total_order_amount|stringformat:"0.2f" }} {{ orders.0.currency.abreviation|default:"MAD" }}</h2>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-5">
+        <!-- Orders Chart -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-line text-primary me-2"></i>Évolution Commandes
+                        </h5>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-calendar me-1"></i>30 jours
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">7 jours</a></li>
+                                <li><a class="dropdown-item" href="#">30 jours</a></li>
+                                <li><a class="dropdown-item" href="#">90 jours</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="ordersChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Distribution -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie text-success me-2"></i>Répartition Statut
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-filter text-secondary me-2"></i>Filtres
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="filter-form" class="row g-3">
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label fw-semibold">Date Début</label>
+                    <input type="date" id="start_date" name="start_date" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date" class="form-label fw-semibold">Date Fin</label>
+                    <input type="date" id="end_date" name="end_date" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="supplier" class="form-label fw-semibold">Fournisseur</label>
+                    <select id="supplier" name="supplier" class="form-select">
+                        <option value="">Tous Fournisseurs</option>
+                        {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label fw-semibold">Statut</label>
+                    <select id="status" name="status" class="form-select">
+                        <option value="">Tous Statuts</option>
+                        {% for status in purchase_order_states %}
+                            <option value="{{ status.0 }}">{{ status.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tables Row -->
+    <div class="row g-4">
+        <!-- Orders Table -->
+        <div class="col-xl-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-shopping-cart text-primary me-2"></i>Commandes Récentes
+                    </h5>
+                    <a href="/purchases/orders" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>Voir Tout
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0 fw-semibold">Référence</th>
+                                    <th class="border-0 fw-semibold">Fournisseur</th>
+                                    <th class="border-0 fw-semibold">Date</th>
+                                    <th class="border-0 fw-semibold">Montant</th>
+                                    <th class="border-0 fw-semibold">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-table-body">
+                                {% for order in orders %}
+                                    <tr>
+                                        <td class="fw-medium">{{ order.name }}</td>
+                                        <td>{{ order.partner.name }}</td>
+                                        <td class="text-muted">{{ order.date_order|date:"d/m/Y" }}</td>
+                                        <td class="fw-medium">{{ order.amount_total }} {{ order.currency.abreviation }}</td>
+                                        <td>
+                                            {% if order.state == 'confirmed' %}
+                                                <span class="badge bg-success">
+                                                    {{ order.get_state_display }}
+                                                </span>
+                                            {% elif order.state == 'draft' %}
+                                                <span class="badge bg-primary">
+                                                    {{ order.get_state_display }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">
+                                                    {{ order.get_state_display }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conventions Table -->
+        <div class="col-xl-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-contract text-success me-2"></i>Conventions Récentes
+                    </h5>
+                    <a href="/purchases/conventions/" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-eye me-1"></i>Voir Tout
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0 fw-semibold">Référence</th>
+                                    <th class="border-0 fw-semibold">Fournisseur</th>
+                                    <th class="border-0 fw-semibold">Type</th>
+                                    <th class="border-0 fw-semibold">Montant</th>
+                                    <th class="border-0 fw-semibold">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="conventions-table-body">
+                                {% for convention in conventions %}
+                                    <tr>
+                                        <td class="fw-medium">{{ convention.name }}</td>
+                                        <td>{{ convention.partner.name }}</td>
+                                        <td class="text-muted">{{ convention.convention_type.libelle }}</td>
+                                        <td class="fw-medium">{{ convention.amount_total }} {{ convention.currency.abreviation }}</td>
+                                        <td>
+                                            {% if convention.state == 'confirmed' %}
+                                                <span class="badge bg-success">
+                                                    {{ convention.get_state_display }}
+                                                </span>
+                                            {% elif convention.state == 'draft' %}
+                                                <span class="badge bg-primary">
+                                                    {{ convention.get_state_display }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">
+                                                    {{ convention.get_state_display }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Orders Evolution Chart
+    const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+    let ordersChart;
+    fetch('{% url 'orders_evolution' %}', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        ordersChart = new Chart(ordersCtx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Commandes',
+                    data: data.data,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Évolution des Commandes'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Nombre de Commandes'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Mois'
+                        }
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching orders evolution:', error);
+        ordersCtx.parentElement.innerHTML = '<p class="text-center text-danger">Erreur de chargement du graphique</p>';
+    });
+
+    // Status Distribution Chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    let statusChart;
+    fetch('{% url 'orders_by_state' %}', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.data,
+                    backgroundColor: [
+                        '#198754', // Success (Confirmed)
+                        '#ffc107', // Warning (Draft)
+                        '#dc3545', // Danger (Cancelled)
+                        '#0dcaf0', // Info (In Progress)
+                        '#6f42c1', // Purple (Other)
+                        '#fd7e14'  // Orange (Other)
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Répartition par Statut'
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching orders by state:', error);
+        statusCtx.parentElement.innerHTML = '<p class="text-center text-danger">Erreur de chargement du graphique</p>';
+    });
+
+    // Filter functionality
+    const filterForm = document.getElementById('filter-form');
+    const ordersTableBody = document.getElementById('orders-table-body');
+    const conventionsTableBody = document.getElementById('conventions-table-body');
+
+    filterForm.addEventListener('change', () => {
+        const formData = new FormData(filterForm);
+
+        // Show loading state
+        ordersTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Chargement...</td></tr>';
+        conventionsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm text-success" role="status"></div> Chargement...</td></tr>';
+
+        // Fetch filtered orders
+        fetch('{% url 'order_list_filtered' %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            ordersTableBody.innerHTML = '';
+            if (data.orders.length === 0) {
+                ordersTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="fas fa-inbox me-2"></i>Aucune commande trouvée</td></tr>';
+            } else {
+                data.orders.forEach(order => {
+                    let stateClass, stateIcon;
+                    if (order.state === 'confirmed') {
+                        stateClass = 'bg-success-subtle text-success';
+                        stateIcon = 'fas fa-check';
+                    } else if (order.state === 'draft') {
+                        stateClass = 'bg-warning-subtle text-warning';
+                        stateIcon = 'fas fa-clock';
+                    } else {
+                        stateClass = 'bg-secondary-subtle text-secondary';
+                        stateIcon = 'fas fa-minus';
+                    }
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="fw-medium">${order.name}</td>
+                        <td>${order.partner_name}</td>
+                        <td class="text-muted">${new Date(order.date_order).toLocaleDateString('fr-FR')}</td>
+                        <td class="fw-medium">${order.amount_total} ${order.currency || ''}</td>
+                        <td>
+                            <span class="badge ${stateClass}">
+                                <i class="${stateIcon} me-1"></i>${order.state_display}
+                            </span>
+                        </td>
+                    `;
+                    ordersTableBody.appendChild(row);
+                });
+            }
+        })
+        .catch(error => {
+            ordersTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Erreur de chargement</td></tr>';
+        });
+
+        // Fetch filtered conventions
+        fetch('{% url 'convention_list_filtered' %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            conventionsTableBody.innerHTML = '';
+            if (data.conventions.length === 0) {
+                conventionsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="fas fa-inbox me-2"></i>Aucune convention trouvée</td></tr>';
+            } else {
+                data.conventions.forEach(convention => {
+                    let stateClass, stateIcon;
+                    if (convention.state === 'confirmed') {
+                        stateClass = 'bg-success-subtle text-success';
+                        stateIcon = 'fas fa-check';
+                    } else if (convention.state === 'draft') {
+                        stateClass = 'bg-warning-subtle text-warning';
+                        stateIcon = 'fas fa-clock';
+                    } else {
+                        stateClass = 'bg-secondary-subtle text-secondary';
+                        stateIcon = 'fas fa-minus';
+                    }
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="fw-medium">${convention.name}</td>
+                        <td>${convention.partner_name}</td>
+                        <td class="text-muted">${convention.type}</td>
+                        <td class="fw-medium">${convention.amount_total} ${convention.currency || ''}</td>
+                        <td>
+                            <span class="badge ${stateClass}">
+                                <i class="${stateIcon} me-1"></i>${convention.state_display}
+                            </span>
+                        </td>
+                    `;
+                    conventionsTableBody.appendChild(row);
+                });
+            }
+        })
+        .catch(error => {
+            conventionsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Erreur de chargement</td></tr>';
+        });
+    });
+});
+</script>
+
+<style>
+.avatar {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.table th {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+</style>
+{% endblock %}

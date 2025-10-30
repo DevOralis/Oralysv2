@@ -1,0 +1,986 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Oralys - Réservations{% endblock %}
+{% block menu %}
+  {% include 'hosting_menu.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+ <!-- Section JavaScript complète pour réservations avec import/export -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const checkboxes = document.querySelectorAll('input.row-check');
+  const importExportButton = document.querySelector('#import-export-button');
+  
+  // Traduction des statuts
+  const statusTranslations = {
+    'pending': 'En attente',
+    'confirmed': 'Confirmé', 
+    'cancelled': 'Annulé',
+    'completed': 'Terminé'
+  };
+
+  // Variables pour les filtres JS
+  let allRows = [];
+  let filteredRows = [];
+
+  // Initialiser les données des lignes
+  function initializeRowData() {
+    const tableRows = document.querySelectorAll('#searchableTable tbody tr');
+    allRows = Array.from(tableRows).map(row => {
+      if (row.cells.length === 1 && row.textContent.includes('Aucune réservation')) {
+        return null;
+      }
+      return {
+        element: row,
+        patient: row.cells[1]?.textContent.trim().toLowerCase() || '',
+        chambre: row.cells[2]?.textContent.trim().toLowerCase() || '',
+        lit: row.cells[3]?.textContent.trim().toLowerCase() || '',
+        dateDebut: row.cells[4]?.textContent.trim() || '',
+        dateFin: row.cells[5]?.textContent.trim() || '',
+        status: row.cells[6]?.querySelector('.badge')?.textContent.trim() || '',
+        statusValue: getStatusValue(row.cells[6]?.querySelector('.badge'))
+      };
+    }).filter(row => row !== null);
+    filteredRows = [...allRows];
+  }
+
+  // Obtenir la valeur du statut depuis les classes CSS
+  function getStatusValue(badgeElement) {
+    if (!badgeElement) return '';
+    if (badgeElement.classList.contains('bg-success')) return 'confirmed';
+    if (badgeElement.classList.contains('bg-info')) return 'pending';
+    if (badgeElement.classList.contains('bg-danger')) return 'cancelled';
+    if (badgeElement.classList.contains('bg-warning')) return 'completed';
+    return '';
+  }
+
+  // Fonction de recherche
+  function performSearch() {
+    const searchTerm = document.getElementById('reservation-search').value.toLowerCase();
+    const statusFilter = document.getElementById('status-filter').value;
+
+    filteredRows = allRows.filter(row => {
+      const matchesSearch = !searchTerm || 
+        row.patient.includes(searchTerm) ||
+        row.chambre.includes(searchTerm) ||
+        row.lit.includes(searchTerm) ||
+        row.dateDebut.toLowerCase().includes(searchTerm) ||
+        row.dateFin.toLowerCase().includes(searchTerm) ||
+        row.status.toLowerCase().includes(searchTerm);
+
+      const matchesStatus = !statusFilter || row.statusValue === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+
+    updateTableDisplay();
+    updatePagination();
+  }
+
+  // Mettre à jour l'affichage du tableau
+  function updateTableDisplay() {
+    const tbody = document.querySelector('#searchableTable tbody');
+    const currentPage = parseInt(document.querySelector('.pagination .active .page-link')?.textContent) || 1;
+    const itemsPerPage = 10; // Ajustez selon vos besoins
+    
+    // Cacher toutes les lignes
+    allRows.forEach(row => {
+      row.element.style.display = 'none';
+    });
+
+    // Calculer les indices de pagination
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageRows = filteredRows.slice(startIndex, endIndex);
+
+    // Afficher les lignes de la page courante
+    pageRows.forEach(row => {
+      row.element.style.display = '';
+    });
+
+    // Afficher message si aucun résultat
+    let noResultsRow = tbody.querySelector('.no-results-row');
+    if (filteredRows.length === 0) {
+      if (!noResultsRow) {
+        noResultsRow = document.createElement('tr');
+        noResultsRow.className = 'no-results-row';
+        noResultsRow.innerHTML = '<td colspan="8" class="text-center">Aucune réservation trouvée</td>';
+        tbody.appendChild(noResultsRow);
+      }
+      noResultsRow.style.display = '';
+    } else if (noResultsRow) {
+      noResultsRow.style.display = 'none';
+    }
+  }
+
+  // Mettre à jour la pagination
+  function updatePagination() {
+    const paginationContainer = document.querySelector('.pagination');
+    if (!paginationContainer) return;
+
+    const itemsPerPage = 10;
+    const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+    const currentPage = parseInt(document.querySelector('.pagination .active .page-link')?.textContent) || 1;
+
+    if (totalPages <= 1) {
+      paginationContainer.parentElement.style.display = 'none';
+      return;
+    }
+
+    paginationContainer.parentElement.style.display = 'block';
+    paginationContainer.innerHTML = '';
+
+    // Bouton précédent
+    if (currentPage > 1) {
+      const prevLi = document.createElement('li');
+      prevLi.className = 'page-item';
+      prevLi.innerHTML = `
+        <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Précédent">
+          <i class="fas fa-chevron-left d-block d-sm-none"></i>
+          <span class="d-none d-sm-block">&laquo; Préc</span>
+        </a>
+      `;
+      paginationContainer.appendChild(prevLi);
+    }
+
+    // Numéros de page
+    for (let i = 1; i <= totalPages; i++) {
+      const li = document.createElement('li');
+      li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+      li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+      paginationContainer.appendChild(li);
+    }
+
+    // Bouton suivant
+    if (currentPage < totalPages) {
+      const nextLi = document.createElement('li');
+      nextLi.className = 'page-item';
+      nextLi.innerHTML = `
+        <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Suivant">
+          <i class="fas fa-chevron-right d-block d-sm-none"></i>
+          <span class="d-none d-sm-block">Suiv &raquo;</span>
+        </a>
+      `;
+      paginationContainer.appendChild(nextLi);
+    }
+
+    // Gestionnaires d'événements pour la pagination
+    paginationContainer.querySelectorAll('.page-link').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const page = parseInt(this.dataset.page);
+        if (page && page !== currentPage) {
+          // Mettre à jour la classe active
+          paginationContainer.querySelectorAll('.page-item').forEach(item => {
+            item.classList.remove('active');
+          });
+          this.parentElement.classList.add('active');
+          
+          // Mettre à jour l'affichage
+          updateTableDisplay();
+        }
+      });
+    });
+  }
+
+  // Gestionnaires d'événements pour les filtres
+  let searchTimeout;
+  const searchInput = document.getElementById('reservation-search');
+  const statusSelect = document.getElementById('status-filter');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(performSearch, 300);
+    });
+  }
+
+  if (statusSelect) {
+    statusSelect.addEventListener('change', performSearch);
+  }
+
+  // Logique pour import/export
+  function updateImportExportLogic() {
+    const checkedBoxes = Array.from(checkboxes).filter(checkbox => checkbox.checked);
+    
+    if (checkedBoxes.length > 0) {
+      // Mode Export - au moins une case cochée
+      importExportButton.innerHTML = '<i class="fas fa-file-export"></i><span class="d-none d-lg-inline ms-1">Exporter</span>';
+      importExportButton.title = 'Exporter les réservations sélectionnées';
+    } else {
+      // Mode Import - aucune case cochée
+      importExportButton.innerHTML = '<i class="fas fa-file-import"></i><span class="d-none d-lg-inline ms-1">Importer</span>';
+      importExportButton.title = 'Importer des réservations depuis un fichier';
+    }
+  }
+
+  // Écouter les changements sur les checkboxes
+  checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateImportExportLogic);
+  });
+
+  // Écouter les changements sur "Sélectionner tout"
+  const selectAllCheckbox = document.getElementById('selectAll');
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      const visibleCheckboxes = Array.from(checkboxes).filter(checkbox => 
+        checkbox.closest('tr').style.display !== 'none'
+      );
+      visibleCheckboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+      updateImportExportLogic();
+    });
+  }
+
+  // Gérer le clic sur le bouton Import/Export
+  if (importExportButton) {
+    importExportButton.addEventListener('click', function() {
+      const checkedBoxes = Array.from(checkboxes).filter(checkbox => checkbox.checked);
+      
+      if (checkedBoxes.length > 0) {
+        // Mode Export
+        exportSelectedReservations(checkedBoxes);
+      } else {
+        // Mode Import
+        showImportDialog();
+      }
+    });
+  }
+
+  // Fonction d'exportation
+  function exportSelectedReservations(selectedBoxes) {
+    const selectedReservationIds = selectedBoxes.map(checkbox => {
+      return checkbox.dataset.reservationId;
+    });
+
+    Swal.fire({
+      title: 'Exporter les réservations',
+      text: `Exporter ${selectedReservationIds.length} réservation(s) sélectionnée(s) ?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Exporter',
+      cancelButtonText: 'Annuler',
+      showLoaderOnConfirm: true,
+      preConfirm: () => {
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+        selectedReservationIds.forEach(id => {
+          formData.append('reservation_ids', id);
+        });
+
+        return fetch('/hosting/reservations/export/', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Erreur lors de l\'exportation');
+          }
+          return response.blob();
+        })
+        .then(blob => {
+          // Télécharger le fichier
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = `reservations_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          
+          // Décocher tous les éléments après export
+          checkboxes.forEach(checkbox => checkbox.checked = false);
+          selectAllCheckbox.checked = false;
+          updateImportExportLogic();
+        })
+        .catch(error => {
+          Swal.showValidationMessage(`Erreur: ${error.message}`);
+        });
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Export réussi',
+          text: 'Les réservations ont été exportées avec succès',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    });
+  }
+
+  // Fonction d'importation
+  function showImportDialog() {
+    Swal.fire({
+      title: 'Importer des réservations',
+      html: `
+        <div class="mb-3">
+          <label for="import-file" class="form-label">Sélectionner un fichier Excel (.xlsx)</label>
+          <input type="file" id="import-file" class="form-control" accept=".xlsx,.xls" required>
+        </div>
+        <div class="alert alert-info">
+          <small>
+            <strong>Format attendu:</strong><br>
+            - Colonne A: Patient (nom complet ou ID)<br>
+            - Colonne B: Chambre (nom ou ID)<br>
+            - Colonne C: Lit (numéro ou ID)<br>
+            - Colonne D: Date de début (YYYY-MM-DD)<br>
+            - Colonne E: Date de fin (YYYY-MM-DD)<br>
+            - Colonne F: Statut de la réservation
+          </small>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Importer',
+      cancelButtonText: 'Annuler',
+      showLoaderOnConfirm: true,
+      preConfirm: () => {
+        const fileInput = document.getElementById('import-file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+          Swal.showValidationMessage('Veuillez sélectionner un fichier');
+          return false;
+        }
+
+        if (!file.name.match(/\.(xlsx|xls)$/)) {
+          Swal.showValidationMessage('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+          return false;
+        }
+
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+        formData.append('import_file', file);
+
+        return fetch('/hosting/reservations/import/', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Erreur lors de l\'importation');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.status === 'success') {
+            return data;
+          } else {
+            throw new Error(data.message || 'Erreur lors de l\'importation');
+          }
+        })
+        .catch(error => {
+          Swal.showValidationMessage(`Erreur: ${error.message}`);
+        });
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const data = result.value;
+        Swal.fire({
+          icon: 'success',
+          title: 'Import réussi',
+          html: `
+            <div class="text-start">
+              <p><strong>${data.imported_count}</strong> réservation(s) importée(s) avec succès</p>
+              ${data.errors_count > 0 ? `<p class="text-warning"><strong>${data.errors_count}</strong> erreur(s) détectée(s)</p>` : ''}
+              ${data.duplicates_count > 0 ? `<p class="text-info"><strong>${data.duplicates_count}</strong> doublon(s) ignoré(s)</p>` : ''}
+              ${data.conflicts_count > 0 ? `<p class="text-danger"><strong>${data.conflicts_count}</strong> conflit(s) de réservation</p>` : ''}
+            </div>
+          `,
+          confirmButtonText: 'Actualiser la page'
+        }).then(() => {
+          location.reload();
+        });
+      }
+    });
+  }
+
+  // Initialiser l'état du bouton au chargement
+  updateImportExportLogic();
+  
+  // Initialiser les filtres JS
+  initializeRowData();
+  
+  const printButtons = document.querySelectorAll('.btn-print');
+  printButtons.forEach(button => {
+        button.addEventListener('click', function (e) {
+            e.preventDefault();
+            const reservationId = this.getAttribute('data-reservation-id');
+            if (reservationId) {
+                // Ouvre le PDF dans une nouvelle fenêtre
+                window.open(`/hosting/reservations/pdf/${reservationId}/`, '_blank');
+            } else {
+                console.error('ID de réservation non trouvé');
+            }
+        });
+    });
+
+  // Fonction utilitaire pour récupérer le token CSRF
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  const csrftoken = getCookie('csrftoken');
+
+  // Fonctions existantes pour les réservations
+  function loadReservationForm(reservationId) {
+    fetch(`/hosting/reservations/${reservationId}/update/`, {
+      method: 'GET',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': csrftoken,
+      },
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP ! Statut : ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.status === 'success') {
+        document.querySelector('#id_patient').value = data.form.patient || '';
+        document.querySelector('#id_room').value = data.form.room || '';
+        document.querySelector('#id_bed').value = data.form.bed || '';
+        document.querySelector('#id_start_date').value = data.form.start_date || '';
+        document.querySelector('#id_end_date').value = data.form.end_date || '';
+        document.querySelector('#id_reservation_status').value = data.form.reservation_status || '';
+        document.querySelector('#reservationForm').dataset.reservationId = reservationId;
+        const collapse = new bootstrap.Collapse(document.getElementById('newReservationForm'), { toggle: true });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: `Erreur lors du chargement des données : ${data.message}`,
+        });
+      }
+    })
+    .catch(error => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: `Erreur lors du chargement des données : ${error.message}`,
+      });
+    });
+  }
+
+  function loadReservationDetails(reservationId) {
+    fetch(`/hosting/reservations/${reservationId}/details/`, {
+      method: 'GET',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': csrftoken,
+      },
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const modalBody = document.querySelector('#reservationDetailsModal .modal-body');
+        modalBody.innerHTML = `
+          <p><strong>Patient :</strong> ${data.reservation.patient}</p>
+          <p><strong>Chambre :</strong> ${data.reservation.room}</p>
+          <p><strong>Lit :</strong> ${data.reservation.bed}</p>
+          <p><strong>Date de début :</strong> ${data.reservation.start_date}</p>
+          <p><strong>Date de fin :</strong> ${data.reservation.end_date}</p>
+          <p><strong>Statut :</strong> ${data.reservation.reservation_status}</p>
+        `;
+        const modal = new bootstrap.Modal(document.getElementById('reservationDetailsModal'));
+        modal.show();
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: `Erreur lors du chargement des détails : ${data.message}`,
+        });
+      }
+    })
+    .catch(error => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: `Erreur lors du chargement des détails : ${error.message}`,
+      });
+    });
+  }
+
+  function confirmReservation(reservationId) {
+    Swal.fire({
+      title: 'Confirmer la réservation',
+      text: 'Voulez-vous vraiment confirmer cette réservation ?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, confirmer',
+      cancelButtonText: 'Annuler',
+    }).then(result => {
+      if (result.isConfirmed) {
+        fetch(`/hosting/reservations/${reservationId}/confirm/`, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrftoken,
+          },
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            Swal.fire({
+              icon: 'success',
+              title: 'Succès',
+              text: data.message,
+              timer: 1500,
+              showConfirmButton: false,
+            }).then(() => {
+              window.location.reload();
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Erreur',
+              text: `Erreur lors de la confirmation : ${data.message}`,
+            });
+          }
+        })
+        .catch(error => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: `Erreur lors de la confirmation : ${error.message}`,
+          });
+        });
+      }
+    });
+  }
+
+  // Form submission
+  const form = document.getElementById('reservationForm');
+  if (form) {
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+      const reservationId = this.dataset.reservationId;
+      const url = reservationId ? `/hosting/reservations/${reservationId}/update/` : '/hosting/reservations/create/';
+      const formData = new FormData(this);
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': csrftoken,
+        },
+        body: formData,
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP ! Statut : ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.status === 'success') {
+          Swal.fire({
+            icon: 'success',
+            title: 'Succès',
+            text: data.message,
+            timer: 1500,
+            showConfirmButton: false,
+          }).then(() => {
+            window.location.reload();
+          });
+        } else {
+          let errorMsg = data.message;
+          if (data.errors) {
+            errorMsg += '<ul>';
+            for (const [field, errors] of Object.entries(data.errors)) {
+              errorMsg += `<li>${field}: ${errors.join(', ')}</li>`;
+              const fieldElement = document.querySelector(`#id_${field}`);
+              if (fieldElement) {
+                fieldElement.classList.add('is-invalid');
+                const errorDiv = fieldElement.nextElementSibling;
+                if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                  errorDiv.textContent = errors.join(', ');
+                } else {
+                  const newErrorDiv = document.createElement('div');
+                  newErrorDiv.className = 'invalid-feedback';
+                  newErrorDiv.textContent = errors.join(', ');
+                  fieldElement.parentNode.appendChild(newErrorDiv);
+                }
+              }
+            }
+            errorMsg += '</ul>';
+          }
+          Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            html: errorMsg,
+          });
+        }
+      })
+      .catch(error => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: `Erreur lors de l'enregistrement : ${error.message}`,
+        });
+      });
+    });
+  }
+
+  // Action buttons
+  document.querySelectorAll('.actions-cell button').forEach(button => {
+    button.addEventListener('click', function() {
+      const reservationId = this.closest('tr').querySelector('.row-check').dataset.reservationId;
+      if (this.title === 'Modifier') {
+        loadReservationForm(reservationId);
+      } else if (this.title === 'Voir') {
+        loadReservationDetails(reservationId);
+      } else if (this.title === 'Supprimer') {
+        Swal.fire({
+          title: 'Confirmer la suppression',
+          text: 'Voulez-vous vraiment supprimer cette réservation ?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Oui, supprimer',
+          cancelButtonText: 'Annuler',
+        }).then(result => {
+          if (result.isConfirmed) {
+            fetch(`/hosting/reservations/${reservationId}/delete/`, {
+              method: 'POST',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrftoken,
+              },
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success') {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Succès',
+                  text: data.message,
+                  timer: 1500,
+                  showConfirmButton: false,
+                }).then(() => {
+                  window.location.reload();
+                });
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Erreur',
+                  text: `Erreur lors de la suppression : ${data.message}`,
+                });
+              }
+            })
+            .catch(error => {
+              Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: `Erreur lors de la suppression : ${error.message}`,
+              });
+            });
+          }
+        });
+      } else if (this.title === 'Confirmer') {
+        confirmReservation(reservationId);
+      }
+    });
+  });
+
+  // Gestionnaire pour le bouton "Nouveau"
+  const addReservationBtn = document.getElementById('add-reservation-btn');
+  if (addReservationBtn) {
+    addReservationBtn.addEventListener('click', function() {
+      // Réinitialiser le formulaire
+      document.getElementById('reservationForm').reset();
+      delete document.getElementById('reservationForm').dataset.reservationId;
+      
+      // Afficher le formulaire
+      const collapse = new bootstrap.Collapse(document.getElementById('newReservationForm'), { show: true });
+    });
+  }
+});
+</script>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card mb-4">
+          <div class="card-header card-header-primary">
+            <i class="fas fa-user me-2"></i>
+            Gestion des Réservations
+          </div>
+          <div class="card-body">
+            <!-- Formulaire de filtres JavaScript uniquement -->
+            <div class="row g-2 mb-3">
+              <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                <div class="input-group">
+                  <span class="input-group-text input-group-text-primary">
+                    <i class="fas fa-search"></i>
+                  </span>
+                  <input type="search" id="reservation-search" class="form-control search-input-primary" placeholder="Rechercher une réservation...">
+                </div>
+              </div>
+              <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+                <select id="status-filter" class="form-select" title="Filtrer par statut">
+                  <option value="">Tous les statuts</option>
+                  <option value="pending">En attente</option>
+                  <option value="confirmed">Confirmé</option>
+                  <option value="cancelled">Annulé</option>
+                  <option value="completed">Terminé</option>
+                </select>
+              </div>
+              <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                <div class="d-flex gap-1">
+                  <button type="button" id="import-export-button" class="btn btn-light border w-100 text-nowrap px-2" title="Importer des réservations depuis un fichier">
+                    <i class="fas fa-file-import"></i>
+                    <span class="d-none d-lg-inline ms-1">Importer</span>
+                  </button>
+                  {% if request.session.user.permissions.hosting.write %}
+                  <button type="button" class="btn btn-primary w-100 text-nowrap px-2" id="add-reservation-btn">
+                    <i class="fas fa-plus"></i>
+                    <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                  </button>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <table class="table table-responsive table-striped table-hover" id="searchableTable">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th>
+                    <input type="checkbox" id="selectAll">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Patient</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Chambre</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Lit</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Date de début</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Date de fin</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Statut</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for reservation in reservations %}
+                  <tr>
+                    <td data-label="Sélection"><input type="checkbox" name="selected_reservations" class="row-check" data-reservation-id="{{ reservation.reservation_id }}"></td>
+                    <td data-label="Patient">{{ reservation.patient }}</td>
+                    <td data-label="Chambre">{{ reservation.room.room_name }}</td>
+                    <td data-label="Lit">{{ reservation.bed.bed_number|default:"Non assigné" }}</td>
+                    <td data-label="Date de début">{{ reservation.start_date }}</td>
+                    <td data-label="Date de fin">{{ reservation.end_date }}</td>
+                    <td data-label="Statut">
+                      <span class="badge {% if reservation.reservation_status == 'confirmed' %}bg-success{% elif reservation.reservation_status == 'pending' %}bg-info{% elif reservation.reservation_status == 'cancelled' %}bg-danger{% elif reservation.reservation_status == 'completed' %}bg-warning{% endif %}">
+                        {% if reservation.reservation_status == 'confirmed' %}Confirmé
+                        {% elif reservation.reservation_status == 'pending' %}En attente
+                        {% elif reservation.reservation_status == 'cancelled' %}Annulé
+                        {% elif reservation.reservation_status == 'completed' %}Terminé
+                        {% else %}{{ reservation.get_reservation_status_display }}
+                        {% endif %}
+                      </span>
+                    </td>
+                    <td data-label="Actions" class="actions-cell">
+                      <div class="d-flex gap-1 justify-content-end">
+                          <button class="btn btn-sm btn-light border text-primary btn-print" 
+                                title="Imprimer" 
+                                data-reservation-id="{{ reservation.reservation_id }}">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light border text-info" title="Voir">
+                          <i class="fas fa-eye"></i>
+                        </button>
+                        {% if request.session.user.permissions.hosting.update %}
+                        <button class="btn btn-sm btn-light border text-dark" title="Modifier">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        {% endif %}
+                        {% if request.session.user.permissions.hosting.delete %}
+                        <button class="btn btn-sm btn-light border text-danger" title="Supprimer">
+                          <i class="fas fa-trash-alt"></i>
+                        </button>
+                        {% endif %}
+                        {% if request.session.user.permissions.hosting.update %}
+                        {% if reservation.reservation_status == 'pending' %}
+                          <button class="btn btn-sm btn-light border text-success" title="Confirmer">
+                            <i class="fas fa-check"></i>
+                          </button>
+                        {% endif %}
+                        {% endif %}
+
+                      </div>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="8">Aucune réservation enregistrée</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            <!-- Pagination JavaScript -->
+            <nav class="mt-3">
+              <ul class="pagination justify-content-center flex-wrap">
+                <!-- La pagination sera générée dynamiquement par JavaScript -->
+              </ul>
+            </nav>
+          </div>
+        </div>
+
+        <div class="collapse mt-4" id="newReservationForm">
+          <div class="card mb-4">
+            <div class="card-header card-header-primary">
+              <i class="fas fa-edit me-2"></i>
+              Nouvelle Réservation
+            </div>
+            <div class="card-body">
+              {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+              {% endif %}
+              {% if messages %}
+                {% for message in messages %}
+                  {% if message.tags != 'success' %}
+                    <div class="alert alert-danger">{{ message }}</div>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+              
+              <form method="post" id="reservationForm">
+                {% csrf_token %}
+                <div class="row g-3">
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label" for="id_patient">Patient :</label>
+                    {{ form.patient }}
+                    {% if form.patient.errors %}
+                      <div class="invalid-feedback">{{ form.patient.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label" for="id_room">Chambre :</label>
+                    {{ form.room }}
+                    {% if form.room.errors %}
+                      <div class="invalid-feedback">{{ form.room.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label" for="id_bed">Lit :</label>
+                    {{ form.bed }}
+                    {% if form.bed.errors %}
+                      <div class="invalid-feedback">{{ form.bed.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label" for="id_start_date">Date de début :</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                      {{ form.start_date }}
+                    </div>
+                    {% if form.start_date.errors %}
+                      <div class="invalid-feedback">{{ form.start_date.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label" for="id_end_date">Date de fin :</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                      {{ form.end_date }}
+                    </div>
+                    {% if form.end_date.errors %}
+                      <div class="invalid-feedback">{{ form.end_date.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label" for="id_reservation_status">Statut :</label>
+                    {{ form.reservation_status }}
+                    {% if form.reservation_status.errors %}
+                      <div class="invalid-feedback">{{ form.reservation_status.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#newReservationForm">
+                    <i class="fas fa-times"></i>
+                    <span class="d-none d-sm-inline ms-1">Annuler</span>
+                  </button>
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-save"></i>
+                    <span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal fade" id="reservationDetailsModal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Détails de la Réservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <p>Chargement...</p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary">Imprimer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

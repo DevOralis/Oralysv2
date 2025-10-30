@@ -1,0 +1,64 @@
+{% if request.session.user.permissions.therapeutic_activities.write or request.session.user.permissions.therapeutic_activities.update %}
+  <div class="card mb-4" id="activity-form">
+    <div class="card-header card-header-primary">
+      <i class="fas fa-edit me-2"></i>
+      {% if activity %}Modifier l'activité{% else %}Ajouter une nouvelle activité{% endif %}
+    </div>
+    <div class="card-body">
+      <form method="post" action="{% if activity %}{% url 'therapeutic_activities:activity_edit' activity.pk %}{% else %}{% url 'therapeutic_activities:activity_create' %}{% endif %}">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">{{ form.title.label }} : <span class="text-danger">*</span></label>
+            {{ form.title }}
+            {% if form.title.errors %}
+              <div class="text-danger small">{{ form.title.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ form.type.label }} : <span class="text-danger">*</span></label>
+            {{ form.type }}
+            {% if form.type.errors %}
+              <div class="text-danger small">{{ form.type.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ form.coach.label }} : </label>
+            {{ form.coach }}
+            {% if form.coach.errors %}
+              <div class="text-danger small">{{ form.coach.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex align-items-center justify-content-start mt-4">
+              <span class="me-3 form-label">{{ form.is_active.label }} :</span>
+              <div class="form-check form-switch">
+                {{ form.is_active }}
+              </div>
+            </div>
+            {% if form.is_active.errors %}
+              <div class="text-danger small">{{ form.is_active.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label">{{ form.description.label }} : </label>
+            {{ form.description }}
+            {% if form.description.errors %}
+              <div class="text-danger small">{{ form.description.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+          <a href="{% url 'therapeutic_activities:activity_list' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-times"></i><span class="d-none d-sm-inline ms-1">Annuler</span>
+          </a>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endif %}
+

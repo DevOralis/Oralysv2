@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ page_title }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: 'Segoe UI', 'Noto Serif', serif;
+            font-size: 11pt;
+            max-width: 850px;
+            margin: 20px auto;
+            color: #222;
+            line-height: 1.4;
+        }
+        h1, h2 {
+            font-weight: 700;
+            color: #3c2f2f;
+            margin-bottom: 12px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        header .logo {
+            font-size: 36pt;
+            font-weight: 900;
+            color: #8B4513; /* Saddlebrown */
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+        }
+        .inventory-date {
+            font-size: 10pt;
+            color: #666;
+            margin-bottom: 30px;
+            text-align: center;
+            font-style: italic;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border: 2px solid #3c2f2f; /* Darker brown border */
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1cm;
+        }
+        thead {
+            background: #8B4513; /* Saddlebrown */
+            color: white;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid #a0522d; /* Sienna */
+            border-right: 1px solid #a0522d;
+        }
+        th:last-child, td:last-child {
+            border-right: none;
+        }
+        th:first-child, td:first-child {
+            text-align: left;
+        }
+        .product-row td {
+            font-weight: 600; /* Bold for product rows */
+            background: #fff8e7; /* Light beige */
+        }
+        .location-row td {
+            font-size: 10pt;
+            background: #f5f0e1; /* Slightly darker beige */
+        }
+        .location-row td:not(:last-child) {
+            border-top: 1px solid #a0522d;
+        }
+        tbody tr:nth-child(odd) .product-row td {
+            background: #fff8e7; /* Alternating beige */
+        }
+        tbody tr:nth-child(even) .product-row td {
+            background: #fdf5e6; /* Slightly different beige */
+        }
+        tbody tr:hover td {
+            background: #efe4b0; /* Light brown hover */
+        }
+        .no-data {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+            padding: 15px;
+        }
+        .notes-section {
+            margin-top: 30px;
+            background: #f5f0e1; /* Beige background */
+            border-left: 5px solid #8B4513; /* Saddlebrown border */
+            padding: 15px 20px;
+            border-radius: 6px;
+            font-style: italic;
+            color: #3c2f2f;
+        }
+        .main-header {
+            background: #6b3c0f; /* Darker brown for main header */
+            font-size: 12pt;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">ORALYS</div>
+        <h1>{{ page_title }}</h1>
+    </header>
+
+    <div class="inventory-date">
+        <div><strong>Inventaire au :</strong> {{ date }}</div>
+    </div>
+
+    <section>
+        <h2>Détails de l'Inventaire</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Nom</th>
+                    <th style="width: 15%;">Réf.</th>
+                    <th style="width: 15%;">Catégorie</th>
+                    <th style="width: 15%;">Quantité Totale</th>
+                    <th colspan="2" class="main-header">Détails du Stockage</th>
+                </tr>
+                <tr>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th style="width: 20%; color: #8B4513;">Emplacement</th>
+                    <th style="width: 10%; color: #8B4513;">Quantité par Emplacement</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                {% if product.locations %}
+                {% for loc in product.locations %}
+                <tr {% if forloop.first %}class="product-row"{% else %}class="location-row"{% endif %}>
+                    {% if forloop.first %}
+                    <td rowspan="{{ product.locations|length }}">{{ product.name }}</td>
+                    <td rowspan="{{ product.locations|length }}">{{ product.default_code|default:"N/A" }}</td>
+                    <td rowspan="{{ product.locations|length }}">{{ product.category|default:"N/A" }}</td>
+                    <td rowspan="{{ product.locations|length }}">{{ product.total_quantity|floatformat:2 }}</td>
+                    {% endif %}
+                    <td>{{ loc.location_name }}</td>
+                    <td>{{ loc.quantity_stored|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr class="product-row">
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.default_code|default:"N/A" }}</td>
+                    <td>{{ product.category|default:"N/A" }}</td>
+                    <td>{{ product.total_quantity|floatformat:2 }}</td>
+                    <td colspan="2" class="no-data">Aucun emplacement</td>
+                </tr>
+                {% endif %}
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="no-data">Aucun produit</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+
+</body>
+</html>

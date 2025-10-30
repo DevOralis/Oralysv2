@@ -1,0 +1,424 @@
+{% load math_filters %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facture {{ invoice.invoice_number }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .invoice-info {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .invoice-info-left, .invoice-info-right {
+            display: table-cell;
+            vertical-align: top;
+            width: 50%;
+        }
+
+        .invoice-info-left {
+            padding-right: 20px;
+        }
+
+        .invoice-info-right {
+            text-align: right;
+        }
+
+        .info-section {
+            margin-bottom: 20px;
+        }
+
+        .info-section h3 {
+            color: #2c3e50;
+            font-size: 14px;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 3px;
+        }
+
+        .info-section p {
+            margin-bottom: 3px;
+        }
+
+        .invoice-number {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .actes-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .actes-table thead {
+            background-color: #34495e;
+            color: white;
+        }
+
+        .actes-table th, .actes-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .actes-table th {
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        .actes-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .actes-table .text-right {
+            text-align: right;
+        }
+
+        .actes-table .text-center {
+            text-align: center;
+        }
+
+        .totals {
+            margin-top: 30px;
+            display: table;
+            width: 100%;
+        }
+
+        .totals-left {
+            display: table-cell;
+            width: 60%;
+            vertical-align: top;
+        }
+
+        .totals-right {
+            display: table-cell;
+            width: 40%;
+            vertical-align: top;
+        }
+
+        .totals-table {
+            width: 100%;
+            font-size: 14px;
+        }
+
+        .totals-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .totals-table .total-ht {
+            font-weight: bold;
+        }
+
+        .totals-table .total-final {
+            background-color: #2c3e50;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .payment-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .payment-info h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #3498db;
+            color: #7f8c8d;
+            font-size: 11px;
+        }
+
+        .date-due {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .header {
+                break-inside: avoid;
+            }
+        }
+
+        .consultation-details {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .consultation-details h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête -->
+    <div class="header">
+        <h1>FACTURE</h1>
+        <p>Cabinet Médical Oralys</p>
+    </div>
+
+    <!-- Informations facture et patient -->
+    <div class="invoice-info">
+        <div class="invoice-info-left">
+            <div class="info-section">
+                <h3>FACTURÉ À</h3>
+                <p><strong>{{ patient.last_name|upper }} {{ patient.first_name }}</strong></p>
+                {% if patient.cin %}
+                <p>CIN: {{ patient.cin }}</p>
+                {% endif %}
+                {% if patient.phone %}
+                <p>Tél: {{ patient.phone }}</p>
+                {% endif %}
+                {% if patient.email %}
+                <p>Email: {{ patient.email }}</p>
+                {% endif %}
+                {% if patient.city %}
+                <p>Ville: {{ patient.city }}</p>
+                {% endif %}
+            </div>
+
+            {% if patient.has_insurance %}
+            <div class="info-section">
+                <h3>ASSURANCE</h3>
+                {% if patient.insurance_number %}
+                <p>N° Immatriculation: {{ patient.insurance_number }}</p>
+                {% endif %}
+                {% if patient.affiliation_number %}
+                <p>N° Affiliation: {{ patient.affiliation_number }}</p>
+                {% endif %}
+                {% if patient.insured_name %}
+                <p>Nom adhérent: {{ patient.insured_name }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="invoice-info-right">
+            <div class="info-section">
+                <div class="invoice-number">N° {{ invoice.invoice_number }}</div>
+            </div>
+
+            <div class="info-section">
+                <h3>DÉTAILS FACTURE</h3>
+                <p><strong>Date facture:</strong> {{ invoice.invoice_date|date:"d/m/Y" }}</p>
+                <p><strong>Date création:</strong> {{ invoice.created_date|date:"d/m/Y" }}</p>
+                {% if invoice.due_date %}
+                <p><strong>Date échéance:</strong> <span class="date-due">{{ invoice.due_date|date:"d/m/Y" }}</span></p>
+                {% endif %}
+                <p><strong>Statut:</strong> 
+                    {% if invoice.status == 'draft' %}Brouillon
+                    {% elif invoice.status == 'sent' %}Envoyée
+                    {% elif invoice.status == 'paid' %}Payée
+                    {% elif invoice.status == 'overdue' %}En retard
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if consultation %}
+            <div class="info-section">
+                <h3>CONSULTATION</h3>
+                <p><strong>Date:</strong> {{ consultation.date|date:"d/m/Y à H:i" }}</p>
+                {% if consultation.medecin %}
+                <p><strong>Médecin:</strong> {{ consultation.medecin.full_name }}</p>
+                {% if consultation.medecin.speciality %}
+                <p><strong>Spécialité:</strong> {{ consultation.medecin.speciality.name }}</p>
+                {% endif %}
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="info-section">
+                <h3>FACTURE GLOBALE</h3>
+                <p><strong>Type:</strong> Consultations et Hébergement</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Détails de la consultation -->
+    {% if consultation.commentaires %}
+    <div class="consultation-details">
+        <h4>Commentaires de consultation</h4>
+        <p>{{ consultation.commentaires }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Tableau des prestations (actes + hébergement) -->
+    <table class="actes-table">
+        <thead>
+            <tr>
+                <th>Prestation</th>
+                <th class="text-center">Détails</th>
+                <th class="text-right">Prix unitaire</th>
+                <th class="text-right">Total HT</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Section Consultations -->
+            {% if consultations %}
+                <tr style="background-color: #3498db; color: white; font-weight: bold;">
+                    <td colspan="4">CONSULTATIONS MÉDICALES</td>
+                </tr>
+                {% for consultation_item in consultations %}
+                    {% for acte in consultation_item.actes.all %}
+                    <tr>
+                        <td>{{ acte.libelle }}</td>
+                        <td class="text-center">{{ consultation_item.date|date:"d/m/Y" }}</td>
+                        <td class="text-right">{{ acte.price|floatformat:2 }} DH</td>
+                        <td class="text-right">{{ acte.price|floatformat:2 }} DH</td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            {% endif %}
+
+            <!-- Section Hébergements -->
+            {% if admissions %}
+                <tr style="background-color: #f39c12; color: white; font-weight: bold;">
+                    <td colspan="4">HÉBERGEMENT</td>
+                </tr>
+                {% for admission in admissions %}
+                <tr>
+                    <td>Hébergement - Chambre {{ admission.room.room_name|default:"Non assignée" }} ({{ admission.room_type }})</td>
+                    <td class="text-center">{{ admission.calculate_stay_duration }} jour(s)<br><small>{{ admission.admission_date|date:"d/m/Y" }} - {% if admission.discharge_date %}{{ admission.discharge_date|date:"d/m/Y" }}{% else %}En cours{% endif %}</small></td>
+                    <td class="text-right">{{ admission.calculate_room_unit_price|floatformat:2 }} DH</td>
+                    <td class="text-right">{{ admission.calculate_room_cost|floatformat:2 }} DH</td>
+                </tr>
+                {% with companion_cost=admission.calculate_companion_cost %}
+                    {% if companion_cost > 0 %}
+                    <tr>
+                        <td>Accompagnant(s)</td>
+                        <td class="text-center">{{ admission.calculate_stay_duration }} jour(s)</td>
+                        <td class="text-right">{{ admission.calculate_companion_unit_price|floatformat:2 }} DH</td>
+                        <td class="text-right">{{ companion_cost|floatformat:2 }} DH</td>
+                    </tr>
+                    {% endif %}
+                {% endwith %}
+                {% endfor %}
+            {% endif %}
+
+            {% if not consultations and not admissions %}
+            <tr>
+                <td colspan="4" class="text-center" style="color: #7f8c8d; font-style: italic;">
+                    Aucune prestation facturée
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <!-- Totaux -->
+    <div class="totals">
+        <div class="totals-left">
+            {% if invoice.notes %}
+            <div class="payment-info">
+                <h4>Notes</h4>
+                <p>{{ invoice.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="totals-right">
+            <table class="totals-table">
+                <tr>
+                    <td><strong>Total HT:</strong></td>
+                    <td class="text-right total-ht">{{ total_ht|floatformat:2 }} DH</td>
+                </tr>
+                <tr>
+                    <td>TVA ({{ tva_rate|floatformat:0 }}%):</td>
+                    <td class="text-right">{{ tva_amount|floatformat:2 }} DH</td>
+                </tr>
+                <tr class="total-final">
+                    <td><strong>TOTAL TTC:</strong></td>
+                    <td class="text-right"><strong>{{ total_ttc|floatformat:2 }} DH</strong></td>
+                </tr>
+            </table>
+
+            {% if invoice.paid_amount > 0 %}
+            <table class="totals-table" style="margin-top: 15px; border-top: 2px solid #2c3e50;">
+                <tr>
+                    <td>Montant payé:</td>
+                    <td class="text-right" style="color: #27ae60;">{{ invoice.paid_amount|floatformat:2 }} DH</td>
+                </tr>
+                <tr style="background-color: #f39c12; color: white;">
+                    <td><strong>Reste à payer:</strong></td>
+                    <td class="text-right"><strong>{{ invoice.remaining_amount|floatformat:2 }} DH</strong></td>
+                </tr>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Informations de paiement -->
+    <div class="payment-info">
+        <h4>Informations de paiement</h4>
+        <p><strong>Mode de paiement acceptés:</strong> Espèces, Chèque, Carte bancaire, Virement</p>
+        <p><strong>Conditions:</strong> Paiement à réception de facture</p>
+        {% if invoice.due_date %}
+        <p><strong>Date limite de paiement:</strong> <span class="date-due">{{ invoice.due_date|date:"d/m/Y" }}</span></p>
+        {% endif %}
+    </div>
+
+    <!-- Pied de page -->
+    <div class="footer">
+        <p>Cabinet Médical Oralys - Facture générée le {{ today|date:"d/m/Y" }}</p>
+        <p>Cette facture est établie conformément à la réglementation en vigueur</p>
+    </div>
+</body>
+</html>

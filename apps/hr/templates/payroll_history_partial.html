@@ -1,0 +1,130 @@
+{% with params='search='|add:filters.search|urlencode|add:'&employee_id='|add:filters.employee_id|add:'&start_date='|add:filters.start_date|add:'&end_date='|add:filters.end_date %}
+<div class="table-responsive">
+    <table class="table table-hover shadow-sm" id="payrollHistoryTable" style="border-radius: 8px; overflow: hidden;">
+        <thead style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white;">
+            <tr>
+                <th class="border-0 d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAll">
+                </th>
+                <th class="border-0 d-none d-lg-table-cell sortable" data-sort="employee" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>Employé concerné</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0 d-none d-lg-table-cell sortable" data-sort="generated_by" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>Généré par</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0 d-none d-lg-table-cell sortable" data-sort="generated_at" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>Date génération</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0 sortable" data-sort="period" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>Période</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0 d-lg-none">
+                    Actions
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for h in history %}
+            <tr class="align-middle" style="transition: all 0.2s ease;">
+                <td data-label="Sélection" class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check">
+                </td>
+                <td data-label="Employé" class="d-none d-lg-table-cell">
+                    <strong>{{ h.employee.full_name }}</strong>
+                </td>
+                <td data-label="Généré par" class="d-none d-lg-table-cell">
+                    {% if h.generated_by %}{{ h.generated_by.full_name }}{% else %}<em class="text-muted">—</em>{% endif %}
+                </td>
+                <td data-label="Date génération" class="d-none d-lg-table-cell">
+                    <small class="text-muted">{{ h.generated_at|date:"d/m/Y H:i" }}</small>
+                </td>
+                <td data-label="Période">
+                    <div class="d-block d-lg-none">
+                        <strong>{{ h.employee.full_name }}</strong><br>
+                    </div>
+                    <span class="badge bg-info text-dark">{{ h.start_date|date:"d/m/Y" }} - {{ h.end_date|date:"d/m/Y" }}</span>
+                </td>
+                <td data-label="Actions" class="d-lg-none">
+                    <button type="button" class="btn btn-sm btn-light border view-payroll-details" 
+                            data-employee="{{ h.employee.full_name }}"
+                            data-generated-by="{% if h.generated_by %}{{ h.generated_by.full_name }}{% else %}—{% endif %}"
+                            data-generated-at="{{ h.generated_at|date:"d/m/Y H:i" }}"
+                            data-period="{{ h.start_date|date:"d/m/Y" }} - {{ h.end_date|date:"d/m/Y" }}"
+                            data-start-date="{{ h.start_date|date:"d/m/Y" }}"
+                            data-end-date="{{ h.end_date|date:"d/m/Y" }}"
+                            title="Voir les détails">
+                        <i class="fas fa-eye text-info"></i>
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr class="empty-row">
+                <td colspan="4" class="text-center text-muted py-4 d-none d-lg-table-cell">
+                    <i class="fas fa-file-invoice fa-2x mb-2 d-block"></i>
+                    Aucun bulletin généré pour le moment.
+                </td>
+                <td colspan="2" class="text-center text-muted py-4 d-lg-none">
+                    <i class="fas fa-file-invoice fa-2x mb-2 d-block"></i>
+                    Aucun bulletin généré pour le moment.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if history.has_other_pages %}
+<nav aria-label="Pagination historique" class="mt-3">
+    <ul class="pagination justify-content-center flex-wrap">
+        {% if history.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ history.previous_page_number }}&{{ params }}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+            </span>
+        </li>
+        {% endif %}
+        {% for num in history.paginator.page_range %}
+            {% if history.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% else %}
+                <li class="page-item"><a class="page-link" href="?page={{ num }}&{{ params }}">{{ num }}</a></li>
+            {% endif %}
+        {% endfor %}
+        {% if history.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ history.next_page_number }}&{{ params }}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+            </span>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endwith %} 

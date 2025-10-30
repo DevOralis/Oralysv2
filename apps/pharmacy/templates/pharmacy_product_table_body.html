@@ -1,0 +1,43 @@
+{% for product in page_obj %}
+<tr data-product-id="{{ product.pk }}">  
+  <td data-label="Sélection"><input type="checkbox" class="row-check"></td>
+  <td data-label="Code">{{ product.code }}</td>
+  <td data-label="Libellé">{{ product.short_label }}</td>
+  <td data-label="Marque">
+    {% if product.brand %}
+      {{ product.brand }}
+    {% else %}
+      <span class="text-muted">Aucune marque</span>
+    {% endif %}
+  </td>
+  <td data-label="DCI">
+    {% if product.dci %}
+      {{ product.dci.label }}
+    {% else %}
+      <span class="text-muted">Aucune DCI</span>
+    {% endif %}
+  </td>
+  <td data-label="Forme">
+    {% if product.pharmaceutical_form %}
+      {{ product.pharmaceutical_form.name }}
+    {% else %}
+      <span class="text-muted">Aucune forme</span>
+    {% endif %}
+  </td>
+  <td data-label="Prix.U">{{ product.unit_price|floatformat:2 }}</td>
+  <td data-label="Q.Totale">{{ product.total_quantity_cached|floatformat:2 }}</td>
+  <td data-label="Actions" class="actions-cell text-center">
+    <div class="d-flex gap-1 justify-content-end">
+      <button type="button" class="btn btn-sm btn-light border text-info btn-details-pharmacy-product" data-id="{{ product.pk }}" data-bs-toggle="modal" data-bs-target="#pharmacyProductOrderHistoryModal" title="Historique"><i class="fas fa-eye"></i></button>
+           {% if request.session.user.permissions.pharmacy.update %}
+      <a href="{% url 'pharmacy_product_edit' product.pk %}#product-form-card" class="btn btn-sm btn-light border text-dark" title="Modifier"><i class="fas fa-edit"></i></a>
+      {% endif %}
+      {% if request.session.user.permissions.pharmacy.delete %}
+      <button type="button" class="btn btn-sm btn-light border text-danger btn-delete-product" data-id="{{ product.pk }}" data-name="{{ product.short_label }}" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr><td colspan="9" class="text-center">Aucun produit trouvé</td></tr>
+{% endfor %}

@@ -1,0 +1,14 @@
+{% for operation_type in operation_types %}
+<!-- operation type -->
+<tr data-id="{{ operation_type.pk }}" data-label="{{ operation_type.label }}">
+  <td>{{ operation_type.label }}</td>
+  {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+  <td>
+    <button type="button" class="btn btn-sm btn-light btn-edit-config" data-entity="operation-type" title="Modifier"><i class="fas fa-edit"></i></button>
+    <button type="button" class="btn btn-sm btn-light text-danger btn-operation-type-delete" title="Supprimer"><i class="fas fas fa-trash-alt"></i></button>
+  </td>
+  {% endif %}
+</tr>
+{% empty %}
+<tr><td colspan="2" class="text-center text-muted">Aucun type d'opération trouvé</td></tr>
+{% endfor %} 

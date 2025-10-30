@@ -1,0 +1,14 @@
+{% for product_type in product_types %}
+<!-- Product type -->
+<tr data-id="{{ product_type.pk }}" data-label="{{ product_type.label }}">
+  <td data-label="Libellé">{{ product_type.label }}</td>
+  {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+  <td data-label="Actions" class="text-center">
+    <button type="button" class="btn btn-sm btn-light btn-edit-config" data-entity="product-type" title="Modifier"><i class="fas fa-edit"></i></button>
+    <button type="button" class="btn btn-sm btn-light text-danger btn-product-type-delete" title="Supprimer"><i class="fas fas fa-trash-alt"></i></button>
+  </td>
+  {% endif %}
+</tr>
+{% empty %}
+<tr><td colspan="2" class="text-center text-muted">Aucun type de produit trouvé</td></tr>
+{% endfor %} 

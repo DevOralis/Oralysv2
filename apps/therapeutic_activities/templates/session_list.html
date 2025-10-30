@@ -1,0 +1,1331 @@
+{% extends 'base.html' %}
+{% block menu %}
+  {% include 'therapeutic_activities_menu.html' %}
+{% endblock %}
+
+{% load static %}
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-calendar-alt text-primary me-2"></i>
+    Sessions
+  </h3>
+
+  <!-- Hidden div for success messages -->
+  <div id="success-message" style="display: none;"></div>
+
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-list me-2"></i>
+      Liste des sessions
+    </div>
+    <div class="card-body">
+      <!-- Search and Filter Form -->
+      <form method="get" class="mb-3">
+        <div class="row g-1 mb-3 align-items-center">
+          <div class="col-12 col-md-4 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" name="q" class="form-control border-primary"
+                     placeholder="Recherche par activité, lieu, notes..."
+                     id="searchSession">
+            </div>
+          </div>
+          <div class="col-6 col-md-3 order-2">
+            <select name="activity" class="form-select" title="Filtrer par activité" id="filterActivity">
+              <option value="">Toutes les activités</option>
+              {% for activity in activities %}
+                <option value="{{ activity.title }}">
+                  {{ activity.title }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-3 col-md-2 order-3">
+            <button type="button" class="btn btn-light border w-100 d-flex align-items-center justify-content-center" id="export-import-btn-sessions" title="Import/Export">
+              <i class="fas fa-file-import" id="export-import-icon-sessions"></i>
+              <span class="d-none d-xl-inline ms-1" id="export-import-text-sessions">Importer</span>
+            </button>
+          </div>
+          {% if request.session.user.permissions.therapeutic_activities.write %}
+            <div class="col-3 col-md-3 order-4">
+              <button type="button" class="btn btn-primary w-100 d-flex align-items-center justify-content-center text-nowrap" 
+                      title="Nouvelle session" id="btn-add-session">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-xl-inline ms-1">Nouvelle session</span>
+              </button>
+            </div>
+          {% endif %}
+        </div>
+      </form>
+
+      <!-- Sessions Table -->
+        <table class="table table-hover table-responsive" id="sessions-table">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAllSessions">
+              </th>
+              <th class="sortable" data-sort="activity" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Activité</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell sortable" data-sort="date" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Date & Heure</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell sortable" data-sort="location" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Salle</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell sortable" data-sort="coach" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Coach</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell sortable" data-sort="participants" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Participants</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell sortable" data-sort="status" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Statut</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center action-column no-sort">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for session in sessions %}
+            <tr>
+              <td data-label="Sélection" class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td data-label="Activité">
+                {{ session.activity.title }}
+                {% if session.notes %}
+                  <br><small class="text-muted">{{ session.notes|truncatechars:40 }}</small>
+                {% endif %}
+              </td>
+              <td data-label="Date & Heure" class="d-none d-md-table-cell">
+                <strong>{{ session.date|date:"d/m/Y" }}</strong><br>
+                <small class="text-muted">{{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}</small>
+              </td>
+              <td data-label="Salle" class="d-none d-lg-table-cell">{{ session.location.name }}</td>
+              <td data-label="Coach" class="d-none d-lg-table-cell">{{ session.activity.coach.full_name|default:"Non assigné" }}</td>
+              <td data-label="Participants" class="d-none d-lg-table-cell text-center">
+                <span class="badge bg-info">{{ session.participants_count }}/{{ session.max_participants }}</span>
+              </td>
+              <td data-label="Statut" class="d-none d-lg-table-cell">
+                {% if session.status == 'planned' %}
+                  <span class="badge bg-warning text-dark">Prévu</span>
+                {% elif session.status == 'done' %}
+                  <span class="badge bg-success">Réalisé</span>
+                {% elif session.status == 'canceled' %}
+                  <span class="badge bg-danger">Annulé</span>
+                {% endif %}
+              </td>
+              <td data-label="Actions" class="text-end">
+                <div class="d-flex gap-1 justify-content-end">
+                  <button type="button" class="btn btn-sm btn-light border text-info view-session-details" 
+                          title="Voir détails"
+                          data-session-id="{{ session.pk }}"
+                          data-activity="{{ session.activity.title }}"
+                          data-date="{{ session.date|date:'d/m/Y' }}"
+                          data-time="{{ session.start_time|time:'H:i' }} - {{ session.end_time|time:'H:i' }}"
+                          data-location="{{ session.location.name }}"
+                          data-coach="{{ session.activity.coach.full_name|default:'Non assigné' }}"
+                          data-participants="{{ session.participants_count }}/{{ session.max_participants }}"
+                          data-status="{{ session.get_status_display }}"
+                          data-notes="{{ session.notes|default:'Aucune note' }}"
+                          data-bs-toggle="modal" 
+                          data-bs-target="#sessionDetailsModal">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  {% if request.session.user.permissions.therapeutic_activities.update %}
+                    <button type="button" class="btn btn-sm btn-light border text-dark edit-session-btn" 
+                            title="Modifier"
+                            data-session-id="{{ session.pk }}"
+                            data-activity="{{ session.activity.id }}"
+                            data-location="{{ session.location.id }}"
+                            data-date="{{ session.date|date:'Y-m-d' }}"
+                            data-start-time="{{ session.start_time|time:'H:i' }}"
+                            data-end-time="{{ session.end_time|time:'H:i' }}"
+                            data-max-participants="{{ session.max_participants }}"
+                            data-status="{{ session.status }}"
+                            data-notes="{{ session.notes|default:'' }}">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                  {% endif %}
+                  {% if request.session.user.permissions.therapeutic_activities.delete %}
+                    <button type="button" 
+                            class="btn btn-sm btn-light border text-danger" 
+                            title="Supprimer"
+                            data-session-id="{{ session.pk }}"
+                            data-session-title="{{ session.activity.title|escapejs }}"
+                            data-session-date="{{ session.date|date:'d/m/Y' }}"
+                            data-session-time="{{ session.start_time|time:'H:i' }}"
+                            onclick="deleteSession(this.dataset.sessionId, this.dataset.sessionTitle, this.dataset.sessionDate, this.dataset.sessionTime)">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="text-center text-muted py-4">
+                <i class="fas fa-calendar-times fa-2x mb-2"></i><br>
+                Aucune session trouvée
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+      <!-- Pagination for Sessions -->
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap" id="sessionPagination">
+          <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Précédent" id="prevPageSession">
+              <i class="fas fa-chevron-left d-block d-sm-none"></i>
+              <span class="d-none d-sm-block">&laquo; Préc</span>
+            </a>
+          </li>
+          <!-- Les numéros de page seront générés dynamiquement -->
+          <li class="page-item">
+            <a class="page-link" href="#" aria-label="Suivant" id="nextPageSession">
+              <i class="fas fa-chevron-right d-block d-sm-none"></i>
+              <span class="d-none d-sm-block">Suiv &raquo;</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+  {% if request.session.user.permissions.therapeutic_activities.write %}
+  <!-- Add Session Form -->
+  <div class="collapse mt-3" id="sessionAddFormCollapse">
+    <div class="card">
+      <div class="card-header text-white" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+        Ajouter une nouvelle session
+      </div>
+      <div class="card-body">
+        <form method="post" id="sessionAddForm">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Activité : <span class="text-danger">*</span></label>
+              <select name="activity" class="form-select" required>
+                <option value="">Sélectionner une activité</option>
+                {% for activity in activities %}
+                  <option value="{{ activity.id }}">{{ activity.title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Salle : <span class="text-danger">*</span></label>
+              <select name="location" class="form-select" required>
+                <option value="">Sélectionner une salle</option>
+                {% for location in locations %}
+                  <option value="{{ location.id }}">{{ location.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Date : <span class="text-danger">*</span></label>
+              <input type="date" name="date" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Participants max : <span class="text-danger">*</span></label>
+              <input type="number" name="max_participants" class="form-control" min="1" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Heure début : <span class="text-danger">*</span></label>
+              <input type="time" name="start_time" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Heure fin : <span class="text-danger">*</span></label>
+              <input type="time" name="end_time" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Statut : <span class="text-danger">*</span></label>
+              <select name="status" class="form-select" required>
+                <option value="planned">Prévu</option>
+                <option value="done">Réalisé</option>
+                <option value="canceled">Annulé</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Notes : </label>
+              <textarea name="notes" class="form-control" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="collapse" data-bs-target="#sessionAddFormCollapse">
+              <i class="fas fa-times"></i><span class="d-none d-sm-inline ms-1">Annuler</span>
+            </button>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if request.session.user.permissions.therapeutic_activities.update %}
+  <!-- Edit Session Form -->
+  <div class="collapse mt-3" id="sessionEditFormCollapse">
+    <div class="card">
+      <div class="card-header text-white" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+        Modifier la session
+      </div>
+      <div class="card-body">
+        <form method="post" id="sessionEditForm">
+          {% csrf_token %}
+          <input type="hidden" name="session_id" id="edit-session-id">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Activité : <span class="text-danger">*</span></label>
+              <select name="activity" id="edit-activity" class="form-select" required>
+                <option value="">Sélectionner une activité</option>
+                {% for activity in activities %}
+                  <option value="{{ activity.id }}">{{ activity.title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Salle : <span class="text-danger">*</span></label>
+              <select name="location" id="edit-location" class="form-select" required>
+                <option value="">Sélectionner une salle</option>
+                {% for location in locations %}
+                  <option value="{{ location.id }}">{{ location.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Date : <span class="text-danger">*</span></label>
+              <input type="date" name="date" id="edit-date" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Participants max : <span class="text-danger">*</span></label>
+              <input type="number" name="max_participants" id="edit-max-participants" class="form-control" min="1" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Heure début : <span class="text-danger">*</span></label>
+              <input type="time" name="start_time" id="edit-start-time" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Heure fin : <span class="text-danger">*</span></label>
+              <input type="time" name="end_time" id="edit-end-time" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Statut : <span class="text-danger">*</span></label>
+              <select name="status" id="edit-status" class="form-select" required>
+                <option value="planned">Prévu</option>
+                <option value="done">Réalisé</option>
+                <option value="canceled">Annulé</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Notes : </label>
+              <textarea name="notes" id="edit-notes" class="form-control" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="collapse" data-bs-target="#sessionEditFormCollapse">
+              <i class="fas fa-times"></i><span class="d-none d-sm-inline ms-1">Annuler</span>
+            </button>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Session Details Modal -->
+  <div class="modal fade" id="sessionDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header" style="background-color: #1e90ff; color: white;">
+          <h5 class="modal-title">
+            <i class="fas fa-eye me-2"></i>
+            Détails de la session
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <strong>Activité:</strong>
+              <p id="modal-activity" class="mb-2"></p>
+            </div>
+            <div class="col-md-6">
+              <strong>Date et heure:</strong>
+              <p id="modal-datetime" class="mb-2"></p>
+            </div>
+            <div class="col-md-6">
+              <strong>Salle:</strong>
+              <p id="modal-location" class="mb-2"></p>
+            </div>
+            <div class="col-md-6">
+              <strong>Coach:</strong>
+              <p id="modal-coach" class="mb-2"></p>
+            </div>
+            <div class="col-md-6">
+              <strong>Participants:</strong>
+              <p id="modal-participants" class="mb-2"></p>
+            </div>
+            <div class="col-md-6">
+              <strong>Statut:</strong>
+              <p id="modal-status" class="mb-2"></p>
+            </div>
+            <div class="col-12">
+              <strong>Notes:</strong>
+              <p id="modal-notes" class="mb-2"></p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+window.sessionListConfig = {
+  showForm: true
+};
+
+// Variables globales pour les sessions
+let existingSessions = [];
+let sessionTable, sessionRows, sessionSearch, activityFilter, filteredSessionRows;
+
+// Fonction pour extraire les données des sessions existantes
+function extractExistingSessions() {
+    existingSessions = [];
+    if (!sessionRows) return;
+    
+    sessionRows.forEach(row => {
+        // Ignorer la ligne "Aucune session trouvée"
+        if (row.querySelector('td[colspan]')) return;
+        
+        const activityText = row.querySelector('td:nth-child(2) strong')?.textContent.trim();
+        const dateText = row.querySelector('td:nth-child(3) strong')?.textContent.trim();
+        const timeText = row.querySelector('td:nth-child(3) small')?.textContent.trim();
+        const coachText = row.querySelector('td:nth-child(5)')?.textContent.trim();
+        
+        if (activityText && dateText && timeText && coachText) {
+            // Extraire l'ID de l'activité depuis les données du bouton edit
+            const editBtn = row.querySelector('.edit-session-btn');
+            const activityId = editBtn ? editBtn.dataset.activity : null;
+            
+            // Parser la date (format dd/mm/yyyy)
+            const dateParts = dateText.split('/');
+            const formattedDate = dateParts.length === 3 ? 
+                `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}` : null;
+            
+            // Parser les heures (format HH:mm - HH:mm)
+            const timeMatch = timeText.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+            const startTime = timeMatch ? timeMatch[1] : null;
+            const endTime = timeMatch ? timeMatch[2] : null;
+            
+            if (activityId && formattedDate && startTime && endTime) {
+                existingSessions.push({
+                    activityId: activityId,
+                    activityName: activityText,
+                    coach: coachText,
+                    date: formattedDate,
+                    startTime: startTime,
+                    endTime: endTime
+                });
+            }
+        }
+    });
+}
+
+// Fonction pour vérifier les conflits de coach
+function checkCoachConflict(selectedActivityId, selectedDate, selectedStartTime, selectedEndTime, excludeSessionId = null) {
+    // Trouver le coach de l'activité sélectionnée
+    const selectedActivity = existingSessions.find(s => s.activityId === selectedActivityId);
+    if (!selectedActivity) {
+        // Si l'activité n'est pas dans les sessions existantes, 
+        // on ne peut pas vérifier le conflit côté client
+        return null;
+    }
+    
+    const selectedCoach = selectedActivity.coach;
+    
+    return existingSessions.find(session => {
+        // Exclure la session en cours de modification
+        if (excludeSessionId && session.sessionId === excludeSessionId) return false;
+        
+        // Vérifier si c'est le même coach
+        if (session.coach !== selectedCoach) return false;
+        
+        // Vérifier si c'est la même date
+        if (session.date !== selectedDate) return false;
+        
+        // Vérifier si les heures se chevauchent
+        const sessionStart = session.startTime;
+        const sessionEnd = session.endTime;
+        
+        // Les heures se chevauchent si:
+        // - La nouvelle session commence avant que l'existante se termine ET
+        // - La nouvelle session se termine après que l'existante commence
+        const startTime = selectedStartTime;
+        const endTime = selectedEndTime;
+        
+        return (startTime < sessionEnd && endTime > sessionStart);
+    });
+}
+
+// Fonction pour afficher l'alerte de conflit
+function showCoachConflictAlert(conflictSession) {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Conflit de planning détecté!',
+        html: `
+            <div style="text-align: left;">
+                <p style="margin-bottom: 15px;"><strong>⚠️ Ce coach a déjà une session à cet horaire :</strong></p>
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                    <ul style="margin: 0; padding-left: 20px;">
+                        <li style="margin-bottom: 8px;"><strong>🎯 Activité:</strong> ${conflictSession.activityName}</li>
+                        <li style="margin-bottom: 8px;"><strong>👨‍💼 Coach:</strong> ${conflictSession.coach}</li>
+                        <li style="margin-bottom: 8px;"><strong>📅 Date:</strong> ${conflictSession.date.split('-').reverse().join('/')}</li>
+                        <li style="margin-bottom: 8px;"><strong>🕐 Horaire:</strong> ${conflictSession.startTime} - ${conflictSession.endTime}</li>
+                    </ul>
+                </div>
+                <p style="margin-top: 15px; color: #666; font-size: 14px;">
+                    💡 <strong>Solution :</strong> Choisissez une autre date ou un autre créneau horaire.
+                </p>
+            </div>
+        `,
+        confirmButtonText: 'Compris',
+        confirmButtonColor: '#e74c3c',
+        timer: 5000,
+        timerProgressBar: true
+    });
+}
+
+// Fonction de validation en temps réel
+function validateFormFields() {
+    const activitySelect = document.querySelector('#sessionAddForm select[name="activity"]') || 
+                          document.querySelector('#sessionEditForm select[name="activity"]');
+    const dateInput = document.querySelector('#sessionAddForm input[name="date"]') || 
+                     document.querySelector('#sessionEditForm input[name="date"]');
+    const startTimeInput = document.querySelector('#sessionAddForm input[name="start_time"]') || 
+                          document.querySelector('#sessionEditForm input[name="start_time"]');
+    const endTimeInput = document.querySelector('#sessionAddForm input[name="end_time"]') || 
+                        document.querySelector('#sessionEditForm input[name="end_time"]');
+    
+    if (activitySelect && dateInput && startTimeInput && endTimeInput) {
+        const selectedActivityId = activitySelect.value;
+        const selectedDate = dateInput.value;
+        const selectedStartTime = startTimeInput.value;
+        const selectedEndTime = endTimeInput.value;
+        
+        // Vérifier si tous les champs sont remplis
+        if (selectedActivityId && selectedDate && selectedStartTime && selectedEndTime) {
+            // Vérifier si l'heure de fin est après l'heure de début
+            if (selectedStartTime >= selectedEndTime) {
+                return { valid: false, message: "L'heure de fin doit être après l'heure de début." };
+            }
+            
+            // Vérifier les conflits de coach
+            const conflict = checkCoachConflict(selectedActivityId, selectedDate, selectedStartTime, selectedEndTime);
+            if (conflict) {
+                return { valid: false, conflict: conflict };
+            }
+        }
+    }
+    
+    return { valid: true };
+}
+
+// Event listeners pour validation en temps réel sur les formulaires
+function setupRealTimeValidation() {
+    // Formulaire d'ajout
+    const addForm = document.getElementById('sessionAddForm');
+    if (addForm) {
+        const addActivity = addForm.querySelector('select[name="activity"]');
+        const addDate = addForm.querySelector('input[name="date"]');
+        const addStartTime = addForm.querySelector('input[name="start_time"]');
+        const addEndTime = addForm.querySelector('input[name="end_time"]');
+        
+        [addActivity, addDate, addStartTime, addEndTime].forEach(field => {
+            if (field) {
+                field.addEventListener('change', function() {
+                    // Délai pour permettre à l'utilisateur de finir de saisir
+                    setTimeout(() => {
+                        const validation = validateFormFields();
+                        if (!validation.valid && validation.conflict) {
+                            showCoachConflictAlert(validation.conflict);
+                            // Vider le champ qui cause le conflit
+                            if (field === addStartTime || field === addEndTime) {
+                                field.value = '';
+                            }
+                        }
+                    }, 500);
+                });
+            }
+        });
+    }
+    
+    // Formulaire de modification
+    const editForm = document.getElementById('sessionEditForm');
+    if (editForm) {
+        const editActivity = editForm.querySelector('select[name="activity"]');
+        const editDate = editForm.querySelector('input[name="date"]');
+        const editStartTime = editForm.querySelector('input[name="start_time"]');
+        const editEndTime = editForm.querySelector('input[name="end_time"]');
+        
+        [editActivity, editDate, editStartTime, editEndTime].forEach(field => {
+            if (field) {
+                field.addEventListener('change', function() {
+                    setTimeout(() => {
+                        const validation = validateFormFields();
+                        if (!validation.valid && validation.conflict) {
+                            showCoachConflictAlert(validation.conflict);
+                            // Vider le champ qui cause le conflit
+                            if (field === editStartTime || field === editEndTime) {
+                                field.value = '';
+                            }
+                        }
+                    }, 500);
+                });
+            }
+        });
+    }
+}
+
+// Initialisation quand le DOM est chargé
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration pour les sessions
+    sessionTable = document.getElementById('sessions-table');
+    sessionRows = Array.from(sessionTable.querySelector('tbody').querySelectorAll('tr'));
+    sessionSearch = document.getElementById('searchSession');
+    activityFilter = document.getElementById('filterActivity');
+    filteredSessionRows = [...sessionRows];
+    
+    // Initialiser les données des sessions existantes
+    extractExistingSessions();
+    
+    
+    // Pagination côté client - 5 éléments par page
+    const itemsPerPage = 5;
+    let currentSessionPage = 1;
+    let totalSessionPages = Math.ceil(filteredSessionRows.length / itemsPerPage);
+    
+    // Fonction de tri pour les sessions
+    function setupSessionSorting() {
+        const sortableHeaders = document.querySelectorAll('#sessions-table .sortable');
+        
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const sortField = this.dataset.sort;
+                const currentDirection = this.dataset.direction || 'asc';
+                const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+                
+                // Mettre à jour l'icône de tri
+                updateSessionSortIcons(this, newDirection);
+                
+                // Trier le tableau
+                sortSessionTable(sortField, newDirection);
+                
+                // Réappliquer la pagination
+                showSessionPage(1);
+                currentSessionPage = 1;
+                
+                // Sauvegarder la direction
+                this.dataset.direction = newDirection;
+            });
+        });
+    }
+
+    function sortSessionTable(sortField, direction) {
+        filteredSessionRows.sort((a, b) => {
+            let aValue, bValue;
+            
+            switch(sortField) {
+                case 'activity':
+                    aValue = a.querySelector('td:nth-child(2) strong')?.textContent.trim() || '';
+                    bValue = b.querySelector('td:nth-child(2) strong')?.textContent.trim() || '';
+                    break;
+                case 'date':
+                    aValue = a.querySelector('td:nth-child(3) strong')?.textContent.trim() || '';
+                    bValue = b.querySelector('td:nth-child(3) strong')?.textContent.trim() || '';
+                    // Convertir en format de date pour tri correct
+                    aValue = aValue.split('/').reverse().join('-');
+                    bValue = bValue.split('/').reverse().join('-');
+                    break;
+                case 'location':
+                    aValue = a.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+                    bValue = b.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+                    break;
+                case 'coach':
+                    aValue = a.querySelector('td:nth-child(5)')?.textContent.trim() || '';
+                    bValue = b.querySelector('td:nth-child(5)')?.textContent.trim() || '';
+                    break;
+                case 'participants':
+                    aValue = a.querySelector('td:nth-child(6) .badge')?.textContent.trim().split('/')[0] || '0';
+                    bValue = b.querySelector('td:nth-child(6) .badge')?.textContent.trim().split('/')[0] || '0';
+                    aValue = parseInt(aValue);
+                    bValue = parseInt(bValue);
+                    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+                case 'status':
+                    aValue = a.querySelector('td:nth-child(7) .badge')?.textContent.trim() || '';
+                    bValue = b.querySelector('td:nth-child(7) .badge')?.textContent.trim() || '';
+                    break;
+                default:
+                    return 0;
+            }
+            
+            if (typeof aValue === 'string') {
+                const comparison = aValue.localeCompare(bValue, 'fr', { numeric: true });
+                return direction === 'asc' ? comparison : -comparison;
+            }
+            return 0;
+        });
+    }
+
+    function updateSessionSortIcons(activeHeader, direction) {
+        // Réinitialiser toutes les icônes
+        document.querySelectorAll('#sessions-table .sort-icon').forEach(icon => {
+            icon.className = 'fas fa-sort sort-icon text-muted';
+        });
+        
+        // Mettre à jour l'icône active
+        const activeIcon = activeHeader.querySelector('.sort-icon');
+        if (activeIcon) {
+            if (direction === 'asc') {
+                activeIcon.className = 'fas fa-sort-up sort-icon text-primary';
+            } else {
+                activeIcon.className = 'fas fa-sort-down sort-icon text-primary';
+            }
+        }
+    }
+    
+    // Fonction de recherche et filtrage pour les sessions
+    function searchAndFilterSessions() {
+        const query = sessionSearch.value.toLowerCase().trim();
+        const activityFilterValue = activityFilter.value.toLowerCase().trim();
+        const statusFilterValue = statusFilter.value.toLowerCase().trim();
+        
+        filteredSessionRows = sessionRows.filter(row => {
+            if (row.querySelector('td[colspan]')?.textContent.includes('Aucune session')) return false;
+            
+            const activity = row.querySelector('td:nth-child(2) strong')?.textContent.toLowerCase().trim() || '';
+            const dateText = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase().trim() || '';
+            const location = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase().trim() || '';
+            const coach = row.querySelector('td:nth-child(5)')?.textContent.toLowerCase().trim() || '';
+            const statusText = row.querySelector('td:nth-child(7)')?.textContent.toLowerCase().trim() || '';
+            
+            // Filtrage par recherche générale
+            const matchesSearch = !query || activity.includes(query) || location.includes(query) || dateText.includes(query) || coach.includes(query) || statusText.includes(query);
+            
+            // Filtrage par activité
+            const matchesActivity = !activityFilterValue || activity.includes(activityFilterValue);
+            
+            return matchesSearch && matchesActivity;
+        });
+        
+        totalSessionPages = Math.ceil(filteredSessionRows.length / itemsPerPage);
+        currentSessionPage = 1;
+        showSessionPage(1);
+    }
+    
+    // Affichage des pages pour les sessions
+    function showSessionPage(page) {
+        const start = (page - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        
+        // Masquer toutes les lignes
+        sessionRows.forEach(row => row.style.display = 'none');
+        
+        // Afficher les lignes filtrées pour la page actuelle
+        for (let i = start; i < end && i < filteredSessionRows.length; i++) {
+            filteredSessionRows[i].style.display = '';
+        }
+        
+        updateSessionPagination(page);
+    }
+    
+    // Mise à jour de la pagination pour les sessions
+    function updateSessionPagination(page) {
+        const pagination = document.getElementById('sessionPagination');
+        const prevBtn = document.getElementById('prevPageSession');
+        const nextBtn = document.getElementById('nextPageSession');
+        
+        prevBtn.parentElement.classList.toggle('disabled', page === 1);
+        nextBtn.parentElement.classList.toggle('disabled', page === totalSessionPages);
+        
+        // Nettoyer les anciens numéros de page
+        const pageNumbers = pagination.querySelectorAll('.page-number');
+        pageNumbers.forEach(num => num.remove());
+        
+        // Ajouter les numéros de page
+        for (let i = 1; i <= totalSessionPages; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.className = 'page-item page-number';
+            if (i === page) pageItem.classList.add('active');
+            
+            const pageLink = document.createElement('a');
+            pageLink.className = 'page-link';
+            pageLink.href = '#';
+            pageLink.textContent = i;
+            pageLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentSessionPage = i;
+                showSessionPage(i);
+            });
+            
+            pageItem.appendChild(pageLink);
+            pagination.insertBefore(pageItem, nextBtn.parentElement);
+        }
+        
+        // Masquer la pagination si pas assez d'éléments
+        pagination.style.display = totalSessionPages <= 1 ? 'none' : 'flex';
+    }
+    
+    // Event listeners pour la recherche et les filtres
+    sessionSearch.addEventListener('input', searchAndFilterSessions);
+    activityFilter.addEventListener('change', searchAndFilterSessions);
+    
+    // Event listeners pour la pagination
+    document.getElementById('prevPageSession').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentSessionPage > 1) {
+            currentSessionPage--;
+            showSessionPage(currentSessionPage);
+        }
+    });
+    
+    document.getElementById('nextPageSession').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentSessionPage < totalSessionPages) {
+            currentSessionPage++;
+            showSessionPage(currentSessionPage);
+        }
+    });
+    
+    // Gestion des boutons d'import/export
+    let isImportMode = true;
+    const exportImportBtn = document.getElementById('export-import-btn-sessions');
+    const exportImportIcon = document.getElementById('export-import-icon-sessions');
+    const exportImportText = document.getElementById('export-import-text-sessions');
+    
+    exportImportBtn.addEventListener('click', function() {
+        if (isImportMode) {
+            // Mode Import - créer un input file pour importer
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.csv';
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    console.log('Fichier sélectionné pour import:', e.target.files[0].name);
+                    // Ici on pourrait ajouter la logique d'import
+                    alert('Fonctionnalité d\'import à implémenter');
+                }
+            });
+            fileInput.click();
+        } else {
+            // Mode Export
+            exportSessionsData();
+        }
+    });
+    
+    function updateImportExportButton() {
+        if (isImportMode) {
+            exportImportIcon.className = 'fas fa-file-import';
+            exportImportText.textContent = 'Importer';
+            exportImportBtn.title = 'Importer des sessions';
+        } else {
+            exportImportIcon.className = 'fas fa-file-export';
+            exportImportText.textContent = 'Exporter';
+            exportImportBtn.title = 'Exporter les sessions sélectionnées';
+        }
+    }
+    
+    function exportSessionsData() {
+        const selectedRows = document.querySelectorAll('#sessions-table tbody tr input.row-check:checked');
+        if (selectedRows.length === 0) {
+            alert('Veuillez sélectionner au moins une session à exporter.');
+            return;
+        }
+        
+        const exportData = [];
+        selectedRows.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const activity = row.querySelector('td:nth-child(2) strong')?.textContent.trim() || '';
+            const notes = row.querySelector('td:nth-child(2) small')?.textContent.trim() || '';
+            const dateTime = row.querySelector('td:nth-child(3)')?.textContent.trim() || '';
+            const location = row.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+            const coach = row.querySelector('td:nth-child(5)')?.textContent.trim() || '';
+            const participants = row.querySelector('td:nth-child(6) .badge')?.textContent.trim() || '';
+            const status = row.querySelector('td:nth-child(7) .badge')?.textContent.trim() || '';
+            
+            exportData.push({
+                'Activité': activity,
+                'Notes': notes,
+                'Date & Heure': dateTime,
+                'Salle': location,
+                'Coach': coach,
+                'Participants': participants,
+                'Statut': status
+            });
+        });
+        
+        const csvContent = convertToCSV(exportData);
+        downloadCSV(csvContent, 'sessions_export.csv');
+    }
+    
+    function convertToCSV(data) {
+        if (data.length === 0) return '';
+        
+        const headers = Object.keys(data[0]);
+        const csvRows = [
+            headers.join(','),
+            ...data.map(row => 
+                headers.map(header => 
+                    `"${String(row[header]).replace(/"/g, '""')}"`
+                ).join(',')
+            )
+        ];
+        
+        return csvRows.join('\n');
+    }
+    
+    function downloadCSV(content, filename) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+    
+    // Gestion des cases à cocher
+    const selectAllCheckbox = document.getElementById('selectAllSessions');
+    
+    selectAllCheckbox.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('#sessions-table tbody tr:not([style*="display: none"]) input.row-check');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+    
+    // Mettre à jour la case "Tout sélectionner" et le mode import/export
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('row-check') || e.target.id === 'selectAllSessions') {
+            const allCheckboxes = document.querySelectorAll('#sessions-table tbody tr:not([style*="display: none"]) input.row-check');
+            const checkedCheckboxes = document.querySelectorAll('#sessions-table tbody tr:not([style*="display: none"]) input.row-check:checked');
+            
+            // Mettre à jour la case "Tout sélectionner"
+            if (e.target.classList.contains('row-check')) {
+                selectAllCheckbox.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
+                selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+            }
+            
+            // Basculer automatiquement vers export si des éléments sont sélectionnés
+            if (checkedCheckboxes.length > 0 && isImportMode) {
+                isImportMode = false;
+                updateImportExportButton();
+            } else if (checkedCheckboxes.length === 0 && !isImportMode) {
+                isImportMode = true;
+                updateImportExportButton();
+            }
+        }
+    });
+    
+    // Initialiser le tri
+    setupSessionSorting();
+    
+    // Initialiser le bouton import/export
+    updateImportExportButton();
+    
+    // Initialiser la validation en temps réel
+    setupRealTimeValidation();
+    
+    // Initialiser l'affichage
+    showSessionPage(1);
+});
+
+// Bouton Nouvelle session - afficher le formulaire d'ajout
+document.getElementById('btn-add-session').addEventListener('click', function() {
+    // Réinitialiser le formulaire d'ajout
+    document.getElementById('sessionAddForm').reset();
+    
+    // Réinitialiser les données des sessions existantes
+    extractExistingSessions();
+    
+    // Afficher le formulaire d'ajout
+    const addCollapse = new bootstrap.Collapse(document.getElementById('sessionAddFormCollapse'), {show: true});
+    
+    // Masquer le formulaire de modification s'il est ouvert
+    const editCollapse = bootstrap.Collapse.getInstance(document.getElementById('sessionEditFormCollapse'));
+    if (editCollapse) editCollapse.hide();
+});
+
+// Function to show SweetAlert success messages
+function showSuccessMessage(message) {
+    Swal.fire({
+        icon: 'success',
+        title: 'Succès!',
+        text: message,
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false
+    });
+}
+
+// Function to show SweetAlert error messages
+function showErrorMessage(message) {
+    
+    // Vérifier si c'est une erreur de conflit de coach/salle
+    const isConflictError = message.includes('Ce coach a déjà une séance') || 
+                           message.includes('La salle est déjà réservée') || 
+                           message.includes('coach') || 
+                           message.includes('salle') || 
+                           message.includes('réservée') ||
+                           message.includes('horaire') ||
+                           message.includes('conflit');
+    
+    
+    if (isConflictError) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Conflit de planning détecté!',
+            html: `
+                <div style="text-align: left;">
+                    <p style="margin-bottom: 15px;"><strong>⚠️ Impossible de créer cette session :</strong></p>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        ${message.includes('Ce coach a déjà une séance') ? 
+                            '<li style="color: #e74c3c; margin-bottom: 8px;"><strong>👨‍💼 Coach indisponible :</strong> Ce coach a déjà une séance à cet horaire</li>' : ''}
+                        ${message.includes('La salle est déjà réservée') ? 
+                            '<li style="color: #e74c3c; margin-bottom: 8px;"><strong>🏢 Salle occupée :</strong> La salle est déjà réservée à cet horaire</li>' : ''}
+                    </ul>
+                    <p style="margin-top: 15px; color: #666; font-size: 14px;">
+                        💡 <strong>Solution :</strong> Choisissez une autre date ou un autre créneau horaire.
+                    </p>
+                </div>
+            `,
+            confirmButtonText: 'Compris',
+            confirmButtonColor: '#e74c3c',
+            timer: 5000,
+            timerProgressBar: true
+        });
+    } else {
+        // Message d'erreur générique
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur!',
+            text: message,
+            timer: 3000,
+            timerProgressBar: true,
+            showConfirmButton: false
+        });
+    }
+}
+
+// Function to handle delete with SweetAlert confirmation
+function deleteSession(sessionId, activityTitle, sessionDate, sessionTime) {
+    Swal.fire({
+        title: 'Êtes-vous sûr?',
+        text: `Voulez-vous vraiment supprimer la session "${activityTitle}" du ${sessionDate} à ${sessionTime}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Oui, supprimer!',
+        cancelButtonText: 'Annuler'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Perform AJAX delete
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+            
+            fetch(`/therapeutic_activities/sessions/${sessionId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccessMessage(data.message);
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showErrorMessage(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorMessage('Erreur de connexion au serveur');
+            });
+        }
+    });
+}
+
+// Function to get CSRF token from cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Check for success/error messages from URL parameters
+window.addEventListener('load', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const message = urlParams.get('message');
+    const type = urlParams.get('type');
+    
+    if (message) {
+        if (type === 'success') {
+            showSuccessMessage(decodeURIComponent(message));
+        } else if (type === 'error') {
+            showErrorMessage(decodeURIComponent(message));
+        }
+        
+        // Clear URL parameters to prevent showing message on refresh
+        const url = new URL(window.location);
+        url.searchParams.delete('message');
+        url.searchParams.delete('type');
+        window.history.replaceState({}, document.title, url.toString());
+    }
+});
+
+// Session details modal
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.view-session-details')) {
+        const btn = e.target.closest('.view-session-details');
+        document.getElementById('modal-activity').textContent = btn.dataset.activity;
+        document.getElementById('modal-datetime').textContent = btn.dataset.date + ' à ' + btn.dataset.time;
+        document.getElementById('modal-location').textContent = btn.dataset.location;
+        document.getElementById('modal-coach').textContent = btn.dataset.coach;
+        document.getElementById('modal-participants').textContent = btn.dataset.participants;
+        document.getElementById('modal-status').textContent = btn.dataset.status;
+        document.getElementById('modal-notes').textContent = btn.dataset.notes;
+    }
+});
+
+// Edit session functionality
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.edit-session-btn')) {
+        const btn = e.target.closest('.edit-session-btn');
+        
+        // Fill edit form
+        document.getElementById('edit-session-id').value = btn.dataset.sessionId;
+        document.getElementById('edit-activity').value = btn.dataset.activity;
+        document.getElementById('edit-location').value = btn.dataset.location;
+        document.getElementById('edit-date').value = btn.dataset.date;
+        document.getElementById('edit-start-time').value = btn.dataset.startTime;
+        document.getElementById('edit-end-time').value = btn.dataset.endTime;
+        document.getElementById('edit-max-participants').value = btn.dataset.maxParticipants;
+        document.getElementById('edit-status').value = btn.dataset.status;
+        document.getElementById('edit-notes').value = btn.dataset.notes;
+        
+        // Show edit form
+        const editCollapse = new bootstrap.Collapse(document.getElementById('sessionEditFormCollapse'), {show: true});
+        
+        // Hide add form if open
+        const addCollapse = bootstrap.Collapse.getInstance(document.getElementById('sessionAddFormCollapse'));
+        if (addCollapse) addCollapse.hide();
+    }
+});
+
+// Handle form submissions
+document.getElementById('sessionAddForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validation côté client avant soumission
+    const validation = validateFormFields();
+    if (!validation.valid) {
+        if (validation.conflict) {
+            showCoachConflictAlert(validation.conflict);
+        } else if (validation.message) {
+            showErrorMessage(validation.message);
+        }
+        return; // Empêcher la soumission
+    }
+    
+    const formData = new FormData(this);
+    formData.append('action', 'add');
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData
+    })
+    .then(response => {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            // Si ce n'est pas du JSON, c'est probablement une redirection vers la page avec un message
+            showSuccessMessage('Session ajoutée avec succès');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+            return null;
+        }
+    })
+    .then(data => {
+        if (data && data.success) {
+            showSuccessMessage(data.message);
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else if (data && !data.success) {
+            // Formater les erreurs pour un meilleur affichage
+            let errorMessage = data.message;
+            if (data.errors) {
+                // Extraire les messages d'erreur spécifiques
+                const errorDetails = [];
+                if (data.errors._all_) {
+                    errorDetails.push(...data.errors._all_);
+                }
+                // Aussi vérifier d'autres propriétés possibles
+                Object.keys(data.errors).forEach(key => {
+                    if (key !== '_all_' && Array.isArray(data.errors[key])) {
+                        errorDetails.push(...data.errors[key]);
+                    }
+                });
+                if (errorDetails.length > 0) {
+                    errorMessage = errorDetails.join(' ');
+                }
+            }
+            showErrorMessage(errorMessage);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showSuccessMessage('Session ajoutée avec succès');
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+    });
+});
+
+document.getElementById('sessionEditForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validation côté client avant soumission
+    const validation = validateFormFields();
+    if (!validation.valid) {
+        if (validation.conflict) {
+            showCoachConflictAlert(validation.conflict);
+        } else if (validation.message) {
+            showErrorMessage(validation.message);
+        }
+        return; // Empêcher la soumission
+    }
+    
+    const formData = new FormData(this);
+    formData.append('action', 'edit');
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData
+    })
+    .then(response => {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            // Si ce n'est pas du JSON, c'est probablement une redirection vers la page avec un message
+            showSuccessMessage('Session modifiée avec succès');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+            return null;
+        }
+    })
+    .then(data => {
+        if (data && data.success) {
+            showSuccessMessage(data.message);
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else if (data && !data.success) {
+            // Formater les erreurs pour un meilleur affichage
+            let errorMessage = data.message;
+            if (data.errors) {
+                // Extraire les messages d'erreur spécifiques
+                const errorDetails = [];
+                if (data.errors._all_) {
+                    errorDetails.push(...data.errors._all_);
+                }
+                // Aussi vérifier d'autres propriétés possibles
+                Object.keys(data.errors).forEach(key => {
+                    if (key !== '_all_' && Array.isArray(data.errors[key])) {
+                        errorDetails.push(...data.errors[key]);
+                    }
+                });
+                if (errorDetails.length > 0) {
+                    errorMessage = errorDetails.join(' ');
+                }
+            }
+            showErrorMessage(errorMessage);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showSuccessMessage('Session modifiée avec succès');
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+    });
+});
+</script>
+{% endblock %}

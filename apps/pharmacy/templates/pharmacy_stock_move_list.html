@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block menu %}
+  {% include 'pharmacy_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  {# Messages de session pour SweetAlert #}
+  {% if swal_success %}
+    <script>
+      window.swalSuccess = "{{ swal_success|escapejs }}";
+    </script>
+  {% endif %}
+  {% if swal_error %}
+    <script>
+      window.swalError = "{{ swal_error|escapejs }}";
+    </script>
+  {% endif %}
+
+  {# Afficher les messages immédiatement si présents #}
+  {% if swal_success or swal_error %}
+    <script>
+      // Attendre que tout soit chargé puis afficher les messages
+      window.addEventListener('load', function() {
+        if (typeof showMessagesImmediately === 'function') {
+          showMessagesImmediately();
+        } else {
+          // Fallback si la fonction n'est pas encore disponible
+          setTimeout(function() {
+            if (typeof showMessagesImmediately === 'function') {
+              showMessagesImmediately();
+            }
+          }, 500);
+        }
+      });
+    </script>
+  {% endif %}
+
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-box text-primary me-2"></i>
+    Gestion des produits - Pharmacie
+  </h3>
+
+  <div class="card mb-4">
+    <div class="card-header card-header-primary">
+      <i class="fas fa-exchange-alt me-2"></i>
+      Mouvements de stock
+    </div>
+    <div class="card-body">
+      <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <div class="ms-auto d-flex gap-2">
+          <a href="{% url 'pharmacy_stock_move_pdf' %}?state={{ request.GET.state|default:'' }}&operation_type={{ request.GET.operation_type|default:'' }}" class="btn btn-light border w-100 text-nowrap px-2" title="PDF" target="_blank">
+            <i class="fas fa-file-pdf"></i> <span class="d-none d-lg-inline ms-1">PDF</span>
+          </a>
+          {% if request.session.user.permissions.pharmacy.write %}
+          <a href="{% url 'pharmacy_stock_move_create' %}" class="btn btn-primary w-100 text-nowrap px-2" title="Nouveau Mouvement">
+            <i class="fas fa-plus"></i> <span class="d-none d-lg-inline ms-1">Nouveau Mouvement</span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      <form id="search-form" method="get">
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+            <div class="input-group">
+              <span class="input-group-text input-group-text-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" name="search" id="search-input" class="form-control search-input-primary" placeholder="Recherche par référence, date, source, destination, département, fournisseur..." value="{{ request.GET.search|default:'' }}">
+            </div>
+          </div>
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-2">
+            <select name="state" id="state_filter" class="form-select" title="Filtrer par état" onchange="this.form.submit()">
+              <option value="">Tous les états</option>
+              <option value="draft" {% if request.GET.state == 'draft' %}selected{% endif %}>Brouillon</option>
+              <option value="confirmed" {% if request.GET.state == 'confirmed' %}selected{% endif %}>Confirmé</option>
+              <option value="done" {% if request.GET.state == 'done' %}selected{% endif %}>Terminé</option>
+              <option value="canceled" {% if request.GET.state == 'canceled' %}selected{% endif %}>Annulé</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-3">
+            <select name="operation_type" id="operation-type-filter" class="form-select" title="Filtrer par opération" onchange="this.form.submit()">
+              <option value="">Tous les types</option>
+              {% for op in operation_types %}
+                <option value="{{ op.label }}" {% if request.GET.operation_type == op.label %}selected{% endif %}>{{ op.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </form>
+      <table class="table table-hover table-responsive table-middle" id="stock-move-table">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="sortable" data-sort-field="reference">
+                <div class="d-flex align-items-center">
+                  <span>Réf.</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort-field="operation_type">
+                <div class="d-flex align-items-center">
+                  <span>Opération</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort-field="source_location">
+                <div class="d-flex align-items-center">
+                  <span>Source</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort-field="dest_location">
+                <div class="d-flex align-items-center">
+                  <span>Destination</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort-field="department">
+                <div class="d-flex align-items-center">
+                  <span>Département</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort-field="supplier">
+                <div class="d-flex align-items-center">
+                  <span>Fournisseur</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort-field="state">
+                <div class="d-flex align-items-center">
+                  <span>État</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center actions-column">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for move in page_obj %}
+            <tr>
+              <td data-label="Réf" class="nowrap">{{ move.reference }}</td>
+              <td data-label="Opération" class="nowrap"><strong>{{ move.operation_type.label }}</strong></td>
+              <td data-label="Source" class="nowrap">{{ move.source_location|default:'—' }}</td>
+              <td data-label="Destination" class="nowrap">{{ move.dest_location|default:'—' }}</td>
+              <td data-label="Département" class="nowrap">{{ move.department.name|default:'—' }}</td>
+              <td data-label="Fournisseur" class="nowrap">{{ move.supplier.name|default:'—' }}</td>
+              <td data-label="État" class="nowrap">
+                <span class="badge 
+                  {% if move.state == 'draft' %}bg-primary
+                  {% elif move.state == 'confirmed' %}bg-warning
+                  {% elif move.state == 'done' %}bg-success
+                  {% elif move.state == 'canceled' %}bg-secondary
+                  {% endif %}">
+                  {{ move.get_state_display }}
+                </span>
+              </td>
+              <td data-label="Actions" class="nowrap">
+                <div class="d-flex gap-1 justify-content-end">
+                  {% if move.state == 'done' %}
+                    <a href="{% url 'pharmacy_stock_move_delivery_pdf' move.pk %}" class="btn btn-sm btn-light border text-primary" title="Imprimer le bon de livraison" target="_blank">
+                      <i class="fas fa-print"></i>
+                    </a>
+                    <a href="{% url 'pharmacy_stock_move_update' move.pk %}" class="btn btn-sm btn-light border text-info" title="Aperçu">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                  {% elif move.state == 'canceled' %}
+                    <a href="{% url 'pharmacy_stock_move_update' move.pk %}" class="btn btn-sm btn-light border text-info" title="Aperçu">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                  {% else %}
+                    {% if request.session.user.permissions.pharmacy.update %}
+                    <a href="{% url 'pharmacy_stock_move_update' move.pk %}" class="btn btn-sm btn-light border" title="Éditer">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    {% endif %}
+                  {% endif %}
+                  {% if request.session.user.permissions.pharmacy.delete %}
+                  <form method="post" action="{% url 'pharmacy_stock_move_delete' move.pk %}" class="d-inline delete-move-form">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-sm btn-light border text-danger btn-delete-move" data-id="{{ move.pk }}" data-ref="{{ move.reference }}" title="Supprimer">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" class="text-center text-muted">Aucun mouvement de stock trouvé</td></tr>
+            {% endfor %}
+          </tbody>
+      </table>
+      {% if page_obj.has_other_pages %}
+        <nav aria-label="Pagination des mouvements de stock" class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&state={{ request.GET.state|default:'' }}&operation_type={{ request.GET.operation_type|default:'' }}&search={{ request.GET.search|default:'' }}" aria-label="Précédent">
+              <i class="fas fa-chevron-left d-block d-sm-none"></i><span class="d-none d-sm-block">&laquo; Préc</span></a>
+            </li>
+            {% endif %}
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+              <a class="page-link" href="?page={{ num }}&state={{ request.GET.state|default:'' }}&operation_type={{ request.GET.operation_type|default:'' }}&search={{ request.GET.search|default:'' }}" aria-label="Page {{ num }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&state={{ request.GET.state|default:'' }}&operation_type={{ request.GET.operation_type|default:'' }}&search={{ request.GET.search|default:'' }}" aria-label="Suivant">
+              <i class="fas fa-chevron-right d-block d-sm-none"></i><span class="d-none d-sm-block">Suiv &raquo;</span></a></li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
+      </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/pharmacy_stock_move.js' %}"></script>
+<script src="{% static 'js/pharmacy_stock_move_data.js' %}"></script>
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+<script src="{% static 'js/pharmacy_auto_search.js' %}"></script>
+{% endblock %}

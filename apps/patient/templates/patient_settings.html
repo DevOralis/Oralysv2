@@ -1,0 +1,1600 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Paramètres - Patient{% endblock %}
+
+{% block menu %}
+  {% include "patient_menu.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <ul class="nav nav-tabs flex-column flex-sm-row mb-3" id="configTabs">
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'actes' or not tab %}active{% endif %}" href="#actes">Actes Médicaux</a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'documents' %}active{% endif %}" href="#documents">Types De Documents</a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'sources' %}active{% endif %}" href="#sources">Sources De Patients</a>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- Bloc de gestion des actes médicaux -->
+    <div class="tab-pane fade {% if tab == 'actes' or not tab %}show active{% endif %}" id="actes">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+            <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="card mb-3">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-procedures me-2"></i>
+          Actes Médicaux Et Thérapeutiques
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control" style="border-color: #1e90ff;" id="searchActe" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="toggleAddActeForm()">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table table-striped table-hover" id="actesTable">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAllActes">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Libellé</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="d-none d-md-table-cell">Prix</th>
+                  <th class="d-none d-md-table-cell">Durée</th>
+                  <th class="d-none d-md-table-cell">Statut</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="actes-table">
+                {% for a in actes %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check-acte">
+                  </td>
+                  <td>{{ a.libelle }}</td>
+                  <td class="d-none d-md-table-cell">{{ a.price }} DH</td>
+                  <td class="d-none d-md-table-cell">{% if a.duration %}{{ a.duration }} min{% else %}-{% endif %}</td>
+                  <td class="d-none d-md-table-cell">
+                    <span class="badge bg-{% if a.is_active %}success{% else %}danger{% endif %}">
+                      {% if a.is_active %}Actif{% else %}Inactif{% endif %}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-info" title="Voir" 
+                              data-acte-libelle="{{ a.libelle }}"
+                              data-acte-description="{{ a.description|default:'' }}"
+                              data-acte-price="{{ a.price }}"
+                              data-acte-duration="{% if a.duration %}{{ a.duration }}{% endif %}"
+                              data-acte-statut="{% if a.is_active %}Actif{% else %}Inactif{% endif %}"
+                              onclick="toggleDetailsActeForm(this)">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-dark" title="Modifier" 
+                              data-acte-id="{{ a.id }}"
+                              data-acte-libelle="{{ a.libelle }}"
+                              data-acte-description="{{ a.description|default:'' }}"
+                              data-acte-price="{{ a.price }}"
+                              data-acte-duration="{% if a.duration %}{{ a.duration }}{% endif %}"
+                              data-acte-active="{{ a.is_active }}"
+                              onclick="toggleEditActeForm(this)">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" title="Supprimer" data-bs-toggle="modal" data-bs-target="#modalDeleteActe"
+                              data-acte-id="{{ a.id }}"
+                              data-acte-libelle="{{ a.libelle }}">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted">Aucun Acte Trouvé.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour actes -->
+          {% if actes_paginated %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if actes_page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?tab=actes&actes_page={{ actes_page_obj.previous_page_number }}" aria-label="Page précédente">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in actes_page_obj.paginator.page_range %}
+                {% if actes_page_obj.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > actes_page_obj.number|add:'-2' and num < actes_page_obj.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?tab=actes&actes_page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if actes_page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?tab=actes&actes_page={{ actes_page_obj.next_page_number }}" aria-label="Page suivante">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Formulaire d'ajout d'acte -->
+      <div class="card mb-4" id="addActeFormSection">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-plus me-2"></i>Ajouter Un Nouvel Acte
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'patient:patient_settings' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="ajouter_acte" value="1">
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="id_libelle_acte">Libellé <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-procedures"></i></span>
+                  <input type="text" id="id_libelle_acte" name="libelle" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_price_acte">Prix (DH) <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                  <input type="number" step="0.01" id="id_price_acte" name="price" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_duration_acte">Durée (minutes)</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                  <input type="number" id="id_duration_acte" name="duration" class="form-control">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_is_active_acte">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <select id="id_is_active_acte" name="is_active" class="form-select">
+                    <option value="True" selected>Actif</option>
+                    <option value="False">Inactif</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label" for="id_description_acte">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea id="id_description_acte" name="description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleAddActeForm()">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de modification d'acte -->
+      <div class="card mb-4" id="editActeFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-edit me-2"></i>Modifier L'Acte
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'patient:patient_settings' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="modifier_acte" value="1">
+            <input type="hidden" name="acte_id" id="edit_acte_id">
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="edit_libelle_acte">Libellé <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-procedures"></i></span>
+                  <input type="text" id="edit_libelle_acte" name="libelle" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_price_acte">Prix (DH) <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                  <input type="number" step="0.01" id="edit_price_acte" name="price" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_duration_acte">Durée (minutes)</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                  <input type="number" id="edit_duration_acte" name="duration" class="form-control">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_is_active_acte">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <select id="edit_is_active_acte" name="is_active" class="form-select">
+                    <option value="True">Actif</option>
+                    <option value="False">Inactif</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label" for="edit_description_acte">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea id="edit_description_acte" name="description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleEditActeForm()">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Mettre à jour
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de détails d'acte -->
+      <div class="card mb-4" id="detailsActeFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>Détails De L'Acte
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Libellé</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-procedures"></i></span>
+                  <input type="text" class="form-control" id="details_libelle_acte" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Prix</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                  <input type="text" class="form-control" id="details_price_acte" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Durée</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                  <input type="text" class="form-control" id="details_duration_acte" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <input type="text" class="form-control" id="details_statut_acte" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea class="form-control" id="details_description_acte" rows="3" readonly></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 text-end">
+            <button type="button" class="btn btn-secondary" onclick="toggleDetailsActeForm()">
+              <i class="fas fa-times me-2"></i>Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal suppression acte -->
+      <div class="modal fade" id="modalDeleteActe" tabindex="-1" aria-labelledby="modalDeleteActeLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post" action="{% url 'patient:patient_settings' %}">
+              {% csrf_token %}
+              <input type="hidden" name="supprimer_acte" value="1">
+              <input type="hidden" name="acte_id" id="delete_acte_id">
+              <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalDeleteActeLabel">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Confirmer La Suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h5 class="text-danger">Attention!</h5>
+                <p>Êtes-vous sûr de vouloir supprimer l'acte <strong id="delete_acte_libelle" class="text-primary"></strong> ?</p>
+                <p class="text-danger"><small>Cette action est irréversible et supprimera définitivement toutes les données associées.</small></p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                  <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-trash-alt me-2"></i>Supprimer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloc de gestion des types de documents -->
+    <div class="tab-pane fade {% if tab == 'documents' %}show active{% endif %}" id="documents">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+            <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="card mb-3">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-file-medical me-2"></i>
+          Types De Documents
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control" style="border-color: #1e90ff;" id="searchDocumentType" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="toggleAddDocumentTypeForm()">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table table-striped table-hover" id="documentTypesTable">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAllDocumentTypes">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Nom</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="d-none d-md-table-cell">Code</th>
+                  <th class="d-none d-md-table-cell">Statut</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="document-types-table">
+                {% for dt in document_types %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check-document-type">
+                  </td>
+                  <td>{{ dt.name }}</td>
+                  <td class="d-none d-md-table-cell">{{ dt.code }}</td>
+                  <td class="d-none d-md-table-cell">
+                    <span class="badge bg-{% if dt.is_active %}success{% else %}danger{% endif %}">
+                      {% if dt.is_active %}Actif{% else %}Inactif{% endif %}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-info" title="Voir" 
+                              data-documenttype-name="{{ dt.name }}"
+                              data-documenttype-code="{{ dt.code }}"
+                              data-documenttype-description="{{ dt.description|default:'' }}"
+                              data-documenttype-statut="{% if dt.is_active %}Actif{% else %}Inactif{% endif %}"
+                              onclick="toggleDetailsDocumentTypeForm(this)">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-dark" title="Modifier" 
+                              data-documenttype-id="{{ dt.id }}"
+                              data-documenttype-name="{{ dt.name }}"
+                              data-documenttype-code="{{ dt.code }}"
+                              data-documenttype-description="{{ dt.description|default:'' }}"
+                              data-documenttype-active="{{ dt.is_active }}"
+                              onclick="toggleEditDocumentTypeForm(this)">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" title="Supprimer" data-bs-toggle="modal" data-bs-target="#modalDeleteDocumentType"
+                              data-documenttype-id="{{ dt.id }}"
+                              data-documenttype-name="{{ dt.name }}">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center text-muted">Aucun Type De Document Trouvé.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour types de documents -->
+          {% if document_types_paginated %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if document_types_page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?tab=documents&document_types_page={{ document_types_page_obj.previous_page_number }}" aria-label="Page précédente">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in document_types_page_obj.paginator.page_range %}
+                {% if document_types_page_obj.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > document_types_page_obj.number|add:'-2' and num < document_types_page_obj.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?tab=documents&document_types_page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if document_types_page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?tab=documents&document_types_page={{ document_types_page_obj.next_page_number }}" aria-label="Page suivante">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Form d'ajout de type de document -->
+      <div class="card mb-4" id="addDocumentTypeFormSection">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-plus me-2"></i>Ajouter Un Nouveau Type De Document
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'patient:patient_settings' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="ajouter_document_type" value="1">
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="id_name_document_type">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-file-medical"></i></span>
+                  <input type="text" id="id_name_document_type" name="name" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_code_document_type">Code <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                  <input type="text" id="id_code_document_type" name="code" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_is_active_document_type">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <select id="id_is_active_document_type" name="is_active" class="form-select">
+                    <option value="True" selected>Actif</option>
+                    <option value="False">Inactif</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label" for="id_description_document_type">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea id="id_description_document_type" name="description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleAddDocumentTypeForm()">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de modification de type de document -->
+      <div class="card mb-4" id="editDocumentTypeFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-edit me-2"></i>Modifier Le Type De Document
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'patient:patient_settings' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="modifier_document_type" value="1">
+            <input type="hidden" name="document_type_id" id="edit_document_type_id">
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="edit_name_document_type">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-file-medical"></i></span>
+                  <input type="text" id="edit_name_document_type" name="name" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_code_document_type">Code <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                  <input type="text" id="edit_code_document_type" name="code" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_is_active_document_type">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <select id="edit_is_active_document_type" name="is_active" class="form-select">
+                    <option value="True">Actif</option>
+                    <option value="False">Inactif</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label" for="edit_description_document_type">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea id="edit_description_document_type" name="description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleEditDocumentTypeForm()">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Mettre à jour
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de détails de type de document -->
+      <div class="card mb-4" id="detailsDocumentTypeFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>Détails Du Type De Document
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Nom</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-file-medical"></i></span>
+                  <input type="text" class="form-control" id="details_name_document_type" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Code</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                  <input type="text" class="form-control" id="details_code_document_type" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <input type="text" class="form-control" id="details_statut_document_type" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea class="form-control" id="details_description_document_type" rows="3" readonly></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 text-end">
+            <button type="button" class="btn btn-secondary" onclick="toggleDetailsDocumentTypeForm()">
+              <i class="fas fa-times me-2"></i>Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal suppression type de document -->
+      <div class="modal fade" id="modalDeleteDocumentType" tabindex="-1" aria-labelledby="modalDeleteDocumentTypeLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post" action="{% url 'patient:patient_settings' %}">
+              {% csrf_token %}
+              <input type="hidden" name="supprimer_document_type" value="1">
+              <input type="hidden" name="document_type_id" id="delete_document_type_id">
+              <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalDeleteDocumentTypeLabel">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Confirmer La Suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h5 class="text-danger">Attention!</h5>
+                <p>Êtes-vous sûr de vouloir supprimer le type de document <strong id="delete_document_type_name" class="text-primary"></strong> ?</p>
+                <p class="text-danger"><small>Cette action est irréversible et supprimera définitivement toutes les données associées.</small></p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                  <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-trash-alt me-2"></i>Supprimer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloc de gestion des sources de patients -->
+    <div class="tab-pane fade {% if tab == 'sources' %}show active{% endif %}" id="sources">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+            <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="card mb-3">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-user-plus me-2"></i>
+          Sources De Patients
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control" style="border-color: #1e90ff;" id="searchSource" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="toggleAddSourceForm()">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table table-striped table-hover" id="sourcesTable">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAllSources">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Nom</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="d-none d-md-table-cell">Code</th>
+                  <th class="d-none d-md-table-cell">Couleur</th>
+                  <th class="d-none d-md-table-cell">Statut</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sources-table">
+                {% for s in sources %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check-source">
+                  </td>
+                  <td>{% if s.icon %}<i class="{{ s.icon }} me-2" style="color: {{ s.color }}"></i>{% endif %}{{ s.name }}</td>
+                  <td class="d-none d-md-table-cell">{{ s.code }}</td>
+                  <td class="d-none d-md-table-cell">
+                    <span class="badge" style="background-color: {{ s.color }}">{{ s.color }}</span>
+                  </td>
+                  <td class="d-none d-md-table-cell">
+                    <span class="badge bg-{% if s.is_active %}success{% else %}danger{% endif %}">
+                      {% if s.is_active %}Actif{% else %}Inactif{% endif %}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-info" title="Voir" 
+                              data-source-name="{{ s.name }}"
+                              data-source-code="{{ s.code }}"
+                              data-source-description="{{ s.description|default:'' }}"
+                              data-source-color="{{ s.color }}"
+                              data-source-icon="{{ s.icon|default:'' }}"
+                              data-source-statut="{% if s.is_active %}Actif{% else %}Inactif{% endif %}"
+                              onclick="toggleDetailsSourceForm(this)">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-dark" title="Modifier" 
+                              data-source-id="{{ s.id }}"
+                              data-source-name="{{ s.name }}"
+                              data-source-code="{{ s.code }}"
+                              data-source-description="{{ s.description|default:'' }}"
+                              data-source-color="{{ s.color }}"
+                              data-source-icon="{{ s.icon|default:'' }}"
+                              data-source-active="{{ s.is_active }}"
+                              onclick="toggleEditSourceForm(this)">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" title="Supprimer" data-bs-toggle="modal" data-bs-target="#modalDeleteSource"
+                              data-source-id="{{ s.id }}"
+                              data-source-name="{{ s.name }}">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted">Aucune Source Trouvée.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour sources -->
+          {% if sources_paginated %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if sources_page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?tab=sources&sources_page={{ sources_page_obj.previous_page_number }}" aria-label="Page précédente">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in sources_page_obj.paginator.page_range %}
+                {% if sources_page_obj.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > sources_page_obj.number|add:'-2' and num < sources_page_obj.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?tab=sources&sources_page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if sources_page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?tab=sources&sources_page={{ sources_page_obj.next_page_number }}" aria-label="Page suivante">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Formulaire d'ajout de source -->
+      <div class="card mb-4" id="addSourceFormSection">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-plus me-2"></i>Ajouter Une Nouvelle Source
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'patient:patient_settings' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="ajouter_source" value="1">
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="id_name_source">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user-plus"></i></span>
+                  <input type="text" id="id_name_source" name="name" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_code_source">Code <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                  <input type="text" id="id_code_source" name="code" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_color_source">Couleur</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-palette"></i></span>
+                  <input type="color" id="id_color_source" name="color" class="form-control" value="#007bff">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_icon_source">Icône (Font Awesome)</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-icons"></i></span>
+                  <input type="text" id="id_icon_source" name="icon" class="form-control" placeholder="fas fa-share-alt">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_is_active_source">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <select id="id_is_active_source" name="is_active" class="form-select">
+                    <option value="True" selected>Actif</option>
+                    <option value="False">Inactif</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label" for="id_description_source">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea id="id_description_source" name="description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleAddSourceForm()">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de modification de source -->
+      <div class="card mb-4" id="editSourceFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-edit me-2"></i>Modifier La Source
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'patient:patient_settings' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="modifier_source" value="1">
+            <input type="hidden" name="source_id" id="edit_source_id">
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="edit_name_source">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user-plus"></i></span>
+                  <input type="text" id="edit_name_source" name="name" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_code_source">Code <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                  <input type="text" id="edit_code_source" name="code" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_color_source">Couleur</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-palette"></i></span>
+                  <input type="color" id="edit_color_source" name="color" class="form-control">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_icon_source">Icône (Font Awesome)</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-icons"></i></span>
+                  <input type="text" id="edit_icon_source" name="icon" class="form-control" placeholder="fas fa-share-alt">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_is_active_source">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <select id="edit_is_active_source" name="is_active" class="form-select">
+                    <option value="True">Actif</option>
+                    <option value="False">Inactif</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label" for="edit_description_source">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea id="edit_description_source" name="description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleEditSourceForm()">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Mettre à jour
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de détails de source -->
+      <div class="card mb-4" id="detailsSourceFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>Détails De La Source
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Nom</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user-plus"></i></span>
+                  <input type="text" class="form-control" id="details_name_source" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Code</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                  <input type="text" class="form-control" id="details_code_source" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Couleur</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-palette"></i></span>
+                  <input type="text" class="form-control" id="details_color_source" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Icône</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-icons"></i></span>
+                  <input type="text" class="form-control" id="details_icon_source" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <input type="text" class="form-control" id="details_statut_source" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea class="form-control" id="details_description_source" rows="3" readonly></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 text-end">
+            <button type="button" class="btn btn-secondary" onclick="toggleDetailsSourceForm()">
+              <i class="fas fa-times me-2"></i>Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal suppression source -->
+      <div class="modal fade" id="modalDeleteSource" tabindex="-1" aria-labelledby="modalDeleteSourceLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post" action="{% url 'patient:patient_settings' %}">
+              {% csrf_token %}
+              <input type="hidden" name="supprimer_source" value="1">
+              <input type="hidden" name="source_id" id="delete_source_id">
+              <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalDeleteSourceLabel">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Confirmer La Suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h5 class="text-danger">Attention!</h5>
+                <p>Êtes-vous sûr de vouloir supprimer la source <strong id="delete_source_name" class="text-primary"></strong> ?</p>
+                <p class="text-danger"><small>Cette action est irréversible et supprimera définitivement toutes les données associées.</small></p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                  <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-trash-alt me-2"></i>Supprimer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Variables de state pour gérer la visibilité des formulaires
+  let isAddActeFormVisible = true;
+  let isEditActeFormVisible = false;
+  let isDetailsActeFormVisible = false;
+  let isAddDocumentTypeFormVisible = true;
+  let isEditDocumentTypeFormVisible = false;
+  let isDetailsDocumentTypeFormVisible = false;
+  let isAddSourceFormVisible = true;
+  let isEditSourceFormVisible = false;
+  let isDetailsSourceFormVisible = false;
+
+  // Fonctions pour les actes
+  function toggleAddActeForm() {
+    const addFormSection = document.getElementById('addActeFormSection');
+    
+    if (isAddActeFormVisible) {
+      addFormSection.style.display = 'none';
+      isAddActeFormVisible = false;
+      clearAddActeForm();
+    } else {
+      hideAllActeForms();
+      addFormSection.style.display = 'block';
+      isAddActeFormVisible = true;
+      window.scrollTo({ top: addFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function toggleEditActeForm(button) {
+    const editFormSection = document.getElementById('editActeFormSection');
+    
+    if (isEditActeFormVisible) {
+      editFormSection.style.display = 'none';
+      isEditActeFormVisible = false;
+      clearEditActeForm();
+    } else {
+      hideAllActeForms();
+      editFormSection.style.display = 'block';
+      isEditActeFormVisible = true;
+      fillEditActeForm(button);
+      window.scrollTo({ top: editFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function toggleDetailsActeForm(button) {
+    const detailsFormSection = document.getElementById('detailsActeFormSection');
+    
+    if (isDetailsActeFormVisible) {
+      detailsFormSection.style.display = 'none';
+      isDetailsActeFormVisible = false;
+    } else {
+      hideAllActeForms();
+      detailsFormSection.style.display = 'block';
+      isDetailsActeFormVisible = true;
+      if (button) {
+        fillDetailsActeForm(button);
+      }
+      window.scrollTo({ top: detailsFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function hideAllActeForms() {
+    if (isAddActeFormVisible) {
+      document.getElementById('addActeFormSection').style.display = 'none';
+      isAddActeFormVisible = false;
+      clearAddActeForm();
+    }
+    if (isEditActeFormVisible) {
+      document.getElementById('editActeFormSection').style.display = 'none';
+      isEditActeFormVisible = false;
+      clearEditActeForm();
+    }
+    if (isDetailsActeFormVisible) {
+      document.getElementById('detailsActeFormSection').style.display = 'none';
+      isDetailsActeFormVisible = false;
+    }
+  }
+
+  function fillEditActeForm(button) {
+    document.getElementById('edit_acte_id').value = button.getAttribute('data-acte-id');
+    document.getElementById('edit_libelle_acte').value = button.getAttribute('data-acte-libelle');
+    document.getElementById('edit_description_acte').value = button.getAttribute('data-acte-description');
+    document.getElementById('edit_price_acte').value = button.getAttribute('data-acte-price');
+    document.getElementById('edit_duration_acte').value = button.getAttribute('data-acte-duration');
+    document.getElementById('edit_is_active_acte').value = button.getAttribute('data-acte-active');
+  }
+
+  function clearAddActeForm() {
+    document.getElementById('addActeFormSection').querySelector('form').reset();
+  }
+
+  function clearEditActeForm() {
+    document.getElementById('editActeFormSection').querySelector('form').reset();
+  }
+
+  function fillDetailsActeForm(button) {
+    document.getElementById('details_libelle_acte').value = button.getAttribute('data-acte-libelle');
+    document.getElementById('details_description_acte').value = button.getAttribute('data-acte-description');
+    document.getElementById('details_price_acte').value = button.getAttribute('data-acte-price') + ' DH';
+    const duration = button.getAttribute('data-acte-duration');
+    document.getElementById('details_duration_acte').value = duration ? duration + ' min' : '-';
+    document.getElementById('details_statut_acte').value = button.getAttribute('data-acte-statut');
+  }
+
+  // Fonctions pour les types de documents
+  function toggleAddDocumentTypeForm() {
+    const addFormSection = document.getElementById('addDocumentTypeFormSection');
+    
+    if (isAddDocumentTypeFormVisible) {
+      addFormSection.style.display = 'none';
+      isAddDocumentTypeFormVisible = false;
+      clearAddDocumentTypeForm();
+    } else {
+      hideAllDocumentTypeForms();
+      addFormSection.style.display = 'block';
+      isAddDocumentTypeFormVisible = true;
+      window.scrollTo({ top: addFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function toggleEditDocumentTypeForm(button) {
+    const editFormSection = document.getElementById('editDocumentTypeFormSection');
+    
+    if (isEditDocumentTypeFormVisible) {
+      editFormSection.style.display = 'none';
+      isEditDocumentTypeFormVisible = false;
+      clearEditDocumentTypeForm();
+    } else {
+      hideAllDocumentTypeForms();
+      editFormSection.style.display = 'block';
+      isEditDocumentTypeFormVisible = true;
+      fillEditDocumentTypeForm(button);
+      window.scrollTo({ top: editFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function toggleDetailsDocumentTypeForm(button) {
+    const detailsFormSection = document.getElementById('detailsDocumentTypeFormSection');
+    
+    if (isDetailsDocumentTypeFormVisible) {
+      detailsFormSection.style.display = 'none';
+      isDetailsDocumentTypeFormVisible = false;
+    } else {
+      hideAllDocumentTypeForms();
+      detailsFormSection.style.display = 'block';
+      isDetailsDocumentTypeFormVisible = true;
+      if (button) {
+        fillDetailsDocumentTypeForm(button);
+      }
+      window.scrollTo({ top: detailsFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function hideAllDocumentTypeForms() {
+    if (isAddDocumentTypeFormVisible) {
+      document.getElementById('addDocumentTypeFormSection').style.display = 'none';
+      isAddDocumentTypeFormVisible = false;
+      clearAddDocumentTypeForm();
+    }
+    if (isEditDocumentTypeFormVisible) {
+      document.getElementById('editDocumentTypeFormSection').style.display = 'none';
+      isEditDocumentTypeFormVisible = false;
+      clearEditDocumentTypeForm();
+    }
+    if (isDetailsDocumentTypeFormVisible) {
+      document.getElementById('detailsDocumentTypeFormSection').style.display = 'none';
+      isDetailsDocumentTypeFormVisible = false;
+    }
+  }
+
+  function fillEditDocumentTypeForm(button) {
+    document.getElementById('edit_document_type_id').value = button.getAttribute('data-documenttype-id');
+    document.getElementById('edit_name_document_type').value = button.getAttribute('data-documenttype-name');
+    document.getElementById('edit_code_document_type').value = button.getAttribute('data-documenttype-code');
+    document.getElementById('edit_description_document_type').value = button.getAttribute('data-documenttype-description');
+    document.getElementById('edit_is_active_document_type').value = button.getAttribute('data-documenttype-active');
+  }
+
+  function clearAddDocumentTypeForm() {
+    document.getElementById('addDocumentTypeFormSection').querySelector('form').reset();
+  }
+
+  function clearEditDocumentTypeForm() {
+    document.getElementById('editDocumentTypeFormSection').querySelector('form').reset();
+  }
+
+  function fillDetailsDocumentTypeForm(button) {
+    document.getElementById('details_name_document_type').value = button.getAttribute('data-documenttype-name');
+    document.getElementById('details_code_document_type').value = button.getAttribute('data-documenttype-code');
+    document.getElementById('details_description_document_type').value = button.getAttribute('data-documenttype-description');
+    document.getElementById('details_statut_document_type').value = button.getAttribute('data-documenttype-statut');
+  }
+
+  // Fonctions pour les sources
+  function toggleAddSourceForm() {
+    const addFormSection = document.getElementById('addSourceFormSection');
+    
+    if (isAddSourceFormVisible) {
+      addFormSection.style.display = 'none';
+      isAddSourceFormVisible = false;
+      clearAddSourceForm();
+    } else {
+      hideAllSourceForms();
+      addFormSection.style.display = 'block';
+      isAddSourceFormVisible = true;
+      window.scrollTo({ top: addFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function toggleEditSourceForm(button) {
+    const editFormSection = document.getElementById('editSourceFormSection');
+    
+    if (isEditSourceFormVisible) {
+      editFormSection.style.display = 'none';
+      isEditSourceFormVisible = false;
+      clearEditSourceForm();
+    } else {
+      hideAllSourceForms();
+      editFormSection.style.display = 'block';
+      isEditSourceFormVisible = true;
+      fillEditSourceForm(button);
+      window.scrollTo({ top: editFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function toggleDetailsSourceForm(button) {
+    const detailsFormSection = document.getElementById('detailsSourceFormSection');
+    
+    if (isDetailsSourceFormVisible) {
+      detailsFormSection.style.display = 'none';
+      isDetailsSourceFormVisible = false;
+    } else {
+      hideAllSourceForms();
+      detailsFormSection.style.display = 'block';
+      isDetailsSourceFormVisible = true;
+      if (button) {
+        fillDetailsSourceForm(button);
+      }
+      window.scrollTo({ top: detailsFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function hideAllSourceForms() {
+    if (isAddSourceFormVisible) {
+      document.getElementById('addSourceFormSection').style.display = 'none';
+      isAddSourceFormVisible = false;
+      clearAddSourceForm();
+    }
+    if (isEditSourceFormVisible) {
+      document.getElementById('editSourceFormSection').style.display = 'none';
+      isEditSourceFormVisible = false;
+      clearEditSourceForm();
+    }
+    if (isDetailsSourceFormVisible) {
+      document.getElementById('detailsSourceFormSection').style.display = 'none';
+      isDetailsSourceFormVisible = false;
+    }
+  }
+
+  function fillEditSourceForm(button) {
+    document.getElementById('edit_source_id').value = button.getAttribute('data-source-id');
+    document.getElementById('edit_name_source').value = button.getAttribute('data-source-name');
+    document.getElementById('edit_code_source').value = button.getAttribute('data-source-code');
+    document.getElementById('edit_description_source').value = button.getAttribute('data-source-description');
+    document.getElementById('edit_color_source').value = button.getAttribute('data-source-color');
+    document.getElementById('edit_icon_source').value = button.getAttribute('data-source-icon');
+    document.getElementById('edit_is_active_source').value = button.getAttribute('data-source-active');
+  }
+
+  function clearAddSourceForm() {
+    document.getElementById('addSourceFormSection').querySelector('form').reset();
+  }
+
+  function clearEditSourceForm() {
+    document.getElementById('editSourceFormSection').querySelector('form').reset();
+  }
+
+  function fillDetailsSourceForm(button) {
+    document.getElementById('details_name_source').value = button.getAttribute('data-source-name');
+    document.getElementById('details_code_source').value = button.getAttribute('data-source-code');
+    document.getElementById('details_description_source').value = button.getAttribute('data-source-description');
+    document.getElementById('details_color_source').value = button.getAttribute('data-source-color');
+    document.getElementById('details_icon_source').value = button.getAttribute('data-source-icon');
+    document.getElementById('details_statut_source').value = button.getAttribute('data-source-statut');
+  }
+
+  // Gestion des onglets
+  document.addEventListener('DOMContentLoaded', function() {
+    const tabLinks = document.querySelectorAll('#configTabs .nav-link');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
+    function activateTab(tabId) {
+      tabLinks.forEach(l => l.classList.remove('active'));
+      tabPanes.forEach(p => p.classList.remove('show', 'active'));
+      
+      const tabLink = document.querySelector(`[href="#${tabId}"]`);
+      const tabPane = document.getElementById(tabId);
+      
+      if (tabLink && tabPane) {
+        tabLink.classList.add('active');
+        tabPane.classList.add('show', 'active');
+      }
+    }
+    
+    tabLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetTab = this.getAttribute('href').substring(1);
+        activateTab(targetTab);
+      });
+    });
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab) {
+      activateTab(activeTab);
+    }
+
+    // Initialisation
+    const addActeFormSection = document.getElementById('addActeFormSection');
+    const editActeFormSection = document.getElementById('editActeFormSection');
+    const detailsActeFormSection = document.getElementById('detailsActeFormSection');
+    const addDocumentTypeFormSection = document.getElementById('addDocumentTypeFormSection');
+    const editDocumentTypeFormSection = document.getElementById('editDocumentTypeFormSection');
+    const detailsDocumentTypeFormSection = document.getElementById('detailsDocumentTypeFormSection');
+    const addSourceFormSection = document.getElementById('addSourceFormSection');
+    const editSourceFormSection = document.getElementById('editSourceFormSection');
+    const detailsSourceFormSection = document.getElementById('detailsSourceFormSection');
+    
+    if (addActeFormSection) addActeFormSection.style.display = 'block';
+    if (editActeFormSection) editActeFormSection.style.display = 'none';
+    if (detailsActeFormSection) detailsActeFormSection.style.display = 'none';
+    if (addDocumentTypeFormSection) addDocumentTypeFormSection.style.display = 'block';
+    if (editDocumentTypeFormSection) editDocumentTypeFormSection.style.display = 'none';
+    if (detailsDocumentTypeFormSection) detailsDocumentTypeFormSection.style.display = 'none';
+    if (addSourceFormSection) addSourceFormSection.style.display = 'block';
+    if (editSourceFormSection) editSourceFormSection.style.display = 'none';
+    if (detailsSourceFormSection) detailsSourceFormSection.style.display = 'none';
+
+    // Remplissage des modales
+    var modalDeleteActe = document.getElementById('modalDeleteActe');
+    modalDeleteActe && modalDeleteActe.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      document.getElementById('delete_acte_id').value = button.getAttribute('data-acte-id');
+      document.getElementById('delete_acte_libelle').textContent = button.getAttribute('data-acte-libelle');
+    });
+
+    var modalDeleteDocumentType = document.getElementById('modalDeleteDocumentType');
+    modalDeleteDocumentType && modalDeleteDocumentType.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      document.getElementById('delete_document_type_id').value = button.getAttribute('data-documenttype-id');
+      document.getElementById('delete_document_type_name').textContent = button.getAttribute('data-documenttype-name');
+    });
+
+    var modalDeleteSource = document.getElementById('modalDeleteSource');
+    modalDeleteSource && modalDeleteSource.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      document.getElementById('delete_source_id').value = button.getAttribute('data-source-id');
+      document.getElementById('delete_source_name').textContent = button.getAttribute('data-source-name');
+    });
+  });
+
+  // Recherche actes
+  document.getElementById('searchActe') && document.getElementById('searchActe').addEventListener('keyup', function() {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#actes-table tr');
+
+    rows.forEach(row => {
+      if (row.cells.length > 1) {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+      }
+    });
+  });
+
+  // Recherche types de documents
+  document.getElementById('searchDocumentType') && document.getElementById('searchDocumentType').addEventListener('keyup', function() {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#document-types-table tr');
+
+    rows.forEach(row => {
+      if (row.cells.length > 1) {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+      }
+    });
+  });
+
+  // Recherche sources
+  document.getElementById('searchSource') && document.getElementById('searchSource').addEventListener('keyup', function() {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#sources-table tr');
+
+    rows.forEach(row => {
+      if (row.cells.length > 1) {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+      }
+    });
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

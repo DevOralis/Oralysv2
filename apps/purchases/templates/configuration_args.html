@@ -1,0 +1,1090 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Configuration - ERP Clinique</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+    <div class="content">
+        <div id="configuration-section">
+            <div class="card p-4">
+                <ul class="nav nav-tabs" id="configTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#countries" type="button" role="tab">Pays</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#cities" type="button" role="tab">Villes</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#languages" type="button" role="tab">Langues</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#taxes" type="button" role="tab">Taxes</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#currencies" type="button" role="tab">Devises</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#payment-modes" type="button" role="tab">Modes de paiement</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#convention-types" role="tab">Types de convention</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content mt-3">
+                    <!-- Pays -->
+                    <div class="tab-pane fade show active" id="countries" role="tabpanel" data-entity="country">
+                        <form method="get" class="search-form">
+                            <div class="row g-2 mb-3">
+                                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white border-primary">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="search" name="search_country" class="form-control border-primary search-input" placeholder="Rechercher un pays..." data-table="country-table" value="{{ request.GET.search_country }}">
+                                    </div>
+                                </div>
+                                {% if request.session.user.permissions.purchases.write %}
+                                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="importExportBtn-country">
+                                            <i class="fas fa-file-import" id="importExportIcon-country"></i>
+                                            <span class="d-none d-lg-inline ms-1" id="importExportText-country">Importer</span>
+                                        </button>
+                                        <button type="button" class="btn btn-primary w-100 text-nowrap px-2 add-entity-btn" data-entity="country">
+                                            <i class="fas fa-plus"></i>
+                                            <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="country-table">
+                                <thead class="table-light">
+                                    <tr class="main-row">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="d-none d-md-table-cell">
+                                            <input type="checkbox" id="selectAll-country">
+                                        </th>
+                                        {% endif %}
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Nom</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="text-center">Actions</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for country in countries %}
+                                    <tr data-id="{{ country.id }}" data-country-id="{{ country.id }}">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Sélection" class="d-none d-md-table-cell">
+                                            <input type="checkbox" class="row-check">
+                                        </td>
+                                        {% endif %}
+                                        <td data-label="Nom" class="country-name">{{ country.name }}</td>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Actions" class="actions-cell">
+                                            <button class="btn btn-sm btn-light border text-danger btn-delete-entity" data-entity="country" data-id="{{ country.id }}" title="Supprimer">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}3{% else %}1{% endif %}" class="text-center text-muted">Aucun pays</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if countries.paginator.num_pages > 1 %}
+                        <nav class="mt-3">
+                            <ul class="pagination justify-content-center flex-wrap">
+                                {% if countries.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_country={{ countries.previous_page_number }}{% if request.GET.search_country %}&search_country={{ request.GET.search_country }}{% endif %}" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                {% for num in countries.paginator.page_range %}
+                                <li class="page-item {% if countries.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page_country={{ num }}{% if request.GET.search_country %}&search_country={{ request.GET.search_country }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endfor %}
+                                {% if countries.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_country={{ countries.next_page_number }}{% if request.GET.search_country %}&search_country={{ request.GET.search_country }}{% endif %}" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                        {% if request.session.user.permissions.purchases.write %}
+                        <div id="country-form" class="d-none mt-3">
+                            <input type="text" id="country-name-input" class="form-control mb-2" placeholder="Nom du pays" />
+                            <button class="btn btn-primary btn-sm save-entity-btn" data-entity="country">Enregistrer</button>
+                            <button class="btn btn-secondary btn-sm cancel-entity-btn" data-entity="country">Annuler</button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Villes -->
+                    <div class="tab-pane fade" id="cities" role="tabpanel" data-entity="city">
+                        <form method="get" class="search-form">
+                            <div class="row g-2 mb-3">
+                                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white border-primary">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="search" name="search_city" class="form-control border-primary search-input" placeholder="Rechercher une ville ou un pays..." data-table="city-table" value="{{ request.GET.search_city }}">
+                                    </div>
+                                </div>
+                                {% if request.session.user.permissions.purchases.write %}
+                                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="importExportBtn-city">
+                                            <i class="fas fa-file-import" id="importExportIcon-city"></i>
+                                            <span class="d-none d-lg-inline ms-1" id="importExportText-city">Importer</span>
+                                        </button>
+                                        <button type="button" class="btn btn-primary w-100 text-nowrap px-2 add-entity-btn" data-entity="city">
+                                            <i class="fas fa-plus"></i>
+                                            <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="city-table">
+                                <thead class="table-light">
+                                    <tr class="main-row">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="d-none d-md-table-cell">
+                                            <input type="checkbox" id="selectAll-city">
+                                        </th>
+                                        {% endif %}
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Nom</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Pays</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="text-center">Actions</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for city in cities %}
+                                    <tr data-id="{{ city.id }}" data-city-id="{{ city.id }}">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Sélection" class="d-none d-md-table-cell">
+                                            <input type="checkbox" class="row-check">
+                                        </td>
+                                        {% endif %}
+                                        <td data-label="Nom" class="city-name">{{ city.name }}</td>
+                                        <td data-label="Pays" class="city-country-name">{{ city.country.name }}</td>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Actions" class="actions-cell">
+                                            <div class="d-flex gap-1 justify-content-end">
+                                                <button class="btn btn-sm btn-light border text-danger btn-delete-entity" data-entity="city" data-id="{{ city.id }}" title="Supprimer">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}4{% else %}2{% endif %}" class="text-center text-muted">Aucune ville</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if cities.paginator.num_pages > 1 %}
+                        <nav class="mt-3">
+                            <ul class="pagination justify-content-center flex-wrap">
+                                {% if cities.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_city={{ cities.previous_page_number }}{% if request.GET.search_city %}&search_city={{ request.GET.search_city }}{% endif %}" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                {% for num in cities.paginator.page_range %}
+                                <li class="page-item {% if cities.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page_city={{ num }}{% if request.GET.search_city %}&search_city={{ request.GET.search_city }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endfor %}
+                                {% if cities.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_city={{ cities.next_page_number }}{% if request.GET.search_city %}&search_city={{ request.GET.search_city }}{% endif %}" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                        {% if request.session.user.permissions.purchases.write %}
+                        <div id="city-form" class="d-none mt-3">
+                            <input type="text" id="city-name-input" class="form-control mb-2" placeholder="Nom de la ville" />
+                            <select id="city-country-select" class="form-control mb-2">
+                                {% for c in countries %}
+                                <option value="{{ c.id }}">{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-primary btn-sm save-entity-btn" data-entity="city">Enregistrer</button>
+                            <button class="btn btn-secondary btn-sm cancel-entity-btn" data-entity="city">Annuler</button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Langues -->
+                    <div class="tab-pane fade" id="languages" role="tabpanel" data-entity="language">
+                        <form method="get" class="search-form">
+                            <div class="row g-2 mb-3">
+                                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white border-primary">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="search" name="search_language" class="form-control border-primary search-input" placeholder="Rechercher une langue..." data-table="language-table" value="{{ request.GET.search_language }}">
+                                    </div>
+                                </div>
+                                {% if request.session.user.permissions.purchases.write %}
+                                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="importExportBtn-language">
+                                            <i class="fas fa-file-import" id="importExportIcon-language"></i>
+                                            <span class="d-none d-lg-inline ms-1" id="importExportText-language">Importer</span>
+                                        </button>
+                                        <button type="button" class="btn btn-primary w-100 text-nowrap px-2 add-entity-btn" data-entity="language">
+                                            <i class="fas fa-plus"></i>
+                                            <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="language-table">
+                                <thead class="table-light">
+                                    <tr class="main-row">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="d-none d-md-table-cell">
+                                            <input type="checkbox" id="selectAll-language">
+                                        </th>
+                                        {% endif %}
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Nom</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="text-center">Actions</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lang in languages %}
+                                    <tr data-id="{{ lang.id }}" data-language-id="{{ lang.id }}">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Sélection" class="d-none d-md-table-cell">
+                                            <input type="checkbox" class="row-check">
+                                        </td>
+                                        {% endif %}
+                                        <td data-label="Nom" class="language-name">{{ lang.name }}</td>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Actions" class="actions-cell">
+                                            <div class="d-flex gap-1 justify-content-end">
+                                                <button class="btn btn-sm btn-light border text-danger btn-delete-entity" data-entity="language" data-id="{{ lang.id }}" title="Supprimer">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}3{% else %}1{% endif %}" class="text-center text-muted">Aucune langue</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if languages.paginator.num_pages > 1 %}
+                        <nav class="mt-3">
+                            <ul class="pagination justify-content-center flex-wrap">
+                                {% if languages.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_language={{ languages.previous_page_number }}{% if request.GET.search_language %}&search_language={{ request.GET.search_language }}{% endif %}" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                {% for num in languages.paginator.page_range %}
+                                <li class="page-item {% if languages.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page_language={{ num }}{% if request.GET.search_language %}&search_language={{ request.GET.search_language }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endfor %}
+                                {% if languages.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_language={{ languages.next_page_number }}{% if request.GET.search_language %}&search_language={{ request.GET.search_language }}{% endif %}" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                        {% if request.session.user.permissions.purchases.write %}
+                        <div id="language-form" class="d-none mt-3">
+                            <input type="text" id="lang-name-input" class="form-control mb-2" placeholder="Nom de la langue" />
+                            <button class="btn btn-primary btn-sm save-entity-btn" data-entity="language">Enregistrer</button>
+                            <button class="btn btn-secondary btn-sm cancel-entity-btn" data-entity="language">Annuler</button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Taxes -->
+                    <div class="tab-pane fade" id="taxes" role="tabpanel" data-entity="tax">
+                        <form method="get" class="search-form">
+                            <div class="row g-2 mb-3">
+                                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white border-primary">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="search" name="search_tax" class="form-control border-primary search-input" placeholder="Rechercher une taxe..." data-table="tax-table" value="{{ request.GET.search_tax }}">
+                                    </div>
+                                </div>
+                                {% if request.session.user.permissions.purchases.write %}
+                                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="importExportBtn-tax">
+                                            <i class="fas fa-file-import" id="importExportIcon-tax"></i>
+                                            <span class="d-none d-lg-inline ms-1" id="importExportText-tax">Importer</span>
+                                        </button>
+                                        <button type="button" class="btn btn-primary w-100 text-nowrap px-2 add-entity-btn" data-entity="tax">
+                                            <i class="fas fa-plus"></i>
+                                            <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="tax-table">
+                                <thead class="table-light">
+                                    <tr class="main-row">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="d-none d-md-table-cell">
+                                            <input type="checkbox" id="selectAll-tax">
+                                        </th>
+                                        {% endif %}
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Libellé</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Valeur (%)</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="text-center">Actions</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for tax in taxes %}
+                                    <tr data-id="{{ tax.id }}" data-tax-id="{{ tax.id }}">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Sélection" class="d-none d-md-table-cell">
+                                            <input type="checkbox" class="row-check">
+                                        </td>
+                                        {% endif %}
+                                        <td data-label="Libellé" class="tax-libelle">{{ tax.libelle }}</td>
+                                        <td data-label="Valeur (%)" class="tax-valeur">{{ tax.valeur }}</td>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Actions" class="actions-cell">
+                                            <div class="d-flex gap-1 justify-content-end">
+                                                <button class="btn btn-sm btn-light border text-danger btn-delete-entity" data-entity="tax" data-id="{{ tax.id }}" title="Supprimer">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}4{% else %}2{% endif %}" class="text-center text-muted">Aucune taxe</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if taxes.paginator.num_pages > 1 %}
+                        <nav class="mt-3">
+                            <ul class="pagination justify-content-center flex-wrap">
+                                {% if taxes.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_tax={{ taxes.previous_page_number }}{% if request.GET.search_tax %}&search_tax={{ request.GET.search_tax }}{% endif %}" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                {% for num in taxes.paginator.page_range %}
+                                <li class="page-item {% if taxes.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page_tax={{ num }}{% if request.GET.search_tax %}&search_tax={{ request.GET.search_tax }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endfor %}
+                                {% if taxes.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_tax={{ taxes.next_page_number }}{% if request.GET.search_tax %}&search_tax={{ request.GET.search_tax }}{% endif %}" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                        {% if request.session.user.permissions.purchases.write %}
+                        <div id="tax-form" class="d-none mt-3">
+                            <input type="text" id="tax-libelle-input" class="form-control mb-2" placeholder="Libellé de la taxe" />
+                            <input type="number" step="0.01" id="tax-valeur-input" class="form-control mb-2" placeholder="Valeur en %" />
+                            <button class="btn btn-primary btn-sm save-entity-btn" data-entity="tax">Enregistrer</button>
+                            <button class="btn btn-secondary btn-sm cancel-entity-btn" data-entity="tax">Annuler</button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Devises -->
+                    <div class="tab-pane fade" id="currencies" role="tabpanel" data-entity="currency">
+                        <form method="get" class="search-form">
+                            <div class="row g-2 mb-3">
+                                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white border-primary">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="search" name="search_currency" class="form-control border-primary search-input" placeholder="Rechercher une devise..." data-table="currency-table" value="{{ request.GET.search_currency }}">
+                                    </div>
+                                </div>
+                                {% if request.session.user.permissions.purchases.write %}
+                                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="importExportBtn-currency">
+                                            <i class="fas fa-file-import" id="importExportIcon-currency"></i>
+                                            <span class="d-none d-lg-inline ms-1" id="importExportText-currency">Importer</span>
+                                        </button>
+                                        <button type="button" class="btn btn-primary w-100 text-nowrap px-2 add-entity-btn" data-entity="currency">
+                                            <i class="fas fa-plus"></i>
+                                            <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="currency-table">
+                                <thead class="table-light">
+                                    <tr class="main-row">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="d-none d-md-table-cell">
+                                            <input type="checkbox" id="selectAll-currency">
+                                        </th>
+                                        {% endif %}
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Libellé</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Abréviation</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="text-center">Actions</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for currency in currencies %}
+                                    <tr data-id="{{ currency.id }}" data-currency-id="{{ currency.id }}">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Sélection" class="d-none d-md-table-cell">
+                                            <input type="checkbox" class="row-check">
+                                        </td>
+                                        {% endif %}
+                                        <td data-label="Libellé" class="currency-libelle">{{ currency.libelle }}</td>
+                                        <td data-label="Abréviation" class="currency-abreviation">{{ currency.abreviation }}</td>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Actions" class="actions-cell">
+                                            <div class="d-flex gap-1 justify-content-end">
+                                                <button class="btn btn-sm btn-light border text-danger btn-delete-entity" data-entity="currency" data-id="{{ currency.id }}" title="Supprimer">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}4{% else %}2{% endif %}" class="text-center text-muted">Aucune devise</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if currencies.paginator.num_pages > 1 %}
+                        <nav class="mt-3">
+                            <ul class="pagination justify-content-center flex-wrap">
+                                {% if currencies.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_currency={{ currencies.previous_page_number }}{% if request.GET.search_currency %}&search_currency={{ request.GET.search_currency }}{% endif %}" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                {% for num in currencies.paginator.page_range %}
+                                <li class="page-item {% if currencies.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page_currency={{ num }}{% if request.GET.search_currency %}&search_currency={{ request.GET.search_currency }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endfor %}
+                                {% if currencies.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_currency={{ currencies.next_page_number }}{% if request.GET.search_currency %}&search_currency={{ request.GET.search_currency }}{% endif %}" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                        {% if request.session.user.permissions.purchases.write %}
+                        <div id="currency-form" class="d-none mt-3">
+                            <input type="text" id="currency-libelle-input" class="form-control mb-2" placeholder="Libellé de la devise" />
+                            <input type="text" id="currency-abreviation-input" class="form-control mb-2" placeholder="Abréviation de la devise (ex: USD)" maxlength="3" />
+                            <button class="btn btn-primary btn-sm save-entity-btn" data-entity="currency">Enregistrer</button>
+                            <button class="btn btn-secondary btn-sm cancel-entity-btn" data-entity="currency">Annuler</button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Modes de paiement -->
+                    <div class="tab-pane fade" id="payment-modes" role="tabpanel" data-entity="payment-mode">
+                        <form method="get" class="search-form">
+                            <div class="row g-2 mb-3">
+                                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white border-primary">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="search" name="search_payment_mode" class="form-control border-primary search-input" placeholder="Rechercher un mode de paiement..." data-table="payment-mode-table" value="{{ request.GET.search_payment_mode }}">
+                                    </div>
+                                </div>
+                                {% if request.session.user.permissions.purchases.write %}
+                                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="importExportBtn-payment-mode">
+                                            <i class="fas fa-file-import" id="importExportIcon-payment-mode"></i>
+                                            <span class="d-none d-lg-inline ms-1" id="importExportText-payment-mode">Importer</span>
+                                        </button>
+                                        <button type="button" class="btn btn-primary w-100 text-nowrap px-2 add-entity-btn" data-entity="payment-mode">
+                                            <i class="fas fa-plus"></i>
+                                            <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="payment-mode-table">
+                                <thead class="table-light">
+                                    <tr class="main-row">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="d-none d-md-table-cell">
+                                            <input type="checkbox" id="selectAll-payment-mode">
+                                        </th>
+                                        {% endif %}
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Nom</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Description</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="text-center">Actions</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mode in payment_modes %}
+                                    <tr data-id="{{ mode.id }}" data-payment-mode-id="{{ mode.id }}">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Sélection" class="d-none d-md-table-cell">
+                                            <input type="checkbox" class="row-check">
+                                        </td>
+                                        {% endif %}
+                                        <td data-label="Nom" class="payment-mode-name">{{ mode.name }}</td>
+                                        <td data-label="Description" class="payment-mode-description">{{ mode.description }}</td>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Actions" class="actions-cell">
+                                            <div class="d-flex gap-1 justify-content-end">
+                                                <button class="btn btn-sm btn-light border text-danger btn-delete-entity" data-entity="payment-mode" data-id="{{ mode.id }}" title="Supprimer">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}4{% else %}2{% endif %}" class="text-center text-muted">Aucun mode de paiement</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if payment_modes.paginator.num_pages > 1 %}
+                        <nav class="mt-3">
+                            <ul class="pagination justify-content-center flex-wrap">
+                                {% if payment_modes.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_payment_mode={{ payment_modes.previous_page_number }}{% if request.GET.search_payment_mode %}&search_payment_mode={{ request.GET.search_payment_mode }}{% endif %}" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                {% for num in payment_modes.paginator.page_range %}
+                                <li class="page-item {% if payment_modes.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page_payment_mode={{ num }}{% if request.GET.search_payment_mode %}&search_payment_mode={{ request.GET.search_payment_mode }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endfor %}
+                                {% if payment_modes.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_payment_mode={{ payment_modes.next_page_number }}{% if request.GET.search_payment_mode %}&search_payment_mode={{ request.GET.search_payment_mode }}{% endif %}" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                        {% if request.session.user.permissions.purchases.write %}
+                        <div id="payment-mode-form" class="d-none mt-3">
+                            <form method="post" action="{% url 'add_payment_mode' %}">
+                                {% csrf_token %}
+                                {{ payment_form.as_p }}
+                                <button type="submit" class="btn btn-primary btn-sm save-entity-btn" data-entity="payment-mode">Enregistrer</button>
+                                <button type="button" class="btn btn-secondary btn-sm cancel-entity-btn" data-entity="payment-mode">Annuler</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Types de convention -->
+                    <div class="tab-pane fade" id="convention-types" role="tabpanel" data-entity="convention-type">
+                        <form method="get" class="search-form">
+                            <div class="row g-2 mb-3">
+                                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-primary text-white border-primary">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="search" name="search_convention_type" class="form-control border-primary search-input" placeholder="Rechercher un type de convention..." data-table="convention-type-table" value="{{ request.GET.search_convention_type }}">
+                                    </div>
+                                </div>
+                                {% if request.session.user.permissions.purchases.write %}
+                                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="importExportBtn-convention-type">
+                                            <i class="fas fa-file-import" id="importExportIcon-convention-type"></i>
+                                            <span class="d-none d-lg-inline ms-1" id="importExportText-convention-type">Importer</span>
+                                        </button>
+                                        <button type="button" class="btn btn-primary w-100 text-nowrap px-2 add-entity-btn" data-entity="convention-type">
+                                            <i class="fas fa-plus"></i>
+                                            <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="convention-type-table">
+                                <thead class="table-light">
+                                    <tr class="main-row">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="d-none d-md-table-cell">
+                                            <input type="checkbox" id="selectAll-convention-type">
+                                        </th>
+                                        {% endif %}
+                                        <th>
+                                            <div class="d-flex align-items-center">
+                                                <span>Libellé</span>
+                                                <i class="fas fa-sort ms-1 text-muted"></i>
+                                            </div>
+                                        </th>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <th class="text-center">Actions</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for t in convention_types %}
+                                    <tr data-id="{{ t.id }}" data-convention-type-id="{{ t.id }}">
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Sélection" class="d-none d-md-table-cell">
+                                            <input type="checkbox" class="row-check">
+                                        </td>
+                                        {% endif %}
+                                        <td data-label="Libellé" class="convention-type-libelle">{{ t.libelle }}</td>
+                                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                        <td data-label="Actions" class="actions-cell">
+                                            <div class="d-flex gap-1 justify-content-end">
+                                                <button class="btn btn-sm btn-light border text-danger btn-delete-entity" data-entity="convention-type" data-id="{{ t.id }}" title="Supprimer">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}3{% else %}1{% endif %}" class="text-center text-muted">Aucun type</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if convention_types.paginator.num_pages > 1 %}
+                        <nav class="mt-3">
+                            <ul class="pagination justify-content-center flex-wrap">
+                                {% if convention_types.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_convention_type={{ convention_types.previous_page_number }}{% if request.GET.search_convention_type %}&search_convention_type={{ request.GET.search_convention_type }}{% endif %}" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Précédent">
+                                        <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">&laquo; Préc</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                {% for num in convention_types.paginator.page_range %}
+                                <li class="page-item {% if convention_types.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page_convention_type={{ num }}{% if request.GET.search_convention_type %}&search_convention_type={{ request.GET.search_convention_type }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endfor %}
+                                {% if convention_types.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page_convention_type={{ convention_types.next_page_number }}{% if request.GET.search_convention_type %}&search_convention_type={{ request.GET.search_convention_type }}{% endif %}" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Suivant">
+                                        <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                        <span class="d-none d-sm-block">Suiv &raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                        {% if request.session.user.permissions.purchases.write %}
+                        <div id="convention-type-form" class="d-none mt-3">
+                            <form method="post" action="{% url 'add_convention_type' %}">
+                                {% csrf_token %}
+                                {{ convention_form.as_p }}
+                                <button type="submit" class="btn btn-primary btn-sm save-entity-btn" data-entity="convention-type">Enregistrer</button>
+                                <button type="button" class="btn btn-secondary btn-sm cancel-entity-btn" data-entity="convention-type">Annuler</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script src="{% static 'purchases/js/configuration.js' %}"></script>
+    <script src="{% static 'purchases/js/configuration-sweetalert.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Configuration des boutons Import/Export dynamiques
+        const entities = ['country', 'city', 'language', 'tax', 'currency', 'payment-mode', 'convention-type'];
+
+        function setupImportExportButtons() {
+            entities.forEach(entity => {
+                const selectAllCheckbox = document.getElementById(`selectAll-${entity}`);
+                const importExportBtn = document.getElementById(`importExportBtn-${entity}`);
+                const importExportIcon = document.getElementById(`importExportIcon-${entity}`);
+                const importExportText = document.getElementById(`importExportText-${entity}`);
+
+                if (!importExportBtn) return;
+
+                // Fonction pour mettre à jour le bouton selon l'état des checkboxes
+                function updateImportExportButton() {
+                    const checkedBoxes = document.querySelectorAll(`#${entity}-table .row-check:checked`);
+                    
+                    if (checkedBoxes.length > 0) {
+                        // Mode Export
+                        importExportIcon.className = 'fas fa-file-export';
+                        importExportText.textContent = 'Exporter';
+                    } else {
+                        // Mode Import
+                        importExportIcon.className = 'fas fa-file-import';
+                        importExportText.textContent = 'Importer';
+                    }
+                }
+
+                // Gestionnaire pour "Sélectionner tout"
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.addEventListener('change', function() {
+                        const isChecked = this.checked;
+                        const rowCheckboxes = document.querySelectorAll(`#${entity}-table .row-check`);
+                        rowCheckboxes.forEach(checkbox => {
+                            checkbox.checked = isChecked;
+                        });
+                        updateImportExportButton();
+                    });
+                }
+
+                // Gestionnaire pour les checkboxes individuelles
+                const rowCheckboxes = document.querySelectorAll(`#${entity}-table .row-check`);
+                rowCheckboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        const allCheckboxes = document.querySelectorAll(`#${entity}-table .row-check`);
+                        const selectAllCheckbox = document.getElementById(`selectAll-${entity}`);
+                        
+                        // Vérifier si toutes les checkboxes sont cochées
+                        const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+                        const noneChecked = Array.from(allCheckboxes).every(cb => !cb.checked);
+                        
+                        // Mettre à jour la checkbox "Sélectionner tout"
+                        if (selectAllCheckbox) {
+                            selectAllCheckbox.checked = allChecked;
+                            selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+                        }
+                        
+                        updateImportExportButton();
+                    });
+                });
+
+                // Gestionnaire de clic sur le bouton Import/Export
+                importExportBtn.addEventListener('click', function() {
+                    const checkedBoxes = document.querySelectorAll(`#${entity}-table .row-check:checked`);
+                    
+                    if (checkedBoxes.length > 0) {
+                        // Mode Export - récupérer les IDs sélectionnés
+                        const selectedIds = Array.from(checkedBoxes).map(cb => {
+                            const row = cb.closest('tr');
+                            return row ? row.getAttribute(`data-${entity}-id`) : null;
+                        }).filter(id => id !== null);
+                        
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Export en cours',
+                            text: `Export de ${selectedIds.length} élément(s) sélectionné(s) (${entity})...`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        
+                        console.log(`Export ${entity}:`, selectedIds);
+                        // TODO: Implémenter la logique d'export réelle
+                        
+                    } else {
+                        // Mode Import
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Import',
+                            text: `Fonctionnalité d'import pour ${entity} à implémenter...`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        
+                        console.log(`Mode Import activé pour ${entity}`);
+                        // TODO: Implémenter la logique d'import réelle
+                    }
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Configuration des boutons Import/Export
+            setupImportExportButtons();
+
+            // Restaurer l'onglet actif depuis localStorage
+            const activeTabId = localStorage.getItem('activeTabId');
+            if (activeTabId) {
+                const tabButton = document.querySelector(`button[data-bs-target="${activeTabId}"]`);
+                if (tabButton) {
+                    const tab = new bootstrap.Tab(tabButton);
+                    tab.show();
+                }
+            }
+
+            const tabButtons = document.querySelectorAll('button[data-bs-toggle="tab"]');
+            tabButtons.forEach(button => {
+                button.addEventListener('shown.bs.tab', function (e) {
+                    const target = e.target.getAttribute('data-bs-target');
+                    localStorage.setItem('activeTabId', target);
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,82 @@
+{% load static %}
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    
+    <div class="menu-items">
+      <a href="{% url 'therapeutic_activities:activities_home' %}" class="menu-item">
+        <i class="fas fa-chart-line"></i>
+        <span class="menu-text">Tableau de bord</span>
+      </a>
+      
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-running"></i>
+          <span class="menu-text">Activités</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'therapeutic_activities:activity_list' %}"><i class="fas fa-list"></i>Liste des activités</a></li>
+          </ul>
+      </div>
+      
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-calendar-alt"></i>
+          <span class="menu-text">Sessions</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'therapeutic_activities:session_list' %}"><i class="fas fa-calendar-check"></i>Liste des sessions</a></li>
+          <li><a href="{% url 'therapeutic_activities:session_calendar' %}"><i class="fas fa-calendar"></i>Calendrier</a></li>
+        </ul>
+      </div>
+      
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-users"></i>
+          <span class="menu-text">Participations</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'therapeutic_activities:participation_list' %}"><i class="fas fa-user-check"></i>Liste des participations</a></li>
+          <li><a href="{% url 'therapeutic_activities:bulk_participation_create' %}"><i class="fas fa-users-cog"></i>Inscription en masse</a></li>
+        </ul>
+      </div>
+      
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-brain"></i>
+          <span class="menu-text">Ergothérapie</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'therapeutic_activities:ergotherapy_evaluation_list' %}"><i class="fas fa-clipboard-check"></i>Évaluations </a></li>
+          <li><a href="{% url 'therapeutic_activities:coaching_session_list' %}"><i class="fas fa-user-md"></i>Sessions Coaching</a></li>
+          <li><a href="{% url 'therapeutic_activities:social_report_list' %}"><i class="fas fa-file-medical-alt"></i>Rapports Sociaux</a></li>
+          </ul>
+      </div>
+      
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-cog"></i>
+          <span class="menu-text">Paramètres</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'therapeutic_activities:configuration' %}"><i class="fas fa-cog"></i>Configuration</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+</div>

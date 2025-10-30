@@ -1,0 +1,73 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    <div class="menu-items">
+      <a href="#" class="menu-item">
+        <i class="fas fa-chart-line"></i>
+        <span class="menu-text">Tableau de bord</span>
+      </a>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-truck-fast"></i>
+          <span class="menu-text">Gestion des fournisseurs&nbsp;</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+            <li><a href="{% url 'pharmacy_supplier_list' %}"><i class="fa-solid fa-store"></i> Fournisseurs</a></li>
+        </ul>
+      </div>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fa-solid fa-file-invoice"></i>
+          <span class="menu-text">Gestion des commandes&nbsp;</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'pharmacy_order_list' %}"><i class="fas fa-list-alt"></i> Commandes & Devis</a></li>
+        </ul>
+      </div>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-box"></i>
+          <span class="menu-text">Gestion des produits</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'pharmacy_product_list' %}"><i class="fa-solid fa-pills"></i>Produits</a></li>
+          <li><a href="{% url 'pharmacy_stock_move_list' %}"><i class="fas fa-exchange-alt"></i>Mouvements de Stock</a></li>
+        </ul>
+      </div>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-clipboard-list"></i>
+          <span class="menu-text">Gestion de l'inventaire</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'pharmacy_inventory_list' %}"><i class="fas fa-boxes"></i>Inventaire pharmacie</a></li>
+          <li><a href="{% url 'pharmacy_inventory_adjustment' %}"><i class="fas fa-adjust"></i>Ajustement d'inventaire</a></li>
+        </ul>
+      </div>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-cog"></i>
+          <span class="menu-text">Paramètres</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'pharmacy_configuration' %}"><i class="fas fa-cog"></i> Configuration</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+</div>

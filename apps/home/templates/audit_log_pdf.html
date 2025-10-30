@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Journaux d'Audit - Oralys ERP Clinique</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 20px;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .filters {
+            margin-bottom: 20px;
+            font-size: 11px;
+        }
+        .filters p {
+            margin: 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 10px;
+            color: white;
+            font-size: 10px;
+        }
+        .badge-creation { background-color: #28a745; }
+        .badge-modification { background-color: #17a2b8; }
+        .badge-suppression { background-color: #dc3545; }
+        .badge-impression { background-color: #ffc107; color: #212529; }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 10px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <h1>Journaux d'Audit - Oralys ERP Clinique</h1>
+    <div class="filters">
+        <p><strong>Recherche :</strong> {{ search_query|default:"Aucune" }}</p>
+        <p><strong>Action :</strong> {{ action_label|default:"Toutes" }}</p>
+        <p><strong>Date et heure de début :</strong> {{ start_datetime|default:"Aucune" }}</p>
+        <p><strong>Date et heure de fin :</strong> {{ end_datetime|default:"Aucune" }}</p>
+        <p><strong>Date d'exportation :</strong> {{ export_date|date:"d/m/Y H:i" }}</p>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Entité</th>
+                <th>ID de l'objet</th>
+                <th>Action</th>
+                <th>Effectué par</th>
+                <th>Date et heure</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.id }}</td>
+                <td>{{ log.entity_name }}</td>
+                <td>{{ log.object_id }}</td>
+                <td>
+                    <span class="badge badge-{{ log.action }}">
+                        {{ log.get_action_display }}
+                    </span>
+                </td>
+                <td>{{ log.created_by|default:"Inconnu" }}</td>
+                <td>{{ log.date_time|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">Aucun journal d'audit trouvé.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="footer">
+        Généré par Oralys ERP Clinique le {{ export_date|date:"d/m/Y H:i" }}
+    </div>
+</body>
+</html>

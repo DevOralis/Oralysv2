@@ -1,0 +1,1111 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}">
+<link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}">
+<link rel="stylesheet" href="{% static 'vendor/css/sweetalert2.min.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+  .is-invalid { border-color: #dc3545; }
+  .invalid-feedback { display: none; }
+  .is-invalid ~ .invalid-feedback { display: block; }
+  
+  /* Style compact pour le tableau */
+  .table-sm th,
+  .table-sm td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+  
+  .table-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .actions-cell {
+    white-space: nowrap;
+  }
+  
+  .actions-cell .btn {
+    margin: 0 0.1rem;
+  }
+  
+  /* Styles responsive pour les tableaux */
+  @media (max-width: 991.98px) {
+    .table-responsive {
+      display: block;
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .table-responsive > .table {
+      margin-bottom: 0;
+    }
+    .table-responsive > .table > thead > tr > th,
+    .table-responsive > .table > tbody > tr > td {
+      white-space: nowrap;
+    }
+    .table-responsive > .table > tbody > tr > td.actions-cell {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+  }
+  
+  @media (max-width: 767.98px) {
+    .table-responsive {
+      display: block;
+    }
+    .table-responsive > .table > thead {
+      display: none;
+    }
+    .table-responsive > .table > tbody > tr {
+      display: block;
+      margin-bottom: 1rem;
+      border: 1px solid #dee2e6;
+      border-radius: 0.375rem;
+      background-color: #fff;
+    }
+    .table-responsive > .table > tbody > tr > td {
+      display: block;
+      text-align: left !important;
+      position: relative;
+      padding-left: 50%;
+      border: none;
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+    .table-responsive > .table > tbody > tr > td:before {
+      content: attr(data-label);
+      position: absolute;
+      left: 0;
+      width: 45%;
+      padding-left: 15px;
+      font-weight: bold;
+      text-align: left;
+    }
+    .table-responsive > .table > tbody > tr > td.actions-cell {
+      display: flex;
+      justify-content: flex-start;
+      padding-left: 15px;
+      border-top: 1px solid #dee2e6;
+    }
+    .table-responsive > .table > tbody > tr > td:first-child {
+      border-top-left-radius: 0.375rem;
+      border-top-right-radius: 0.375rem;
+    }
+    .table-responsive > .table > tbody > tr > td:last-child {
+      border-bottom-left-radius: 0.375rem;
+      border-bottom-right-radius: 0.375rem;
+    }
+  }
+  
+  .modal-content {
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+  .modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+  }
+  .modal-title {
+    font-weight: 600;
+  }
+  .order-history-card {
+    background-color: #e9ecef;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .order-history-card h5 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #343a40;
+  }
+  .revenue-card {
+    background-color: #d4edda;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .revenue-card h5 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #155724;
+  }
+  .order-history-table {
+    font-size: 0.9rem;
+  }
+  .order-history-table th,
+  .order-history-table td {
+    padding: 8px;
+  }
+  .chart-container {
+    max-width: 400px;
+    margin: 0 auto 20px;
+  }
+  @media (max-width: 576px) {
+    .chart-container {
+      max-width: 100%;
+    }
+    .order-history-table {
+      font-size: 0.8rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block menu %}
+  {% include 'purchases_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <!-- Liste des produits -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-boxes me-2"></i>
+      Liste des Produits
+    </div>
+    <div class="card-body">
+      <!-- Search Bar Component -->
+      <form method="get" id="search-form">
+        <div class="row g-2 mb-3">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+            <div class="input-group">
+              <span class="input-group-text bg-primary text-white border-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" name="q" id="product-search" class="form-control border-primary" placeholder="Recherche produit..." value="{{ request.GET.q|default:'' }}">
+            </div>
+          </div>
+          <!-- Filtre catégories -->
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-2">
+            <select name="category" class="form-select" title="Filtrer par catégorie">
+              <option value="">Toutes les catégories</option>
+              {% for category in categories %}
+                <option value="{{ category.pk }}" {% if request.GET.category == category.pk|stringformat:"s" %}selected{% endif %}>
+                  {{ category.label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-3">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="importExportBtn">
+                <i class="fas fa-file-import" id="importExportIcon"></i>
+                <span class="d-none d-lg-inline ms-1" id="importExportText">Importer</span>
+              </button>
+              {% if request.session.user.permissions.purchases.write %}
+              <button id="scrollToForm" type="button" class="btn btn-primary w-100 text-nowrap px-2">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Table -->
+      <div class="table-responsive">
+        <table class="table table-striped table-hover table-sm" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th>
+                <input type="checkbox" id="select-all-products">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Nom</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell">
+                <div class="d-flex align-items-center">
+                  <span>Réf.</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell">
+                <div class="d-flex align-items-center">
+                  <span>Catégorie</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell">
+                <div class="d-flex align-items-center">
+                  <span>Prix</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell">
+                <div class="d-flex align-items-center">
+                  <span>Stock min.</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell">
+                <div class="d-flex align-items-center">
+                  <span>Unité</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell">
+                <div class="d-flex align-items-center">
+                  <span>Qté Totale</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for product in page_obj %}
+              <tr class="main-row" data-product-id="{{ product.pk }}">
+                <td data-label="Sélection">
+                  <input type="checkbox" class="row-check select-product">
+                </td>
+                <td data-label="Nom">{{ product.name }}</td>
+                <td data-label="Réf." class="d-none d-lg-table-cell">{{ product.default_code }}</td>
+                <td data-label="Catégorie" class="d-none d-lg-table-cell">{{ product.categ.label }}</td>
+                <td data-label="Prix" class="d-none d-lg-table-cell">{{ product.standard_price|floatformat:2 }}</td>
+                <td data-label="Stock min." class="d-none d-lg-table-cell">{{ product.stock_minimal }}</td>
+                <td data-label="Unité" class="d-none d-lg-table-cell">{{ product.uom.label }}</td>
+                <td data-label="Qté Totale" class="d-none d-lg-table-cell">{{ product.total_quantity|floatformat:2 }}</td>
+                <td data-label="Actions" class="actions-cell">
+                  <button class="btn btn-sm btn-primary d-lg-none" data-bs-toggle="collapse" data-bs-target="#details-{{ forloop.counter0 }}">
+                    Voir détails
+                  </button>
+                  <div class="d-none d-lg-flex gap-1 justify-content-end">
+                    <button class="btn btn-sm btn-light border text-info btn-details-product" data-id="{{ product.pk }}" data-bs-toggle="modal" data-bs-target="#productOrderHistoryModal" title="Voir">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                    <a href="{% url 'purchases_product_update' product.pk %}#product-form-card" class="btn btn-sm btn-light border text-dark" title="Modifier">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    <button class="btn btn-sm btn-light border text-danger btn-delete-product" data-id="{{ product.pk }}" data-name="{{ product.name }}" title="Supprimer">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              <tr class="collapse bg-light d-lg-none" id="details-{{ forloop.counter0 }}">
+                <td colspan="9" class="p-3">
+                  <div class="row">
+                    <div class="col-12">
+                      <p class="mb-2"><strong>Réf.:</strong> {{ product.default_code }}</p>
+                      <p class="mb-2"><strong>Catégorie:</strong> {{ product.categ.label }}</p>
+                      <p class="mb-2"><strong>Prix:</strong> {{ product.standard_price|floatformat:2 }}</p>
+                      <p class="mb-2"><strong>Stock min.:</strong> {{ product.stock_minimal }}</p>
+                      <p class="mb-2"><strong>Unité:</strong> {{ product.uom.label }}</p>
+                      <p class="mb-2"><strong>Qté Totale:</strong> {{ product.total_quantity|floatformat:2 }}</p>
+                    </div>
+                    <div class="col-12 mt-3">
+                      <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-light border text-info btn-details-product" data-id="{{ product.pk }}" data-bs-toggle="modal" data-bs-target="#productOrderHistoryModal" title="Voir">
+                          <i class="fas fa-eye me-1"></i>
+                        </button>
+                        {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                        <a href="{% url 'purchases_product_update' product.pk %}#product-form-card" class="btn btn-sm btn-light border text-dark" title="Modifier">
+                          <i class="fas fa-edit me-1"></i> 
+                        </a>
+                        <button class="btn btn-sm btn-light border text-danger btn-delete-product" data-id="{{ product.pk }}" data-name="{{ product.name }}" title="Supprimer">
+                          <i class="fas fa-trash-alt me-1"></i> 
+                        </button>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="9" class="text-center">Aucun produit trouvé.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if page_obj.has_other_pages %}
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap">
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" aria-label="Précédent">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </a>
+              </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+              {% if page_obj.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">{{ num }}</a>
+                </li>
+              {% elif num == 1 %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">{{ num }}</a>
+                </li>
+                {% if page_obj.number > 4 %}
+                  <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+              {% elif num == page_obj.paginator.num_pages %}
+                {% if page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+                  <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" aria-label="Suivant">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </a>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if request.session.user.permissions.purchases.write %}
+  <!-- Formulaire produit -->
+  <div class="card mb-4" id="product-form-card">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-box me-2"></i>
+      {{ page_title }}
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" id="product-form" action="{% if product %}{% url 'purchases_product_update' product.pk %}{% else %}{% url 'purchases_product_create' %}{% endif %}">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            <ul class="errorlist">
+              {% for field in form %}
+                {% for error in field.errors %}
+                  <li>{{ field.label }}: {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+              {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+        <input type="hidden" id="product_id" name="id" value="{% if product %}{{ product.pk }}{% endif %}">
+
+        <div class="row g-3">
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.name.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-box"></i></span>
+              {{ form.name }}
+            </div>
+            {% if form.name.errors %}
+              <div class="invalid-feedback">{{ form.name.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.dlc.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="date" name="dlc" class="form-control" value="{{ form.dlc.value|date:'Y-m-d' }}">
+            </div>
+            {% if form.dlc.errors %}
+              <div class="invalid-feedback">{{ form.dlc.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4 d-flex flex-column align-items-center justify-content-start">
+            {% if product and product.image_1920 %}
+              <img src="{{ product.image_1920.url }}" alt="Image produit" class="img-thumbnail mb-2" style="max-width:160px;max-height:160px;">
+            {% endif %}
+            <label class="form-label">{{ form.image_1920.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-image"></i></span>
+              {{ form.image_1920 }}
+            </div>
+            {% if form.image_1920.errors %}
+              <div class="invalid-feedback">{{ form.image_1920.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.categ.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-folder"></i></span>
+              {{ form.categ }}
+            </div>
+            {% if form.categ.errors %}
+              <div class="invalid-feedback">{{ form.categ.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.uom.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-ruler"></i></span>
+              {{ form.uom }}
+            </div>
+            {% if form.uom.errors %}
+              <div class="invalid-feedback">{{ form.uom.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.product_type.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-tag"></i></span>
+              {{ form.product_type }}
+            </div>
+            {% if form.product_type.errors %}
+              <div class="invalid-feedback">{{ form.product_type.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.standard_price.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+              {{ form.standard_price }}
+            </div>
+            {% if form.standard_price.errors %}
+              <div class="invalid-feedback">{{ form.standard_price.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.barcode.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+              {{ form.barcode }}
+            </div>
+            {% if form.barcode.errors %}
+              <div class="invalid-feedback">{{ form.barcode.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.stock_minimal.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-cubes"></i></span>
+              {{ form.stock_minimal }}
+            </div>
+            {% if form.stock_minimal.errors %}
+              <div class="invalid-feedback">{{ form.stock_minimal.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.weight.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-weight"></i></span>
+              {{ form.weight }}
+            </div>
+            {% if form.weight.errors %}
+              <div class="invalid-feedback">{{ form.weight.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.volume.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-cube"></i></span>
+              {{ form.volume }}
+            </div>
+            {% if form.volume.errors %}
+              <div class="invalid-feedback">{{ form.volume.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">{{ form.active.label }}</label>
+            <div class="form-check form-switch">
+              {{ form.active }}
+              <label class="form-check-label" for="{{ form.active.id_for_label }}">Actif</label>
+            </div>
+            {% if form.active.errors %}
+              <div class="invalid-feedback">{{ form.active.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label">{{ form.description.label }}</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+              <div class="invalid-feedback">{{ form.description.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Stock par emplacement -->
+        <hr>
+        <h6>Stock par emplacement</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover" id="pl-table">
+            <thead class="table-light">
+              <tr>
+                <th>Emplacement</th>
+                <th>Quantité</th>
+                <th class="action-column"></th>
+              </tr>
+            </thead>
+            <tbody id="pl-table-body">
+              <!-- Les lignes seront générées par JS -->
+            </tbody>
+          </table>
+        </div>
+        <input type="hidden" name="locations_json" id="locations-json">
+        <div class="d-flex justify-content-between mb-3">
+          <button type="button" class="btn btn-primary btn-sm" id="add-pl-line"><i class="fas fa-plus"></i> Ajouter Emplacement</button>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+          <a href="#top" class="btn btn-secondary">
+            <i class="fas fa-times"></i>
+            <span class="d-none d-sm-inline ms-1">Annuler</span>
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i>
+            <span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Modal for Product Order History -->
+  <div class="modal fade" id="productOrderHistoryModal" tabindex="-1" aria-labelledby="productOrderHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog" style="max-width: 70vw !important; width: 70vw !important; margin: 1rem auto !important;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="productOrderHistoryModalLabel">Historique des commandes</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="order-history-card">
+            <h5 id="totalOrders">0</h5>
+            <p>Commandes totales</p>
+          </div>
+          <div class="revenue-card">
+            <h5 id="totalRevenue">0.00 </h5>
+            <p>Chiffre d'affaires total (MAD)</p>
+          </div>
+          <div class="chart-container">
+            <canvas id="priceProgressionChart"></canvas>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered order-history-table">
+              <thead>
+                <tr>
+                  <th>Commande</th>
+                  <th>Date</th>
+                  <th>Prix Unitaire</th>
+                  <th>Quantité</th>
+                  <th>Montant Total</th>
+                  <th>Devise</th>
+                </tr>
+              </thead>
+              <tbody id="orderHistoryTable"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+          <a href="#" id="downloadPdfLink" class="btn btn-primary"><i class="fas fa-file-pdf"></i> Télécharger PDF</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Données des emplacements pour JavaScript -->
+<script type="application/json" id="locations-data">
+  [
+    {% for location in locations %}
+      {"id": {{ location.pk }}, "name": "{{ location.name|escapejs }}"} {% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+</script>
+
+{% if product_locations %}
+  <script>
+    window.productLocations = JSON.parse('{{ product_locations|escapejs }}');
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('productLocations from template:', window.productLocations);
+      document.getElementById('locations-json').value = JSON.stringify(window.productLocations);
+    });
+  </script>
+{% else %}
+  <script>
+    window.productLocations = [];
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('productLocations is empty');
+      document.getElementById('locations-json').value = JSON.stringify([]);
+    });
+  </script>
+{% endif %}
+
+{% if product %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const formCard = document.getElementById('product-form-card');
+      if (formCard) {
+        formCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  </script>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+<script src="{% static 'js/purchases_js/products.js' %}"></script>
+
+<script type="application/json" id="product-types-data">
+  [
+    {% for product_type in product_types %}
+      {"id": {{ product_type.pk }}, "label": "{{ product_type.label|escapejs }}"} {% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+</script>
+
+<script>
+  function setupImportExportButton() {
+    const selectAllCheckbox = document.getElementById('select-all-products');
+    const importExportBtn = document.getElementById('importExportBtn');
+    const importExportIcon = document.getElementById('importExportIcon');
+    const importExportText = document.getElementById('importExportText');
+
+    // Fonction pour mettre à jour le bouton selon l'état des checkboxes
+    function updateImportExportButton() {
+      const checkedBoxes = document.querySelectorAll('.row-check:checked');
+      
+      if (checkedBoxes.length > 0) {
+        // Mode Export
+        importExportIcon.className = 'fas fa-file-export';
+        importExportText.textContent = 'Exporter';
+      } else {
+        // Mode Import
+        importExportIcon.className = 'fas fa-file-import';
+        importExportText.textContent = 'Importer';
+      }
+    }
+
+    // Gestionnaire pour "Sélectionner tout"
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', function() {
+        const isChecked = this.checked;
+        const rowCheckboxes = document.querySelectorAll('.row-check');
+        rowCheckboxes.forEach(checkbox => {
+          checkbox.checked = isChecked;
+        });
+        updateImportExportButton();
+      });
+    }
+
+    // Gestionnaire pour les checkboxes individuelles
+    const rowCheckboxes = document.querySelectorAll('.row-check');
+    rowCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const allCheckboxes = document.querySelectorAll('.row-check');
+        const selectAllCheckbox = document.getElementById('select-all-products');
+        
+        // Vérifier si toutes les checkboxes sont cochées
+        const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+        const noneChecked = Array.from(allCheckboxes).every(cb => !cb.checked);
+        
+        // Mettre à jour la checkbox "Sélectionner tout"
+        if (selectAllCheckbox) {
+          selectAllCheckbox.checked = allChecked;
+          selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+        }
+        
+        updateImportExportButton();
+      });
+    });
+
+    // Gestionnaire de clic sur le bouton Import/Export
+    if (importExportBtn) {
+      importExportBtn.addEventListener('click', function() {
+        const checkedBoxes = document.querySelectorAll('.row-check:checked');
+        
+        if (checkedBoxes.length > 0) {
+          // Mode Export - récupérer les IDs sélectionnés
+          const selectedIds = Array.from(checkedBoxes).map(cb => {
+            const row = cb.closest('tr');
+            return row ? row.getAttribute('data-product-id') : null;
+          }).filter(id => id !== null);
+          
+          Swal.fire({
+            icon: 'info',
+            title: 'Export en cours',
+            text: `Export de ${selectedIds.length} produit(s) sélectionné(s)...`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+          
+          console.log('Export des produits:', selectedIds);
+          // TODO: Implémenter la logique d'export réelle
+          
+        } else {
+          // Mode Import
+          Swal.fire({
+            icon: 'info',
+            title: 'Import',
+            text: 'Fonctionnalité d\'import à implémenter...',
+            timer: 2000,
+            showConfirmButton: false
+          });
+          
+          console.log('Mode Import activé');
+          // TODO: Implémenter la logique d'import réelle
+        }
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des checkboxes et bouton Import/Export
+    setupImportExportButton();
+
+    // Gestion du bouton scroll vers formulaire
+    const scrollToFormButton = document.getElementById('scrollToForm');
+    if (scrollToFormButton) {
+      scrollToFormButton.addEventListener('click', () => {
+        const productFormCard = document.getElementById('product-form-card');
+        if (productFormCard) {
+          productFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
+
+    // Gestion du formulaire produit avec SweetAlert
+    const productForm = document.getElementById('product-form');
+    if (productForm) {
+      productForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        Swal.fire({
+          title: 'Confirmer l\'enregistrement',
+          text: 'Voulez-vous vraiment sauvegarder ce produit ?',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Oui, sauvegarder',
+          cancelButtonText: 'Annuler',
+          reverseButtons: false, // Confirm button on the left
+          buttonsStyling: true
+        }).then((result) => {
+          if (result.isConfirmed) {
+            const formData = new FormData(productForm);
+            fetch(productForm.action, {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+              }
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Succès',
+                  text: data.message || 'Produit sauvegardé avec succès !',
+                  timer: 1500,
+                  showConfirmButton: false
+                }).then(() => {
+                  window.location.href = "{% url 'purchases_product_list' %}";
+                });
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Erreur',
+                  text: data.error || 'Erreur lors de la sauvegarde du produit.'
+                });
+              }
+            })
+            .catch(error => {
+              Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: 'Une erreur s\'est produite lors de l\'envoi des données.'
+              });
+              console.error('Error:', error);
+            });
+          }
+        });
+      });
+    }
+
+    // Gestion de la suppression de produit avec SweetAlert
+    document.querySelectorAll('.btn-delete-product').forEach(button => {
+      button.addEventListener('click', function() {
+        const productId = this.getAttribute('data-id');
+        const productName = this.getAttribute('data-name');
+        Swal.fire({
+          title: 'Confirmer la suppression',
+          text: `Voulez-vous vraiment supprimer le produit "${productName}" ?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Oui, supprimer',
+          cancelButtonText: 'Annuler',
+          reverseButtons: false, // Confirm button on the left
+          buttonsStyling: false, // Disable default styling to apply custom classes
+          customClass: {
+            confirmButton: 'btn btn-danger me-2', // Red confirm button
+            cancelButton: 'btn btn-secondary'
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            fetch(`/purchases/products/${productId}/delete/`, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+              }
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Succès',
+                  text: data.message || 'Produit supprimé avec succès !',
+                  timer: 1500,
+                  showConfirmButton: false
+                }).then(() => {
+                  window.location.reload();
+                });
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Erreur',
+                  text: data.error || 'Erreur lors de la suppression du produit.'
+                });
+              }
+            })
+            .catch(error => {
+              Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: 'Une erreur s\'est produite lors de la suppression.'
+              });
+              console.error('Error:', error);
+            });
+          }
+        });
+      });
+    });
+
+    // Handle product details modal
+document.querySelectorAll('.btn-details-product').forEach(button => {
+      button.addEventListener('click', function() {
+        const productId = this.getAttribute('data-id');
+        const pdfLink = document.getElementById('downloadPdfLink');
+        if (pdfLink) {
+          pdfLink.href = `/purchases/products/${productId}/order-history/pdf/`;
+        }
+
+        fetch(`/purchases/products/${productId}/order-history/`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const totalOrdersElement = document.getElementById('totalOrders');
+              const totalRevenueElement = document.getElementById('totalRevenue');
+              
+              if (totalOrdersElement) totalOrdersElement.textContent = data.total_orders;
+              // Pas besoin de .toFixed(2) car turnover est déjà une chaîne formatée
+              if (totalRevenueElement) totalRevenueElement.textContent = data.turnover;
+
+              const ctx = document.getElementById('priceProgressionChart');
+              if (ctx) {
+                const context = ctx.getContext('2d');
+                if (window.priceChart) {
+                  window.priceChart.destroy();
+                }
+                window.priceChart = new Chart(context, {
+                  type: 'line',
+                  data: {
+                    labels: data.chart_data.labels,
+                    datasets: [
+                      {
+                        label: 'Prix unitaire (MAD)',
+                        data: data.chart_data.prices, // Déjà formaté en chaînes
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                      },
+                      {
+                        label: 'Chiffre d\'affaires (MAD)',
+                        data: data.chart_data.turnover, // Déjà formaté en chaînes
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                      }
+                    ]
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                      y: {
+                        beginAtZero: false,
+                        title: {
+                          display: true,
+                          text: 'Montant (MAD)'
+                        }
+                      },
+                      x: {
+                        title: {
+                          display: true,
+                          text: 'Mois'
+                        }
+                      }
+                    },
+                    plugins: {
+                      legend: {
+                        display: true,
+                        position: 'top'
+                      }
+                    }
+                  }
+                });
+              } else {
+                console.error('Canvas element #priceProgressionChart not found');
+              }
+
+              const tableBody = document.getElementById('orderHistoryTable');
+              if (tableBody) {
+                tableBody.innerHTML = '';
+                if (data.orders && data.orders.length > 0) {
+                  data.orders.forEach(line => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                      <td>${line.order_name || 'N/A'}</td>
+                      <td>${line.date_order || 'N/A'}</td>
+                      <td>${line.unit_price}</td> <!-- Déjà formaté en chaîne -->
+                      <td>${(line.quantity || 0).toFixed(2)}</td>
+                      <td>${line.subtotal}</td> <!-- Déjà formaté en chaîne -->
+                      <td>${line.currency || 'MAD'}</td>
+                    `;
+                    tableBody.appendChild(row);
+                  });
+                } else {
+                  const row = document.createElement('tr');
+                  row.innerHTML = '<td colspan="6" class="text-center">Aucune commande trouvée</td>';
+                  tableBody.appendChild(row);
+                }
+              }
+
+              const modalLabel = document.getElementById('productOrderHistoryModalLabel');
+              if (modalLabel) {
+                modalLabel.textContent = `Historique des commandes pour ${data.product_name || 'Produit'}`;
+              }
+
+              // Afficher le modal
+              const modal = new bootstrap.Modal(document.getElementById('productOrderHistoryModal'));
+              modal.show();
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: data.error || 'Impossible de charger l\'historique des commandes.'
+              });
+            }
+          })
+          .catch(error => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Erreur',
+              text: 'Une erreur s\'est produite lors du chargement des données.'
+            });
+            console.error('Error:', error);
+          });
+      });
+    });
+
+    // Gestion du checkbox "Tout sélectionner"
+    const selectAllCheckbox = document.getElementById('select-all-products');
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', function() {
+        const productCheckboxes = document.querySelectorAll('.select-product');
+        productCheckboxes.forEach(checkbox => {
+          checkbox.checked = this.checked;
+        });
+      });
+    }
+
+    // Mise à jour du checkbox "Tout sélectionner" en fonction des cases individuelles
+    document.addEventListener('change', function(e) {
+      if (e.target.matches('.select-product')) {
+        const selectAllCheckbox = document.getElementById('select-all-products');
+        const productCheckboxes = document.querySelectorAll('.select-product');
+        const checkedBoxes = document.querySelectorAll('.select-product:checked');
+        
+        if (selectAllCheckbox) {
+          if (checkedBoxes.length === 0) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = false;
+          } else if (checkedBoxes.length === productCheckboxes.length) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = true;
+          } else {
+            selectAllCheckbox.indeterminate = true;
+          }
+        }
+      }
+    });
+
+    // Gestion de la recherche en temps réel
+    const searchInput = document.getElementById('product-search');
+    if (searchInput) {
+      let searchTimeout;
+      searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          const form = document.getElementById('search-form');
+          if (form) {
+            form.submit();
+          }
+        }, 300);
+      });
+    }
+
+    // Gestion du filtre par catégorie
+    const categorySelect = document.querySelector('select[name="category"]');
+    if (categorySelect) {
+      categorySelect.addEventListener('change', function() {
+        const form = document.getElementById('search-form');
+        if (form) {
+          form.submit();
+        }
+      });
+    }
+
+    // Fonction d'aide pour échapper HTML
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+  });
+</script>
+{% endblock %}

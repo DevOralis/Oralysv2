@@ -1,0 +1,70 @@
+:root {
+  --main-blue: #1e90ff;
+  --dark-blue: #1c86ee;
+  --sidebar-width: 250px; /* Aligné avec patient-menu */
+}
+body {
+  display: flex;
+  min-height: 100vh; 
+  margin: 0;
+  background-color: #f8f9fa;
+  font-family: 'Segoe UI', sans-serif;
+}
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--main-blue);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0;
+}
+
+/* Assurer que patient-menu garde sa largeur */
+.sidebar.patient-menu {
+  width: 250px !important;
+}
+.sidebar a {
+  color: #fff;
+  text-decoration: none;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
+}
+.sidebar a:hover, .sidebar .active {
+  background-color: var(--dark-blue);
+}
+.sidebar i {
+  margin-right: 10px;
+}
+.main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+.main-header {
+  background-color: var(--main-blue);
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.content {
+  flex-grow: 1;
+  padding: 1.5rem;
+}
+.table-card, .form-card {
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  background: #fff;
+  margin-bottom: 2rem;
+}
+.actions {
+  margin-bottom: 1rem;
+}
+.main-footer {
+  background-color: var(--main-blue);
+  color: #fff;
+  text-align: center;
+  font-size: 0.9rem;
+}

@@ -1,0 +1,590 @@
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Modifier Commande Pharmacie{% endblock %}
+
+{% block menu %}
+  {% include 'pharmacy_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-edit me-2"></i>
+            Modifier la Commande Pharmacie
+        </div>
+        <div class="card-body">
+            <!-- Afficher les erreurs du formulaire principal -->
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <h6>Erreurs dans le formulaire principal :</h6>
+                <ul>
+                    {% for field, errors in form.errors.items %}
+                        <li>{{ field }}: {{ errors|join:", " }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Afficher les erreurs non-form du formset -->
+            {% if formset.non_form_errors %}
+            <div class="alert alert-danger">
+                {{ formset.non_form_errors }}
+            </div>
+            {% endif %}
+
+            <!-- Afficher les erreurs spécifiques des lignes -->
+            {% if formset.errors %}
+            <div class="alert alert-danger">
+                <h6>Erreurs dans les lignes de commande :</h6>
+                <ul>
+                    {% for form in formset %}
+                        {% for field, errors in form.errors.items %}
+                            <li>Ligne {{ forloop.counter }} - {{ field }}: {{ errors|join:", " }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form id="edit-order-form" method="POST" action="{% url 'pharmacy_order_edit' order.id %}">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="id_supplier" class="form-label">Fournisseur</label>
+                        <select name="supplier" id="id_supplier" class="form-select" required>
+                            <option value="">Sélectionner un fournisseur</option>
+                            {% for supplier in suppliers %}
+                                <option value="{{ supplier.id }}" {% if supplier.id == form.instance.supplier.id %}selected{% endif %}>{{ supplier.name }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.errors.supplier %}
+                            <div class="invalid-feedback d-block">{{ form.errors.supplier }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <input type="hidden" name="name" id="id_name" value="{{ form.instance.name }}">
+                        <label for="id_date_order" class="form-label">Date de commande</label>
+                        <input type="date" name="date_order" id="id_date_order" class="form-control" value="{{ form.instance.date_order|date:'Y-m-d' }}" required>
+                        {% if form.errors.date_order %}
+                            <div class="invalid-feedback d-block">{{ form.errors.date_order }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_currency" class="form-label">Devise</label>
+                        <select name="currency" id="id_currency" class="form-select" required>
+                            <option value="">Sélectionner une devise</option>
+                            {% for currency in currencies %}
+                                <option value="{{ currency.id }}" {% if currency.id == form.instance.currency.id %}selected{% endif %}>{{ currency.libelle }} ({{ currency.abreviation }})</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.errors.currency %}
+                            <div class="invalid-feedback d-block">{{ form.errors.currency }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_state" class="form-label">État</label>
+                        <select name="state" id="id_state" class="form-select" required>
+                            {% for value, label in form.fields.state.choices %}
+                                <option value="{{ value }}" {% if value == form.instance.state %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.errors.state %}
+                            <div class="invalid-feedback d-block">{{ form.errors.state }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_payment_mode" class="form-label">Mode de paiement</label>
+                        <select name="payment_mode" id="id_payment_mode" class="form-select" {% if order.state != "confirmed" %}disabled{% endif %}>
+                            <option value="">---------</option>
+                            {% for mode in form.fields.payment_mode.queryset %}
+                                <option value="{{ mode.id }}" {% if form.instance.payment_mode and form.instance.payment_mode.id == mode.id %}selected{% endif %}>{{ mode.name }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if order.state != "confirmed" %}
+                        <input type="hidden" name="payment_mode" value="{{ form.instance.payment_mode.id|default:'' }}">
+                        {% endif %}
+                        {% if form.errors.payment_mode %}
+                            <div class="invalid-feedback d-block">{{ form.errors.payment_mode }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6>Lignes de commande</h6>
+                {{ formset.management_form }}
+                <div id="formset-container">
+                    <table class="table table-responsive-stack" id="order-lines-table">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Taxe</th>
+                                <th>Sous-total HT</th>
+                                <th>Taxe</th>
+                                <th>Total TTC</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line_form in formset %}
+                            <tr class="formset-row" id="formset-row-{{ forloop.counter0 }}">
+                                {{ line_form.id }}
+                                <td data-label="Produit">{{ line_form.product }}</td>
+                                <td data-label="Quantité">{{ line_form.product_qty }}</td>
+                                <td data-label="Prix unitaire">{{ line_form.price_unit }}</td>
+                                <td data-label="Taxe">{{ line_form.tax }}</td>
+                                <td class="line-subtotal" data-label="Sous-total HT">{{ line_form.instance.price_subtotal|default:"0.00" }}</td>
+                                <td class="line-tax" data-label="Taxe">{{ line_form.instance.price_tax|default:"0.00" }}</td>
+                                <td class="line-total" data-label="Total TTC">{{ line_form.instance.price_total|default:"0.00" }}</td>
+                                <td data-label="Actions">
+                                    <div style="display: none;">{{ line_form.DELETE }}</div>
+                                    <button type="button" class="btn btn-sm btn-light border text-danger btn-remove-line" title="Supprimer">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr class="formset-row d-none" id="template-row">
+                                <td>
+                                    <label for="id_lines-__prefix__-product">Produit</label>
+                                    <select name="lines-__prefix__-product" id="id_lines-__prefix__-product" class="form-select">
+                                        <option value="">Sélectionner un produit</option>
+                                        {% for product in products %}
+                                        <option value="{{ product.short_label }}">{{ product.short_label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <label for="id_lines-__prefix__-product_qty">Quantité</label>
+                                    <input type="number" name="lines-__prefix__-product_qty" id="id_lines-__prefix__-product_qty" value="1" class="form-control" min="1">
+                                </td>
+                                <td>
+                                    <label for="id_lines-__prefix__-price_unit">Prix Unitaire</label>
+                                    <input type="number" name="lines-__prefix__-price_unit" id="id_lines-__prefix__-price_unit" value="0.00" step="0.01" class="form-control">
+                                </td>
+                                <td>
+                                    <label for="id_lines-__prefix__-tax">Taxe</label>
+                                    <select name="lines-__prefix__-tax" id="id_lines-__prefix__-tax" class="form-select">
+                                        <option value="">Aucune</option>
+                                        {% for tax in taxes %}
+                                        <option value="{{ tax.id }}" data-rate="{{ tax.valeur }}">{{ tax.libelle }} ({{ tax.valeur }}%)</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="line-subtotal">0.00</td>
+                                <td class="line-tax">0.00</td>
+                                <td class="line-total">0.00</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-light border text-danger btn-remove-line"><i class="fas fa-trash-alt"></i></button>
+                                    <div style="display: none;"><input type="checkbox" name="lines-__prefix__-DELETE" id="id_lines-__prefix__-DELETE"></div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="4" class="text-end" data-label="">Totaux :</td>
+                                <td id="order-subtotal" data-label="Sous-total HT">0.00</td>
+                                <td id="order-tax" data-label="Taxe">0.00</td>
+                                <td id="order-total" data-label="Total TTC">0.00</td>
+                                <td data-label=""></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <button type="button" class="btn btn-outline-primary btn-sm me-2" id="add-line">
+                    <i class="fas fa-plus"></i> Ajouter une ligne
+                </button>
+
+                <div class="mb-3" style="margin-top: 20px;">
+                    <label for="notes" class="form-label">Notes</label>
+                    <textarea id="notes" name="notes" class="form-control">{{ form.instance.notes|default:"" }}</textarea>
+                </div>
+
+                <div class="text-end">
+                    <a href="{% url 'pharmacy_order_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Annuler</a>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Sauvegarder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_styles %}
+<style>
+@media (max-width: 768px) {
+    .table-responsive-stack tfoot {
+        display: none;
+    }
+    .table-responsive-stack {
+        width: 100%;
+    }
+    .table-responsive-stack thead {
+        display: none;
+    }
+    .table-responsive-stack tbody tr, .table-responsive-stack tfoot tr {
+        display: block;
+        border: 1px solid #dee2e6;
+        margin-bottom: 1rem;
+    }
+    .table-responsive-stack td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        text-align: right;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .table-responsive-stack td:last-child {
+        border-bottom: none;
+    }
+    .table-responsive-stack td[data-label]:before {
+        content: attr(data-label);
+        font-weight: bold;
+        text-align: left;
+        margin-right: auto;
+    }
+    .table-responsive-stack tfoot td {
+        border: none;
+    }
+    .table-responsive-stack tfoot tr {
+        border: 1px solid #dee2e6;
+        padding: 0.5rem;
+    }
+    .table-responsive-stack tfoot td[colspan] {
+        display: block;
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #eee;
+    }
+    .table-responsive-stack tfoot td[colspan]:before {
+        content: ""; /* Remove data-label for the main total label */
+    }
+    .table-responsive-stack tfoot td[data-label]:not([data-label=""]) {
+        display: flex;
+        justify-content: space-between;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const productsData = [
+            {% for product in products %}
+                "{{ product.short_label|escapejs }}"
+                {% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        function updateLineTotals(row) {
+            const qty = parseFloat(row.querySelector('input[name$="product_qty"]').value || 0);
+            const price = parseFloat(row.querySelector('input[name$="price_unit"]').value || 0);
+            const taxSelect = row.querySelector('select[name$="tax"]');
+            const taxRate = taxSelect ? parseFloat(taxSelect.selectedOptions[0]?.dataset.rate || 0) : 0;
+            const subtotal = qty * price;
+            const taxAmount = subtotal * (taxRate / 100);
+            const total = subtotal + taxAmount;
+
+            row.querySelector('.line-subtotal').textContent = subtotal.toFixed(2);
+            row.querySelector('.line-tax').textContent = taxAmount.toFixed(2);
+            row.querySelector('.line-total').textContent = total.toFixed(2);
+
+            updateOrderTotals();
+        }
+
+        function updateOrderTotals() {
+            let subtotal = 0, tax = 0;
+            document.querySelectorAll('#order-lines-table tbody tr:not(.d-none)').forEach(row => {
+                subtotal += parseFloat(row.querySelector('.line-subtotal').textContent) || 0;
+                tax += parseFloat(row.querySelector('.line-tax').textContent) || 0;
+            });
+            document.getElementById('order-subtotal').textContent = subtotal.toFixed(2);
+            document.getElementById('order-tax').textContent = tax.toFixed(2);
+            document.getElementById('order-total').textContent = (subtotal + tax).toFixed(2);
+        }
+
+        function setupRowEvents(row) {
+            row.querySelectorAll('input, select').forEach(input => {
+                input.addEventListener('input', () => updateLineTotals(row));
+            });
+
+            const removeBtn = row.querySelector('.btn-remove-line');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    const deleteInput = row.querySelector('input[name$="DELETE"]');
+                    if (deleteInput) {
+                        deleteInput.checked = true;
+                        row.style.display = 'none';
+                        updateOrderTotals();
+                    } else {
+                        const lineId = removeBtn.getAttribute('data-line-id');
+                        if (lineId) {
+                            Swal.fire({
+                                title: 'Êtes-vous sûr ?',
+                                text: 'Cette ligne sera définitivement supprimée.',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#d33',
+                                cancelButtonColor: '#6c757d',
+                                confirmButtonText: 'Oui, supprimer',
+                                cancelButtonText: 'Annuler'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    fetch(`/pharmacy/orders/line/delete/${lineId}/`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                                            'Content-Type': 'application/json'
+                                        }
+                                    })
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            if (data.success) {
+                                                Swal.fire('Supprimé !', 'La ligne a été supprimée.', 'success');
+                                                row.remove();
+                                                updateOrderTotals();
+                                            } else {
+                                                Swal.fire('Erreur', data.error || 'Suppression échouée.', 'error');
+                                            }
+                                        })
+                                        .catch(error => {
+                                            console.error('Erreur:', error);
+                                            Swal.fire('Erreur', 'Une erreur est survenue.', 'error');
+                                        });
+                                }
+                            });
+                        } else {
+                            row.remove();
+                            updateOrderTotals();
+                        }
+                    }
+                });
+            }
+        }
+
+        document.getElementById('add-line').addEventListener('click', () => {
+            const tbody = document.querySelector('#order-lines-table tbody');
+            const totalFormsInput = document.querySelector('#id_lines-TOTAL_FORMS');
+
+            if (!tbody) {
+                console.error('Table body not found');
+                return;
+            }
+            if (!totalFormsInput) {
+                console.error('Formset management field TOTAL_FORMS not found');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Le champ de gestion du formulaire est manquant. Veuillez vérifier la configuration du formulaire.'
+                });
+                return;
+            }
+
+            const formIndex = parseInt(totalFormsInput.value) || 0;
+            const templateRow = document.querySelector('#template-row') || tbody.querySelector('tr:not(.d-none)');
+
+            if (!templateRow) {
+                console.error('No template row or existing row available to clone');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Aucune ligne modèle disponible pour ajouter une nouvelle ligne.'
+                });
+                return;
+            }
+
+            const row = templateRow.cloneNode(true);
+            row.classList.remove('d-none');
+            row.id = `formset-row-${formIndex}`;
+
+            row.innerHTML = row.innerHTML.replace(/__prefix__/g, formIndex);
+            tbody.appendChild(row);
+
+            // Reset input values for the new row
+            row.querySelectorAll('input').forEach(input => {
+                if (input.type === 'number') {
+                    input.value = input.name.includes('product_qty') ? '1' : '0.00';
+                } else if (input.type === 'checkbox') {
+                    input.checked = false;
+                }
+            });
+            row.querySelectorAll('select').forEach(select => {
+                select.selectedIndex = 0;
+            });
+            row.querySelectorAll('.line-subtotal, .line-tax, .line-total').forEach(cell => {
+                cell.textContent = '0.00';
+            });
+
+            totalFormsInput.value = formIndex + 1;
+            setupRowEvents(row);
+            updateOrderTotals();
+        });
+
+        // Initialize existing rows
+        document.querySelectorAll('#order-lines-table tbody tr:not(.d-none)').forEach(setupRowEvents);
+        updateOrderTotals();
+
+        // Handle form submission
+        document.getElementById('edit-order-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+
+            // Validate form
+            let isValid = true;
+            form.querySelectorAll('[required]').forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Veuillez remplir tous les champs obligatoires.'
+                });
+                return;
+            }
+
+            Swal.fire({
+                icon: 'question',
+                title: 'Confirmer la modification',
+                text: 'Voulez-vous vraiment enregistrer les modifications ?',
+                showCancelButton: true,
+                confirmButtonText: 'Oui, enregistrer',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const formData = new FormData(form);
+                    Swal.fire({
+                        title: 'Traitement en cours...',
+                        text: 'Veuillez patienter',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+                        }
+                    })
+                        .then(response => {
+                            Swal.close();
+                            const contentType = response.headers.get('content-type');
+                            if (contentType && contentType.includes('application/json')) {
+                                return response.json().then(data => {
+                                    if (response.ok) {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Succès',
+                                            text: 'Commande modifiée avec succès !',
+                                            timer: 1500,
+                                            showConfirmButton: false
+                                        }).then(() => {
+                                            window.location.href = "{% url 'pharmacy_order_list' %}";
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Erreur',
+                                            text: data.message || 'Erreur lors de la modification de la commande.'
+                                        });
+                                    }
+                                });
+                            } else {
+                                if (response.ok) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Succès',
+                                        text: 'Commande modifiée avec succès !',
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    }).then(() => {
+                                        window.location.href = "{% url 'pharmacy_order_list' %}";
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Erreur',
+                                        text: 'Erreur lors de la modification de la commande.'
+                                    });
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            Swal.close();
+                            console.error('Erreur:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur',
+                                text: 'Une erreur réseau est survenue. Veuillez réessayer.'
+                            });
+                        });
+                }
+            });
+        });
+
+        // Handle state change to enable/disable payment mode
+        document.getElementById('id_state').addEventListener('change', function() {
+            const paymentModeSelect = document.getElementById('id_payment_mode');
+            if (this.value === 'confirmed') {
+                paymentModeSelect.disabled = false;
+            } else {
+                paymentModeSelect.disabled = true;
+                paymentModeSelect.value = '';
+            }
+        });
+    });
+
+    // Messages SweetAlert
+    {% if messages %}
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                {% if message.tags == 'success' %}
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Succès',
+                        text: '{{ message|escapejs }}',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                {% elif message.tags == 'error' %}
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: '{{ message|escapejs }}',
+                        confirmButtonText: 'OK'
+                    });
+                {% elif message.tags == 'warning' %}
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attention',
+                        text: '{{ message|escapejs }}',
+                        confirmButtonText: 'OK'
+                    });
+                {% endif %}
+            {% endfor %}
+        });
+    {% endif %}
+</script>
+{% endblock %}
+{% endblock %}

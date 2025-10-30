@@ -1,0 +1,888 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Gestion des Patients{% endblock %}
+{% block menu %}
+  {% include 'patient_menu.html' %}
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+<script src="{% static 'js/patient.js' %}"></script>
+<script>
+function showNewPatientForm() {
+    // Nettoyer l'URL pour enlever patient_id
+    const url = new URL(window.location);
+    url.searchParams.delete('patient_id');
+    window.history.replaceState({}, '', url.pathname + url.hash);
+    
+    // Afficher le formulaire
+    document.getElementById('new-patient').style.display = 'block';
+    // Faire défiler vers le formulaire
+    document.getElementById('new-patient').scrollIntoView({ behavior: 'smooth' });
+    
+    // Changer le titre du formulaire
+    const cardHeader = document.querySelector('#new-patient .card-header');
+    if (cardHeader) {
+                        cardHeader.innerHTML = '<i class="fas fa-user-plus me-2"></i>Nouveau Patient';
+    }
+    
+    // Réinitialiser le formulaire pour un nouveau patient
+    document.querySelector('#new-patient form').reset();
+    
+    // Vider les champs cachés
+    document.getElementById('db_patient_id').value = '';
+    
+    // Réinitialiser les documents médicaux (si le module est chargé)
+    if (typeof documentsToUpload !== 'undefined') {
+        documentsToUpload = [];
+        updateDocumentCount();
+        displayPendingDocuments();
+    }
+    
+    // Activer le premier onglet
+    const firstTab = document.querySelector('#patientTabs button[data-bs-target="#personal"]');
+    if (firstTab) {
+        const tab = new bootstrap.Tab(firstTab);
+        tab.show();
+    }
+    
+    // Mettre le focus sur le premier champ
+    setTimeout(() => {
+        const firstInput = document.querySelector('input[name="patient_identifier"]');
+        if (firstInput) {
+            firstInput.focus();
+        }
+    }, 300);
+}
+
+function showEditPatientForm(patientId) {
+    // Afficher le formulaire
+    document.getElementById('new-patient').style.display = 'block';
+    // Faire défiler vers le formulaire
+    document.getElementById('new-patient').scrollIntoView({ behavior: 'smooth' });
+    
+    // Changer le titre du formulaire
+    const cardHeader = document.querySelector('#new-patient .card-header');
+    if (cardHeader) {
+        cardHeader.innerHTML = '<i class="fas fa-user-edit me-2"></i>Modifier Le Patient';
+    }
+    
+    // Charger les données du patient via AJAX
+    fetch(`?patient_id=${patientId}`)
+        .then(response => response.text())
+        .then(html => {
+            // Créer un élément temporaire pour parser le HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            // Extraire le formulaire de la réponse
+            const newForm = tempDiv.querySelector('#new-patient form');
+            if (newForm) {
+                // Remplacer le formulaire actuel
+                document.querySelector('#new-patient form').innerHTML = newForm.innerHTML;
+                // Réinitialiser les événements de navigation après le rechargement AJAX
+                initializeTabNavigation();
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des données du patient:', error);
+            // En cas d'erreur, rediriger vers la page avec les paramètres
+            window.location.href = `?patient_id=${patientId}#new-patient`;
+        });
+}
+
+// Au chargement de la page, vérifier si on doit afficher le formulaire
+document.addEventListener('DOMContentLoaded', function() {
+    // Ne plus afficher automatiquement le formulaire
+    // L'utilisateur doit cliquer sur "Nouveau patient" ou sur l'icône de modification
+    
+    // Optionnel : Si on a le hash #new-patient, afficher le formulaire vide
+    if (window.location.hash === '#new-patient') {
+        showNewPatientForm();
+    }
+});
+</script>
+{% endblock %}
+{% block content %}
+    <div class="content">
+            <div class="card mb-4">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                    <i class="fas fa-user-injured me-2"></i>
+                    Liste Des Patients
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Search Bar Component -->
+                    <form method="get" id="search-form">
+                        <div class="row g-2 mb-3">
+                            <!-- Barre de recherche -->
+                            <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                                <div class="input-group">
+                                    <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="search" id="searchPatient" name="search" class="form-control border-primary" placeholder="Rechercher un patient..." value="{{ request.GET.search|default:'' }}">
+                                </div>
+                            </div>
+                            <!-- Filtre médecin -->
+                            <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+                                <select class="form-select" id="filterMedecin" name="medecin" title="Filtrer par médecin">
+                                    <option value="">Tous les médecins</option>
+                                    {% for med in medecins %}
+                                    <option value="{{ med.full_name }}" {% if request.GET.medecin == med.full_name %}selected{% endif %}>{{ med.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <!-- Boutons d'action -->
+                            <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-import-btn">
+                                        <i class="fas fa-file-import" id="export-import-icon"></i>
+                                        <span class="d-none d-lg-inline ms-1" id="export-import-text">Importer</span>
+                                    </button>
+                                    {% if request.session.user.permissions.patient.write %}
+                                    <button type="button" class="btn btn-primary w-100 text-nowrap px-2" id="add-new-patient-btn" onclick="showNewPatientForm()">
+                                        <i class="fas fa-plus"></i>
+                                        <span class="d-none d-lg-inline ms-1">Nouveau Patient</span>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    {% include 'patient_table_partial.html' with patients=patients paginator=paginator %}
+                </div>
+            </div>
+            <!-- Formulaire d'ajout/modification de patient -->
+            <div class="card mb-4" id="new-patient" style="display:none;">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                    <i class="fas fa-user-plus me-2"></i>
+                    {% if patient %}Modifier Le Patient{% else %}Nouveau Patient{% endif %}
+                </div>
+                <div class="card-body">
+                {% comment %} Suppression des messages Django {% endcomment %}
+                                <form method="POST" enctype="multipart/form-data" action="{% url 'patient:patient_list_create' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
+                    <input type="hidden" name="db_patient_id" id="db_patient_id" value="{% if patient %}{{ patient.id }}{% endif %}">
+                    <input type="hidden" name="consultation_url" id="consultation_url" value="{{ consultation_url|default:'' }}">
+                    <ul class="nav nav-tabs flex-column flex-sm-row mb-3" id="patientTabs" role="tablist">
+                        <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+                            <button class="nav-link active border-bottom-0" data-bs-toggle="tab" data-bs-target="#personal" type="button">
+                                Informations Personnelles
+                            </button>
+                        </li>
+                        <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+                            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#prospouse" type="button">
+                                Profession & Conjoint(e)
+                            </button>
+                        </li>
+                        <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+                            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#medecins" type="button">
+                                Médecins
+                            </button>
+                        </li>
+                        <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+                            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#insurance" type="button">
+                                Assurance / Mutuelle
+                            </button>
+                        </li>
+                        <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+                            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#emergency" type="button">
+                                Contacts D'Urgence
+                            </button>
+                        </li>
+                        <li class="nav-item flex-sm-fill text-sm-center" role="presentation">
+                            <button class="nav-link border-bottom-0" data-bs-toggle="tab" data-bs-target="#medical-documents" type="button">
+                                Dossier Médical
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content mt-3">
+                        <!-- Onglet Informations personnelles -->
+                        <div class="tab-pane fade show active" id="personal">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Identifiant</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                        <input type="text" class="form-control" name="patient_identifier" value="{{ patient.patient_identifier|default:'' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">CIN</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-id-badge"></i></span>
+                                        <input type="text" class="form-control" name="cin" pattern="^$|^[A-Z0-9]{8,20}$" title="Le N° CIN doit contenir 8 à 20 caractères alphanumériques en majuscules (optionnel)." placeholder="Ex: A12345678" value="{{ patient.cin|default:'' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Passeport</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-passport"></i></span>
+                                        <input type="text" class="form-control" name="passport_number" value="{{ patient.passport_number|default:'' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Nom</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                        <input type="text" class="form-control" name="last_name" required value="{{ patient.last_name|default:'' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Prénom</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                        <input type="text" class="form-control" name="first_name" required value="{{ patient.first_name|default:'' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                        <input type="email" class="form-control" name="email" value="{{ patient.email|default:'' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Sexe</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-venus-mars"></i></span>
+                                        <select class="form-select" name="gender" id="genderSelect" required>
+                                            <option value="">Sélectionner</option>
+                                            <option value="H" {% if patient.gender == 'H' %}selected{% endif %}>H</option>
+                                            <option value="F" {% if patient.gender == 'F' %}selected{% endif %}>F</option>
+                                            <option value="O" {% if patient.gender == 'O' %}selected{% endif %}>Autre</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Date De Naissance</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                        <input type="date" class="form-control" name="birth_date" required value="{{ patient.birth_date|date:'Y-m-d' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Nationalité</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-flag"></i></span>
+                                        <select class="form-select" name="nationality" required>
+                                            <option value="">Sélectionner</option>
+                                            {% for code, name in countries %}
+                                            <option value="{{ code }}" {% if patient.nationality == code %}selected{% endif %}>{{ name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Ville</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                                        <input type="text" class="form-control" name="city" value="{{ patient.city|default:'' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Téléphone</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                        <input type="tel" class="form-control" name="phone" pattern="^\+?[0-9\s\-]{8,20}$" title="Numéro de téléphone valide (8 à 20 chiffres, peut commencer par +)" value="{{ patient.phone|default:'' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">GSM</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-mobile-alt"></i></span>
+                                        <input type="tel" class="form-control" name="mobile_number" pattern="^\+?[0-9\s\-]{8,20}$" title="Numéro de téléphone valide (8 à 20 chiffres, peut commencer par +)" value="{{ patient.mobile_number|default:'' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Source</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-share-alt"></i></span>
+                                        <select class="form-select" name="source">
+                                            <option value="">Sélectionner Une Source</option>
+                                            {% for source in sources %}
+                                            <option value="{{ source.name }}" {% if patient.source == source.name %}selected{% endif %}>
+                                                {{ source.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Boutons de navigation -->
+                                                        <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-secondary me-2" onclick="document.getElementById('new-patient').style.display='none';">
+                                    <i class="fas fa-times me-2"></i>
+                                    <span class="d-none d-md-inline">Annuler</span>
+                                </button>
+                                {% if is_update and request.session.user.permissions.patient.update %}
+        <button type="submit" class="btn btn-primary me-2">
+            <i class="fas fa-save me-2"></i>
+            <span class="d-none d-md-inline">Mettre à jour</span>
+        </button>
+        {% endif %}
+        {% if not is_update %}
+       <button type="button" class="btn btn-primary next-tab-btn">
+            <span class="d-none d-md-inline me-2">Suivant</span>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+       {% endif %}
+                            </div>
+                        </div>
+                        <!-- Onglet Profession & Conjoint(e) -->
+                        <div class="tab-pane fade" id="prospouse" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Profession</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
+                                        <input type="text" class="form-control" name="profession" value="{{ patient.profession|default:'' }}" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Conjoint(e)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-heart"></i></span>
+                                        <input type="text" class="form-control" name="spouse_name" value="{{ patient.spouse_name|default:'' }}" />
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Boutons de navigation -->
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-secondary prev-tab-btn me-2">
+                                    <i class="fas fa-arrow-left"></i>
+                                    <span class="d-none d-md-inline ms-2">Précédent</span>
+                                </button>
+                                {% if is_update and request.session.user.permissions.patient.update %}
+        <button type="submit" class="btn btn-primary me-2">
+            <i class="fas fa-save me-2"></i>
+            <span class="d-none d-md-inline">Mettre à jour</span>
+        </button>
+        {% endif %}
+        {% if not is_update %}
+       <button type="button" class="btn btn-primary next-tab-btn">
+            <span class="d-none d-md-inline me-2">Suivant</span>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+       {% endif %}
+                            </div>
+                        </div>
+                        <!-- Onglet Médecins -->
+                        <div class="tab-pane fade" id="medecins" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Type Maladie</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-virus"></i></span>
+                                        <select class="form-select" name="disease_speciality" id="diseaseSpecialitySelect" >
+                                            <option value="">Sélectionner</option>
+                                            {% for speciality in specialities %}
+                                            <option value="{{ speciality.name }}" {% if patient.disease_speciality == speciality.name %}selected{% endif %}>{{ speciality.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6"></div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Médecin Traitant</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-user-md"></i></span>
+                                        <select class="form-select" name="treating_physician" id="treatingPhysicianSelect">
+                                            <option value="">Sélectionner</option>
+                                            {% for med in medecins %}
+                                            <option value="{{ med.full_name }}" {% if patient.treating_physician == med.full_name %}selected{% endif %}>
+                                                {{ med.full_name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Médecin Correspondant</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-stethoscope"></i></span>
+                                        <select class="form-select" name="referring_physician" id="referringPhysicianSelect">
+                                            <option value="">Sélectionner</option>
+                                            {% for med in medecins %}
+                                            <option value="{{ med.full_name }}" {% if patient.referring_physician == med.full_name %}selected{% endif %}>
+                                                {{ med.full_name }} 
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Boutons de navigation -->
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-secondary prev-tab-btn me-2">
+                                    <i class="fas fa-arrow-left"></i>
+                                    <span class="d-none d-md-inline ms-2">Précédent</span>
+                                </button>
+                                {% if is_update and request.session.user.permissions.patient.update %}
+        <button type="submit" class="btn btn-primary me-2">
+            <i class="fas fa-save me-2"></i>
+            <span class="d-none d-md-inline">Mettre à jour</span>
+        </button>
+        {% endif %}
+        {% if not is_update %}
+       <button type="button" class="btn btn-primary next-tab-btn">
+            <span class="d-none d-md-inline me-2">Suivant</span>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+       {% endif %}
+                            </div>
+                        </div>
+                        <!-- Onglet Assurance / Mutuelle -->
+                        <div class="tab-pane fade" id="insurance" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label fw-bold">A Une Mutuelle/Assurance ?</label>
+                                    <div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="has_insurance" id="hasInsuranceYes" value="1" {% if patient.has_insurance %}checked{% endif %}>
+                                            <label class="form-check-label" for="hasInsuranceYes">Oui</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="has_insurance" id="hasInsuranceNo" value="0" {% if not patient.has_insurance %}checked{% endif %}>
+                                            <label class="form-check-label" for="hasInsuranceNo">Non</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div id="insuranceFields">
+                                        <div class="row g-3 mt-3">
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label">N° immatriculation</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                                                    <input type="text" class="form-control" name="insurance_number" value="{{ patient.insurance_number|default:'' }}">
+                                                </div>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label">N° affiliation</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                                                    <input type="text" class="form-control" name="affiliation_number" value="{{ patient.affiliation_number|default:'' }}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row g-3 mt-3">
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label">Lien De Parenté</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text"><i class="fas fa-users"></i></span>
+                                                    <select class="form-select" name="relationship">
+                                                        <option value="">Sélectionner</option>
+                                                        <option value="Père" {% if patient.relationship == 'Père' %}selected{% endif %}>Père</option>
+                                                        <option value="Mère" {% if patient.relationship == 'Mère' %}selected{% endif %}>Mère</option>
+                                                        <option value="Époux" {% if patient.relationship == 'Époux' %}selected{% endif %}>Époux</option>
+                                                        <option value="Épouse" {% if patient.relationship == 'Épouse' %}selected{% endif %}>Épouse</option>
+                                                        <option value="Fils" {% if patient.relationship == 'Fils' %}selected{% endif %}>Fils</option>
+                                                        <option value="Fille" {% if patient.relationship == 'Fille' %}selected{% endif %}>Fille</option>
+                                                        <option value="Lui-même" {% if patient.relationship == 'Lui-même' %}selected{% endif %}>Lui-même</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label">Nom De L'Adhérent</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text"><i class="fas fa-user-check"></i></span>
+                                                    <input type="text" class="form-control" name="insured_name" value="{{ patient.insured_name|default:'' }}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Boutons de navigation -->
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-secondary prev-tab-btn me-2">
+                                    <i class="fas fa-arrow-left"></i>
+                                    <span class="d-none d-md-inline ms-2">Précédent</span>
+                                </button>
+                                {% if is_update and request.session.user.permissions.patient.update %}
+        <button type="submit" class="btn btn-primary me-2">
+            <i class="fas fa-save me-2"></i>
+            <span class="d-none d-md-inline">Mettre à jour</span>
+        </button>
+        {% endif %}
+        {% if not is_update %}
+       <button type="button" class="btn btn-primary next-tab-btn">
+            <span class="d-none d-md-inline me-2">Suivant</span>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+       {% endif %}
+                            </div>
+                        </div>
+                        <!-- Onglet Contacts D'Urgence -->
+                        <div class="tab-pane fade" id="emergency" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Nom</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                        <input type="text" class="form-control" name="emergency_name" value="{{ patient_emergency_contact.name|default:'' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Téléphone</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                        <input type="text" class="form-control" name="emergency_phone" value="{{ patient_emergency_contact.phone|default:'' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Lien</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-link"></i></span>
+                                        <select class="form-select" name="emergency_relationship">
+                                            <option value="">Sélectionner</option>
+                                            <option value="Fils" {% if patient_emergency_contact.relationship == 'Fils' %}selected{% endif %}>Fils</option>
+                                            <option value="Fille" {% if patient_emergency_contact.relationship == 'Fille' %}selected{% endif %}>Fille</option>
+                                            <option value="Père" {% if patient_emergency_contact.relationship == 'Père' %}selected{% endif %}>Père</option>
+                                            <option value="Mère" {% if patient_emergency_contact.relationship == 'Mère' %}selected{% endif %}>Mère</option>
+                                            <option value="Époux" {% if patient_emergency_contact.relationship == 'Époux' %}selected{% endif %}>Époux</option>
+                                            <option value="Épouse" {% if patient_emergency_contact.relationship == 'Épouse' %}selected{% endif %}>Épouse</option>
+                                            <option value="Frère" {% if patient_emergency_contact.relationship == 'Frère' %}selected{% endif %}>Frère</option>
+                                            <option value="Sœur" {% if patient_emergency_contact.relationship == 'Sœur' %}selected{% endif %}>Sœur</option>
+                                            <option value="Ami(e)" {% if patient_emergency_contact.relationship == 'Ami(e)' %}selected{% endif %}>Ami(e)</option>
+                                            <option value="Collègue" {% if patient_emergency_contact.relationship == 'Collègue' %}selected{% endif %}>Collègue</option>
+                                            <option value="Autre" {% if patient_emergency_contact.relationship == 'Autre' %}selected{% endif %}>Autre</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Boutons de navigation -->
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-secondary prev-tab-btn me-2">
+                                    <i class="fas fa-arrow-left me-2"></i>
+                                    <span class="d-none d-md-inline">Précédent</span>
+                                </button>
+                                {% if is_update and request.session.user.permissions.patient.update %}
+                                    <button type="button" class="btn btn-primary next-tab-btn">
+                                        <span class="d-none d-md-inline me-2">Suivant</span>
+                                        <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                {% endif %}
+                                {% if not is_update %}
+                                    <button type="button" class="btn btn-primary next-tab-btn">
+                                        <span class="d-none d-md-inline me-2">Suivant</span>
+                                        <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Onglet Dossier Médical -->
+                        <div class="tab-pane fade" id="medical-documents" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-bold text-secondary">Dossier Médical</label>
+                                    <div class="border rounded p-3" style="border-color: #bee5eb !important; background-color: #f8f9fa;">
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-md-4">
+                                                <select class="form-select" id="documentType" name="document_type">
+                                                    <option value="">Sélectionner Le Type De Document...</option>
+                                                    {% for doc_type in document_types %}
+                                                    <option value="{{ doc_type.code }}">{{ doc_type.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input type="file" class="form-control" id="documentFile" name="document_file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-success w-100" id="addDocumentBtn" onclick="addDocument()">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center text-muted">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <span id="documentCount">Nombre de documents ajoutés: <span id="docCount">0</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Zone de notes/commentaires -->
+                                <div class="col-12">
+                                    <label class="form-label fw-bold text-secondary">
+                                        <i class="fas fa-comment-medical me-2"></i>Notes Et Commentaires
+                                    </label>
+                                    <textarea class="form-control" id="medicalNotes" name="medical_notes" rows="4" placeholder="Ajoutez des notes ou commentaires concernant le dossier médical du patient...">{% if patient %}{{ patient.medical_notes|default:'' }}{% endif %}</textarea>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Utilisez cet espace pour ajouter des précisions complémentaires sur le dossier médical.
+                                    </small>
+                                </div>
+                                
+                                <!-- Liste des documents ajoutés -->
+                                <div class="col-12" id="documentsList">
+                                    {% if patient and patient.medical_documents.all %}
+                                        <div class="card">
+                                            <div class="card-header bg-light">
+                                                <i class="fas fa-file-medical me-2"></i>Documents Existants
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="list-group">
+                                                    {% for doc in patient.medical_documents.all %}
+                                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <i class="fas fa-file-alt me-2 text-primary"></i>
+                                                            <span class="badge bg-info me-2">{{ doc.document_type.name }}</span>
+                                                            <a href="{{ doc.document_file.url }}" target="_blank">{{ doc.file_name }}</a>
+                                                            <small class="text-muted ms-2">{{ doc.uploaded_at|date:"d/m/Y H:i" }}</small>
+                                                        </div>
+                                                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteDocument({{ doc.id }})">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Boutons de navigation -->
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-secondary prev-tab-btn me-2">
+                                    <i class="fas fa-arrow-left me-2"></i>
+                                    <span class="d-none d-md-inline">Précédent</span>
+                                </button>
+                                {% if is_update %}
+                                    {% if request.session.user.permissions.patient.update %}
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>
+                                            <span class="d-none d-md-inline">Sauvegarder</span>
+                                        </button>
+                                    {% endif %}
+                                {% else %}
+                                    {% if request.session.user.permissions.patient.write %}
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>
+                                            <span class="d-none d-md-inline">Sauvegarder</span>
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                </div>
+            </div>
+        </div>
+
+
+<!-- Modal Détails Patient -->
+<div class="modal fade" id="patientDetailsModal" tabindex="-1" aria-labelledby="patientDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title" id="patientDetailsModalLabel">
+                    <i class="fas fa-user-injured me-2"></i>Détails du Patient
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-user me-2 text-primary"></i>Informations Personnelles</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-2">
+                                    <strong>Nom Complet :</strong>
+                                    <span id="modal-patient-name" class="text-muted">-</span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Date De Naissance :</strong>
+                                    <span id="modal-patient-birth" class="text-muted">-</span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Sexe :</strong>
+                                    <span id="modal-patient-gender" class="text-muted">-</span>
+                                </div>
+                                <div class="mb-0">
+                                    <strong>Téléphone :</strong>
+                                    <span id="modal-patient-phone" class="text-muted">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-stethoscope me-2 text-success"></i>Informations Médicales</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-2">
+                                    <strong>Médecin Traitant :</strong>
+                                    <span id="modal-patient-medecin" class="text-muted">-</span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Statut :</strong>
+                                    <span class="badge bg-success">Actif</span>
+                                </div>
+                                <div class="mb-0">
+                                    <strong>Dernière Visite :</strong>
+                                    <span class="text-muted">À définir</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const successMessage = urlParams.get('success');
+    const errorMessage = urlParams.get('error');
+
+    if (successMessage) {
+        let messageText = '';
+        if (successMessage === 'patient_created') {
+            messageText = 'Patient ajouté avec succès';
+        } else if (successMessage === 'patient_updated') {
+            messageText = 'Patient modifié avec succès';
+        } else {
+            messageText = successMessage;
+        }
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Succès',
+            text: messageText,
+            timer: 2000,
+            showConfirmButton: false
+        });
+        const newUrl = window.location.pathname + window.location.hash;
+        history.replaceState(null, '', newUrl);
+    }
+
+    if (errorMessage) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: errorMessage
+        });
+        const newUrl = window.location.pathname + window.location.hash;
+        history.replaceState(null, '', newUrl);
+    }
+});
+</script>
+
+<script>
+function initializeTabNavigation() {
+    const nextButtons = document.querySelectorAll('.next-tab-btn');
+    const prevButtons = document.querySelectorAll('.prev-tab-btn');
+    const tabTriggers = document.querySelectorAll('#patientTabs .nav-link');
+
+    function getActiveTabIndex() {
+        let activeIndex = -1;
+        tabTriggers.forEach((trigger, index) => {
+            if (trigger.classList.contains('active')) {
+                activeIndex = index;
+            }
+        });
+        return activeIndex;
+    }
+
+    function showTab(index) {
+        if (index >= 0 && index < tabTriggers.length) {
+            // Utiliser Bootstrap Tab API pour une navigation correcte
+            const targetTrigger = tabTriggers[index];
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                const tab = new bootstrap.Tab(targetTrigger);
+                tab.show();
+            } else {
+                // Fallback manuel si Bootstrap n'est pas disponible
+                tabTriggers.forEach(trigger => {
+                    trigger.classList.remove('active');
+                    const targetId = trigger.getAttribute('data-bs-target');
+                    if (targetId) {
+                        const targetPane = document.querySelector(targetId);
+                        if (targetPane) {
+                            targetPane.classList.remove('show', 'active');
+                        }
+                    }
+                });
+                
+                targetTrigger.classList.add('active');
+                const targetId = targetTrigger.getAttribute('data-bs-target');
+                if (targetId) {
+                    const targetPane = document.querySelector(targetId);
+                    if (targetPane) {
+                        targetPane.classList.add('show', 'active');
+                    }
+                }
+            }
+        }
+    }
+
+    nextButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const activeIndex = getActiveTabIndex();
+            if (activeIndex !== -1 && activeIndex < tabTriggers.length - 1) {
+                showTab(activeIndex + 1);
+            }
+        });
+    });
+
+    prevButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const activeIndex = getActiveTabIndex();
+            if (activeIndex !== -1 && activeIndex > 0) {
+                showTab(activeIndex - 1);
+            }
+        });
+    });
+    
+    // Gérer la visibilité des champs d'assurance
+    const hasInsuranceRadios = document.querySelectorAll('input[name="has_insurance"]');
+    const insuranceFields = document.getElementById('insuranceFields');
+
+    function toggleInsuranceFields() {
+        const radioChecked = document.querySelector('input[name="has_insurance"]:checked');
+        if (insuranceFields && radioChecked) {
+            if (radioChecked.value === '1') {
+                insuranceFields.style.display = 'block';
+            } else {
+                insuranceFields.style.display = 'none';
+            }
+        }
+    }
+
+    if (hasInsuranceRadios.length > 0) {
+        hasInsuranceRadios.forEach(radio => {
+            radio.addEventListener('change', toggleInsuranceFields);
+        });
+        // Exécuter au chargement de la page
+        toggleInsuranceFields();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    initializeTabNavigation();
+});
+</script>
+
+<!-- Script pour gérer les documents médicaux -->
+<script src="{% static 'js/medical_documents.js' %}"></script>
+{% endblock %}

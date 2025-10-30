@@ -1,0 +1,22 @@
+{% for log in logs %}
+<tr class="audit-log-row">
+  <td data-label="Sélection"><input type="checkbox" class="row-check"></td>
+  <td data-label="ID">{{ log.id }}</td>
+  <td data-label="Entité">{{ log.entity_name }}</td>
+  <td data-label="ID de l'objet">{{ log.object_id }}</td>
+  <td data-label="Action">
+    <span class="badge 
+      {% if log.action == 'creation' %}bg-success
+      {% elif log.action == 'modification' %}bg-info
+      {% elif log.action == 'suppression' %}bg-danger
+      {% elif log.action == 'impression' %}bg-warning
+      {% endif %}">
+      {{ log.get_action_display }}
+    </span>
+  </td>
+  <td data-label="Effectué par" class="d-none d-lg-table-cell">{{ log.created_by|default:"Inconnu" }}</td>
+  <td data-label="Date et heure" class="d-none d-lg-table-cell">{{ log.date_time|date:"d/m/Y H:i" }}</td>
+</tr>
+{% empty %}
+<tr><td colspan="7">Aucun journal d'audit trouvé.</td></tr>
+{% endfor %}

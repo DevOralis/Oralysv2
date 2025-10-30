@@ -1,0 +1,837 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/pharmacy_css/product.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+<style>
+  #user-table { width: 100%; }
+  .user-row { display: table-row; }
+  .user-row td { vertical-align: middle; padding: 5px; }
+  .errorlist { color: red; font-size: 0.9em; }
+  .is-invalid { border-color: #dc3545; }
+  .invalid-feedback { display: none; color: #dc3545; font-size: 0.9em; }
+  .is-invalid ~ .invalid-feedback { display: block; }
+  .status-active { color: #28a745; font-weight: bold; }
+  .status-inactive { color: #dc3545; font-weight: bold; }
+  .permissions-table { width: 100%; margin-top: 1rem; }
+  .permissions-table th, .permissions-table td { text-align: center; padding: 8px; }
+  .permissions-table th { background-color: #f8f9fa; }
+  .modal-body .form-label { font-weight: 500; }
+  .modal-body .form-control:focus { border-color: #007bff; box-shadow: 0 0 5px rgba(0,123,255,0.3); }
+  .password-strength { font-size: 0.85em; color: #6c757d; margin-top: 5px; }
+  .password-strength.strong { color: #28a745; }
+  .password-strength.weak { color: #dc3545; }
+  .card-header-primary {
+    background: #007bff;
+    color: white;
+    font-weight: 500;
+    padding: 15px;
+    border-radius: 8px 8px 0 0;
+  }
+  .input-group-text-primary {
+    background: #007bff;
+    color: white;
+    border: none;
+  }
+  .search-input-primary:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0,123,255,0.3);
+  }
+  .actions-cell { text-align: right; }
+  @media (max-width: 991px) {
+    .d-none.d-lg-table-cell { display: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block menu %}
+  {% include 'home_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Messages -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Liste des utilisateurs -->
+  <div class="card mb-4">
+    <div class="card-header card-header-primary">
+      <i class="fas fa-user me-2"></i>
+      Liste des Utilisateurs
+    </div>
+    <div class="card-body">
+      <!-- Search Bar Component -->
+      <form method="get" id="search-form">
+        <div class="row g-2 mb-3">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+            <div class="input-group">
+              <span class="input-group-text input-group-text-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" id="user-search" class="form-control search-input-primary" placeholder="Recherche utilisateur..." value="">
+            </div>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3 ms-auto">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-primary w-100 text-nowrap px-2" data-bs-toggle="collapse" data-bs-target="#user-form-card" aria-expanded="false" aria-controls="user-form-card">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouveau Utilisateur</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="table-responsive">
+        <table class="table table-responsive table-striped table-hover" id="user-table">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th><input type="checkbox" id="select-all-users"></th>
+              <th><div class="d-flex align-items-center"><span>Nom d'utilisateur</span><i class="fas fa-sort ms-1 text-muted"></i></div></th>
+              <th><div class="d-flex align-items-center"><span>Nom</span><i class="fas fa-sort ms-1 text-muted"></i></div></th>
+              <th class="d-none d-lg-table-cell"><div class="d-flex align-items-center"><span>Prénom</span><i class="fas fa-sort ms-1 text-muted"></i></div></th>
+              <th><div class="d-flex align-items-center"><span>Activé</span><i class="fas fa-sort ms-1 text-muted"></i></div></th>
+              <th class="d-none d-lg-table-cell"><div class="d-flex align-items-center"><span>Employé</span><i class="fas fa-sort ms-1 text-muted"></i></div></th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% include 'user_table_body.html' %}
+          </tbody>
+        </table>
+      </div>
+      <!-- Pagination -->
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+            <button class="page-link" id="prev-page" aria-label="Précédent" {% if not page_obj.has_previous %}disabled{% endif %}>
+              <i class="fas fa-chevron-left d-block d-sm-none"></i>
+              <span class="d-none d-sm-block">&laquo; Préc</span>
+            </button>
+          </li>
+          <li class="page-item active">
+            <span class="page-link" id="page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+          </li>
+          <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+            <button class="page-link" id="next-page" aria-label="Suivant" {% if not page_obj.has_next %}disabled{% endif %}>
+              <i class="fas fa-chevron-right d-block d-sm-none"></i>
+              <span class="d-none d-sm-block">Suiv &raquo;</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Formulaire utilisateur (création uniquement) -->
+  <div class="card mb-4 collapse" id="user-form-card">
+    <div class="card-header card-header-primary">
+      <i class="fas fa-edit me-2"></i>
+      Créer un Utilisateur
+    </div>
+    <div class="card-body">
+      <form method="post" id="user-form" action="{% url 'user_list' %}">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            <ul class="errorlist">
+              {% for field in form %}
+                {% for error in field.errors %}
+                  <li>{{ field.label }}: {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+              {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+        <!-- Form fields -->
+        <div class="row g-3">
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Nom :</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user"></i></span>
+              {{ form.nom }}
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Prénom :</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user"></i></span>
+              {{ form.prenom }}
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Nom d'utilisateur :</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user-circle"></i></span>
+              {{ form.username }}
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Mot de passe :</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-key"></i></span>
+              {{ form.password }}
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Confirmer le mot de passe :</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-key"></i></span>
+              {{ form.password_confirm }}
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Activé :</label>
+            {{ form.is_activated }}
+          </div>
+          <div class="col-12 col-sm-6 col-md-4">
+            <label class="form-label">Employé associé :</label>
+            {{ form.employee }}
+          </div>
+        </div>
+        <!-- Permissions Matrix -->
+        <div class="row g-3 mt-3">
+          <div class="col-md-12">
+            <h6>Droits d'accès</h6>
+            <table class="table permissions-table">
+              <thead>
+                <tr>
+                  <th>Application</th>
+                  <th>Lire <input type="checkbox" class="select-all-permission" data-permission="read"></th>
+                  <th>Écrire <input type="checkbox" class="select-all-permission" data-permission="write"></th>
+                  <th>Modifier <input type="checkbox" class="select-all-permission" data-permission="update"></th>
+                  <th>Supprimer <input type="checkbox" class="select-all-permission" data-permission="delete"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for app in apps %}
+                <tr>
+                  <td><input type="checkbox" class="select-all-app" data-app="{{ app.name|cut:'apps.' }}"> {{ app.label }}</td>
+                  <td><input type="checkbox" name="permissions[{{ app.name|cut:'apps.' }}][read]" class="form-check-input permission-checkbox" data-permission="read" data-app="{{ app.name|cut:'apps.' }}"></td>
+                  <td><input type="checkbox" name="permissions[{{ app.name|cut:'apps.' }}][write]" class="form-check-input permission-checkbox" data-permission="write" data-app="{{ app.name|cut:'apps.' }}"></td>
+                  <td><input type="checkbox" name="permissions[{{ app.name|cut:'apps.' }}][update]" class="form-check-input permission-checkbox" data-permission="update" data-app="{{ app.name|cut:'apps.' }}"></td>
+                  <td><input type="checkbox" name="permissions[{{ app.name|cut:'apps.' }}][delete]" class="form-check-input permission-checkbox" data-permission="delete" data-app="{{ app.name|cut:'apps.' }}"></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#user-form-card">
+            <i class="fas fa-times"></i>
+            <span class="d-none d-sm-inline ms-1">Annuler</span>
+          </button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-save"></i>
+            <span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de modification -->
+  <div class="modal fade" id="updateUserModal" tabindex="-1" aria-labelledby="updateUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="updateUserModalLabel">Modifier l'Utilisateur</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form method="post" id="update-user-form">
+            {% csrf_token %}
+            <input type="hidden" id="update_user_id" name="id">
+            <div class="row g-3">
+              <div class="col-12 col-sm-6 col-md-4">
+                <label for="update_nom" class="form-label">Nom :</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  <input type="text" class="form-control" id="update_nom" name="nom" required>
+                </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label for="update_prenom" class="form-label">Prénom :</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  <input type="text" class="form-control" id="update_prenom" name="prenom" required>
+                </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label for="update_username" class="form-label">Nom d'utilisateur :</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user-circle"></i></span>
+                  <input type="text" class="form-control" id="update_username" name="username" required>
+                </div>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label for="update_is_activated" class="form-label">Activé :</label>
+                <input type="checkbox" class="form-check-input" id="update_is_activated" name="is_activated">
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <label for="update_employee" class="form-label">Employé associé :</label>
+                <select class="form-select" id="update_employee" name="employee">
+                  <option value="">Aucun</option>
+                  {% for employee in employees %}
+                    <option value="{{ employee.pk }}">{{ employee.full_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <!-- Permissions Matrix -->
+            <div class="row g-3 mt-3">
+              <div class="col-md-12">
+                <h6>Droits d'accès</h6>
+                <table class="table permissions-table">
+                  <thead>
+                    <tr>
+                      <th>Application</th>
+                      <th>Lire <input type="checkbox" class="select-all-permission update-select-all-permission" data-permission="read"></th>
+                      <th>Écrire <input type="checkbox" class="select-all-permission update-select-all-permission" data-permission="write"></th>
+                      <th>Modifier <input type="checkbox" class="select-all-permission update-select-all-permission" data-permission="update"></th>
+                      <th>Supprimer <input type="checkbox" class="select-all-permission update-select-all-permission" data-permission="delete"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for app in apps %}
+                    <tr>
+                      <td><input type="checkbox" class="select-all-app update-select-all-app" data-app="{{ app.name|cut:'apps.' }}"> {{ app.label }}</td>
+                      <td><input type="checkbox" name="permissions[{{ app.name|cut:'apps.' }}][read]" class="form-check-input update-permissions permission-checkbox" data-permission="read" data-app="{{ app.name|cut:'apps.' }}"></td>
+                      <td><input type="checkbox" name="permissions[{{ app.name|cut:'apps.' }}][write]" class="form-check-input update-permissions permission-checkbox" data-permission="write" data-app="{{ app.name|cut:'apps.' }}"></td>
+                      <td><input type="checkbox" name="permissions[{{ app.name|cut:'apps.' }}][update]" class="form-check-input update-permissions permission-checkbox" data-permission="update" data-app="{{ app.name|cut:'apps.' }}"></td>
+                      <td><input type="checkbox" name="permissions[{{ app.name|cut:'apps.' }}][delete]" class="form-check-input update-permissions permission-checkbox" data-permission="delete" data-app="{{ app.name|cut:'apps.' }}"></td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div id="update-error" class="alert alert-danger d-none"></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="button" class="btn btn-primary" id="update-user-submit"><i class="fas fa-save"></i> Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de réinitialisation du mot de passe -->
+  <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="resetPasswordModalLabel">Réinitialiser le mot de passe</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="reset-password-form">
+            {% csrf_token %}
+            <input type="hidden" id="reset_user_id" name="id">
+            <div class="row g-3">
+              <div class="col-12">
+                <label for="old_password" class="form-label">Ancien mot de passe :</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-key"></i></span>
+                  <input type="password" class="form-control" id="old_password" name="old_password" required>
+                </div>
+                <div id="old_password_error" class="invalid-feedback"></div>
+              </div>
+              <div class="col-12">
+                <label for="new_password" class="form-label">Nouveau mot de passe :</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-key"></i></span>
+                  <input type="password" class="form-control" id="new_password" name="new_password" required>
+                </div>
+                <div id="new_password_error" class="invalid-feedback"></div>
+                <div id="new_password_strength" class="password-strength"></div>
+              </div>
+              <div class="col-12">
+                <label for="new_password_confirm" class="form-label">Confirmer le nouveau mot de passe :</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-key"></i></span>
+                  <input type="password" class="form-control" id="new_password_confirm" name="new_password_confirm" required>
+                </div>
+                <div id="new_password_confirm_error" class="invalid-feedback"></div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="button" class="btn btn-primary" id="reset-password-submit"><i class="fas fa-save"></i> Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmation de suppression -->
+  <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteUserModalLabel">Confirmer la suppression</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Voulez-vous vraiment supprimer l'utilisateur <strong id="delete-user-name"></strong> ?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <form id="delete-user-form" method="post" action="">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Supprimer</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Données des employés pour JavaScript -->
+  <script type="application/json" id="employees-data">
+    [
+      {% for employee in employees %}
+        {"id": {{ employee.pk }}, "full_name": "{{ employee.full_name|escapejs }}"} {% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]
+  </script>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{% static 'js/home_js/users.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('user-search');
+  const tableBody = document.querySelector('#user-table tbody');
+  const prevPageBtn = document.getElementById('prev-page');
+  const nextPageBtn = document.getElementById('next-page');
+  const pageInfo = document.getElementById('page-info');
+  let currentPage = {{ page_obj.number }};
+
+  function refreshTable(page = currentPage) {
+    const q = searchInput.value;
+    const url = `/users/ajax/?q=${encodeURIComponent(q)}&page=${page}`;
+    
+    fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.text();
+      })
+      .then(html => {
+        tableBody.innerHTML = html;
+        currentPage = page;
+        pageInfo.textContent = `${currentPage} / {{ page_obj.paginator.num_pages }}`;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage === {{ page_obj.paginator.num_pages }};
+        prevPageBtn.parentElement.classList.toggle('disabled', currentPage === 1);
+        nextPageBtn.parentElement.classList.toggle('disabled', currentPage === {{ page_obj.paginator.num_pages }});
+        reattachButtonListeners();
+      })
+      .catch(error => {
+        console.error('Error refreshing user table:', error);
+        Swal.fire({
+          title: 'Erreur',
+          text: 'Une erreur est survenue lors du chargement des utilisateurs.',
+          icon: 'error'
+        });
+      });
+  }
+
+  let searchTimer = null;
+  searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => refreshTable(1), 300); // Reset to page 1 on search
+  });
+
+  prevPageBtn.addEventListener('click', function() {
+    if (currentPage > 1) {
+      refreshTable(currentPage - 1);
+    }
+  });
+
+  nextPageBtn.addEventListener('click', function() {
+    if (currentPage < {{ page_obj.paginator.num_pages }}) {
+      refreshTable(currentPage + 1);
+    }
+  });
+
+  function reattachButtonListeners() {
+    // Reattach delete button event listeners
+    document.querySelectorAll('.btn-delete-user').forEach(button => {
+      button.addEventListener('click', () => {
+        const userId = button.dataset.id;
+        const userName = button.dataset.name;
+        Swal.fire({
+          title: 'Confirmer la suppression',
+          html: `Voulez-vous vraiment supprimer l'utilisateur <strong>${userName}</strong> ?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Supprimer',
+          cancelButtonText: 'Annuler'
+        }).then(result => {
+          if (result.isConfirmed) {
+            const form = document.getElementById('delete-user-form');
+            form.action = `/users/${userId}/delete/`;
+            form.submit();
+          }
+        });
+      });
+    });
+
+    // Reattach update button event listeners
+    document.querySelectorAll('.btn-update-user').forEach(button => {
+      button.addEventListener('click', () => {
+        const userId = button.dataset.id;
+        fetch(`/users/${userId}/get/`)
+          .then(response => response.json())
+          .then(data => {
+            document.querySelector('#update_user_id').value = data.id;
+            document.querySelector('#update_nom').value = data.nom;
+            document.querySelector('#update_prenom').value = data.prenom;
+            document.querySelector('#update_username').value = data.username;
+            document.querySelector('#update_is_activated').checked = data.is_activated;
+            document.querySelector('#update_employee').value = data.employee || '';
+            // Populate permissions
+            document.querySelectorAll('.update-permissions').forEach(checkbox => {
+              const [app, perm] = checkbox.name.match(/permissions\[(.+)\]\[(.+)\]/).slice(1);
+              checkbox.checked = data.permissions && data.permissions[app] ? data.permissions[app][perm] : false;
+            });
+            // Update "Select All" checkboxes by permission type
+            ['read', 'write', 'update', 'delete'].forEach(permission => {
+              const checkboxes = document.querySelectorAll(`#update-user-form .permission-checkbox[data-permission="${permission}"]`);
+              const selectAll = document.querySelector(`.update-select-all-permission[data-permission="${permission}"]`);
+              selectAll.checked = Array.from(checkboxes).every(cb => cb.checked);
+            });
+            // Update "Select All" checkboxes by app
+            document.querySelectorAll('.update-select-all-app').forEach(selectAll => {
+              const app = selectAll.dataset.app;
+              const checkboxes = document.querySelectorAll(`#update-user-form .permission-checkbox[data-app="${app}"]`);
+              selectAll.checked = Array.from(checkboxes).every(cb => cb.checked);
+            });
+            document.querySelector('#update-error').classList.add('d-none');
+            const modal = new bootstrap.Modal(document.getElementById('updateUserModal'));
+            modal.show();
+          })
+          .catch(error => {
+            console.error('Error fetching user data:', error);
+            Swal.fire({
+              title: 'Erreur',
+              text: 'Impossible de charger les données de l\'utilisateur.',
+              icon: 'error'
+            });
+          });
+      });
+    });
+
+    // Reattach toggle button event listeners
+    document.querySelectorAll('.btn-toggle-user').forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        const userId = button.dataset.id;
+        fetch(`/users/${userId}/toggle-activation/`, {
+          method: 'GET',
+          headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+          }
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire({
+                title: 'Succès',
+                text: data.message,
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+              }).then(() => {
+                refreshTable(currentPage); // Refresh table on same page
+              });
+            } else {
+              Swal.fire({
+                title: 'Erreur',
+                text: 'Une erreur est survenue lors de la modification du statut.',
+                icon: 'error'
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Error toggling user:', error);
+            Swal.fire({
+              title: 'Erreur',
+              text: 'Une erreur est survenue lors de la modification du statut.',
+              icon: 'error'
+            });
+          });
+      });
+    });
+document.getElementById('user-form').addEventListener('submit', function(e) {
+    const formData = new FormData(this);
+    for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+    }
+});
+    // Reattach reset password button event listeners
+    document.querySelectorAll('.btn-reset-password').forEach(button => {
+      button.addEventListener('click', () => {
+        const userId = button.dataset.id;
+        const userName = button.dataset.name;
+        document.getElementById('reset_user_id').value = userId;
+        document.getElementById('resetPasswordModalLabel').textContent = `Réinitialiser le mot de passe pour ${userName}`;
+        const modal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
+        modal.show();
+      });
+    });
+
+    // Reattach Select All Users listener after table refresh
+    const selectAllUsers = document.getElementById('select-all-users');
+    selectAllUsers.addEventListener('change', function () {
+      const checkboxes = document.querySelectorAll('#user-table tbody input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAllUsers.checked;
+      });
+    });
+  }
+
+  // Handle update form submission
+  document.getElementById('update-user-submit').addEventListener('click', function () {
+    const form = document.getElementById('update-user-form');
+    const formData = new FormData(form);
+    const userId = document.getElementById('update_user_id').value;
+
+    fetch(`/users/${userId}/update/`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          Swal.fire({
+            title: 'Succès',
+            text: 'Utilisateur mis à jour avec succès.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('updateUserModal'));
+            if (modal) {
+              modal.hide();
+            }
+            // Remove backdrop manually if it persists
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+              backdrop.remove();
+            }
+            // Reset body classes
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            refreshTable(currentPage); // Refresh table on same page
+          });
+        } else {
+          const errorDiv = document.getElementById('update-error');
+          errorDiv.classList.remove('d-none');
+          errorDiv.innerHTML = '<ul>' + Object.entries(data.errors).map(([field, errors]) => 
+            errors.map(error => `<li>${field}: ${error}</li>`).join('')
+          ).join('') + '</ul>';
+        }
+      })
+      .catch(error => {
+        console.error('Error updating user:', error);
+        Swal.fire({
+          title: 'Erreur',
+          text: 'Une erreur est survenue lors de la mise à jour de l\'utilisateur.',
+          icon: 'error'
+        });
+      });
+  });
+
+  // Handle reset password form submission
+  document.getElementById('reset-password-submit').addEventListener('click', function () {
+    const form = document.getElementById('reset-password-form');
+    const formData = new FormData(form);
+    const userId = document.getElementById('reset_user_id').value;
+    const oldPassword = document.getElementById('old_password');
+    const newPassword = document.getElementById('new_password');
+    const newPasswordConfirm = document.getElementById('new_password_confirm');
+
+    // Reset validation
+    oldPassword.classList.remove('is-invalid');
+    newPassword.classList.remove('is-invalid');
+    newPasswordConfirm.classList.remove('is-invalid');
+    document.getElementById('old_password_error').textContent = '';
+    document.getElementById('new_password_error').textContent = '';
+    document.getElementById('new_password_confirm_error').textContent = '';
+
+    // Client-side validation
+    if (!oldPassword.value) {
+      oldPassword.classList.add('is-invalid');
+      document.getElementById('old_password_error').textContent = 'L\'ancien mot de passe est requis.';
+      return;
+    }
+    if (newPassword.value.length < 8) {
+      newPassword.classList.add('is-invalid');
+      document.getElementById('new_password_error').textContent = 'Le nouveau mot de passe doit contenir au moins 8 caractères.';
+      return;
+    }
+    if (newPassword.value !== newPasswordConfirm.value) {
+      newPasswordConfirm.classList.add('is-invalid');
+      document.getElementById('new_password_confirm_error').textContent = 'Les mots de passe ne correspondent pas.';
+      return;
+    }
+
+    fetch(`/users/${userId}/reset-password/`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          Swal.fire({
+            title: 'Succès',
+            text: 'Mot de passe réinitialisé avec succès.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal'));
+            modal.hide();
+          });
+        } else {
+          if (data.errors) {
+            if (data.errors.old_password) {
+              oldPassword.classList.add('is-invalid');
+              document.getElementById('old_password_error').textContent = data.errors.old_password.join(' ');
+            }
+            if (data.errors.new_password) {
+              newPassword.classList.add('is-invalid');
+              document.getElementById('new_password_error').textContent = data.errors.new_password.join(' ');
+            }
+            if (data.errors.new_password_confirm) {
+              newPasswordConfirm.classList.add('is-invalid');
+              document.getElementById('new_password_confirm_error').textContent = data.errors.new_password_confirm.join(' ');
+            }
+          } else {
+            Swal.fire({
+              title: 'Erreur',
+              text: data.message || 'Une erreur est survenue lors de la réinitialisation du mot de passe.',
+              icon: 'error'
+            });
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error resetting password:', error);
+        Swal.fire({
+          title: 'Erreur',
+          text: 'Une erreur est survenue lors de la réinitialisation du mot de passe.',
+          icon: 'error'
+        });
+      });
+  });
+
+  // Password strength indicator
+  const newPasswordInput = document.getElementById('new_password');
+  const passwordStrength = document.getElementById('new_password_strength');
+  newPasswordInput.addEventListener('input', function () {
+    const password = this.value;
+    if (password.length === 0) {
+      passwordStrength.textContent = '';
+      passwordStrength.className = 'password-strength';
+    } else if (password.length < 8) {
+      passwordStrength.textContent = 'Mot de passe faible (minimum 8 caractères)';
+      passwordStrength.className = 'password-strength weak';
+    } else {
+      passwordStrength.textContent = 'Mot de passe acceptable';
+      passwordStrength.className = 'password-strength strong';
+    }
+  });
+
+  // Select All Users in table
+  const selectAllUsers = document.getElementById('select-all-users');
+  selectAllUsers.addEventListener('change', function () {
+    const checkboxes = document.querySelectorAll('#user-table tbody input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = selectAllUsers.checked;
+    });
+  });
+
+  // Select All Permissions by type (Create Form)
+  const selectAllPermissions = document.querySelectorAll('#user-form .select-all-permission');
+  selectAllPermissions.forEach(selectAll => {
+    selectAll.addEventListener('change', function () {
+      const permission = this.dataset.permission;
+      const checkboxes = document.querySelectorAll(`#user-form .permission-checkbox[data-permission="${permission}"]`);
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+      });
+    });
+  });
+
+  // Select All Permissions by type (Update Modal)
+  const updateSelectAllPermissions = document.querySelectorAll('.update-select-all-permission');
+  updateSelectAllPermissions.forEach(selectAll => {
+    selectAll.addEventListener('change', function () {
+      const permission = this.dataset.permission;
+      const checkboxes = document.querySelectorAll(`#update-user-form .permission-checkbox[data-permission="${permission}"]`);
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+      });
+    });
+  });
+
+  // Select All Permissions by app (Create Form)
+  const selectAllApps = document.querySelectorAll('#user-form .select-all-app');
+  selectAllApps.forEach(selectAll => {
+    selectAll.addEventListener('change', function () {
+      const app = this.dataset.app;
+      const checkboxes = document.querySelectorAll(`#user-form .permission-checkbox[data-app="${app}"]`);
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+      });
+    });
+  });
+
+  // Select All Permissions by app (Update Modal)
+  const updateSelectAllApps = document.querySelectorAll('.update-select-all-app');
+  updateSelectAllApps.forEach(selectAll => {
+    selectAll.addEventListener('change', function () {
+      const app = selectAll.dataset.app;
+      const checkboxes = document.querySelectorAll(`#update-user-form .permission-checkbox[data-app="${app}"]`);
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+      });
+    });
+  });
+
+  // Initial attachment of button listeners
+  reattachButtonListeners();
+});
+</script>
+{% endblock %}

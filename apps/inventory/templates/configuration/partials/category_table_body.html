@@ -1,0 +1,15 @@
+{% for category in categories %}
+<!-- Catégorie -->
+<tr data-id="{{ category.pk }}" data-label="{{ category.label }}" data-description="{{ category.description }}">
+  <td data-label="Libellé">{{ category.label }}</td>
+  <td data-label="Description">{{ category.description }}</td>
+  {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+  <td data-label="Actions" class="text-center">
+    <button type="button" class="btn btn-sm btn-light btn-edit-config" data-entity="category" title="Modifier"><i class="fas fa-edit"></i></button>
+    <button type="button" class="btn btn-sm btn-light text-danger btn-category-delete" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+  </td>
+  {% endif %}
+</tr>
+{% empty %}
+<tr><td colspan="3" class="text-center text-muted">Aucune catégorie trouvée</td></tr>
+{% endfor %} 

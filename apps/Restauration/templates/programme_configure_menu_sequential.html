@@ -1,0 +1,499 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Configuration du Menu - {{ programme.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Style général du conteneur select2 */
+    .select2-container--bootstrap4 .select2-selection--multiple {
+        min-height: 45px;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        background-color: #fff;
+        padding: 8px 12px;
+    }
+    
+    .select2-container--bootstrap4 .select2-selection--multiple:focus-within {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    /* Style des tags de sélection - Style épuré */
+    .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+        background-color: #28a745;
+        border: 1px solid #1e7e34;
+        color: white;
+        border-radius: 16px;
+        padding: 4px 12px;
+        margin: 2px 4px 2px 0;
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        line-height: 1.2;
+    }
+    
+    .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice:hover {
+        background-color: #218838;
+        border-color: #1c7430;
+    }
+    
+    /* Style du bouton de suppression - Simple et discret */
+    .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
+        color: white;
+        margin-left: 6px;
+        font-weight: bold;
+        font-size: 12px;
+        line-height: 1;
+        padding: 0;
+        border-radius: 50%;
+        background-color: transparent;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+    }
+    
+    .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: #fff;
+    }
+    
+    .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:before {
+        content: "×";
+        font-size: 14px;
+        font-weight: bold;
+    }
+    
+    /* Style du texte du tag */
+    .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__display {
+        font-weight: 500;
+    }
+    
+    /* Style de la zone de rendu */
+    .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__rendered {
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px;
+    }
+    
+    /* Style du placeholder */
+    .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__placeholder {
+        color: #6c757d;
+        font-style: italic;
+        padding: 4px 0;
+    }
+    
+    /* Style des options dans la liste déroulante */
+    .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected] {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .select2-container--bootstrap4 .select2-results__option[aria-selected=true] {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+    
+    /* Style pour l'état focus */
+    .select2-container--bootstrap4.select2-container--focus .select2-selection--multiple {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            margin: 1px 2px 1px 0;
+        }
+        
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
+            font-size: 10px;
+            width: 14px;
+            height: 14px;
+        }
+    }
+</style>
+<style>
+    /* Harmoniser le bleu sur cette page */
+    .bg-gradient-primary { background-color: #1e90ff !important; background-image: none !important; }
+    .btn-primary { background-color: #1e90ff !important; border-color: #1e90ff !important; }
+    .text-primary { color: #1e90ff !important; }
+</style>
+{% endblock %}
+{% block menu %}
+{% include "menu_restauration.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-utensils me-2"></i> Configuration du Menu
+                    </h1>
+                    <p class="mb-0">
+                        Programme : <strong>{{ programme.nom }}</strong> | 
+                        Lieu : <strong>{{ programme.lieu }}</strong>
+                    </p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <h5 class="alert-heading">
+                                    <i class="fas fa-calendar-day"></i> 
+                                    Configuration du menu pour le : 
+                                    <strong>{{ programme_jour.date|date:"l d F Y" }}</strong>
+                                </h5>
+                                <p class="mb-0">
+                                    {% if menu_exists %}
+                                        <i class="fas fa-info-circle"></i> 
+                                        Un menu existe déjà pour ce jour. Vous pouvez le modifier ou passer au suivant.
+                                    {% else %}
+                                        <i class="fas fa-plus-circle"></i> 
+                                        Aucun menu configuré pour ce jour. Veuillez configurer le menu ci-dessous.
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {% if next_jour %}
+                                <div class="alert alert-warning">
+                                    <h6 class="alert-heading">
+                                        <i class="fas fa-arrow-right"></i> Prochain jour à configurer
+                                    </h6>
+                                    <p class="mb-0">
+                                        <strong>{{ next_jour.date|date:"l d F Y" }}</strong>
+                                    </p>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-success">
+                                    <h6 class="alert-heading">
+                                        <i class="fas fa-check-circle"></i> Dernier jour
+                                    </h6>
+                                    <p class="mb-0">
+                                        Ce sera le dernier jour à configurer pour ce programme.
+                                    </p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                    <h6 class="m-0">
+                        <i class="fas fa-edit me-2"></i> Configuration du Menu
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="jour_id" value="{{ programme_jour.pk }}">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.plats.id_for_label }}" data-bs-toggle="tooltip" title="Sélectionnez un ou plusieurs plats pour composer le menu de ce jour">
+                                        <i class="fas fa-list"></i> Plats sélectionnés
+                                        <i class="fas fa-question-circle text-info ms-1" style="font-size: 0.8em;"></i>
+                                    </label>
+                                    {{ form.plats }}
+                                    {% if form.plats.help_text %}
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-info-circle"></i> {{ form.plats.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.plats.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            {% for error in form.plats.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-lightbulb"></i> 
+                                            <strong>Astuce :</strong> Utilisez Ctrl+Click pour sélectionner plusieurs plats, ou tapez pour rechercher.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.heure_service.id_for_label }}">
+                                        <i class="fas fa-clock"></i> Heure de service
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                                        {{ form.heure_service }}
+                                    </div>
+                                    {% if form.heure_service.help_text %}
+                                        <small class="form-text text-muted">{{ form.heure_service.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.heure_service.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.heure_service.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.description.id_for_label }}">
+                                <i class="fas fa-comment"></i> Description / Remarques
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                                {{ form.description }}
+                            </div>
+                            {% if form.description.help_text %}
+                                <small class="form-text text-muted">{{ form.description.help_text }}</small>
+                            {% endif %}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.description.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" name="action" value="save_and_next" class="btn btn-primary" data-bs-toggle="tooltip" title="Sauvegarder ce menu et passer au jour suivant (Ctrl+Enter)">
+                                            <i class="fas fa-save me-1"></i>Enregistrer et Passer au Suivant
+                                        </button>
+                                        <button type="submit" name="action" value="skip_day" class="btn btn-light border" data-bs-toggle="tooltip" title="Passer ce jour sans configuration">
+                                            <i class="fas fa-forward me-1"></i>Passer ce Jour
+                                        </button>
+                                        <button type="submit" name="action" value="cancel" class="btn btn-secondary" data-bs-toggle="tooltip" title="Annuler et quitter la configuration (Échap)">
+                                            <i class="fas fa-times me-1"></i>Annuler et Quitter
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                    <h6 class="m-0">
+                        <i class="fas fa-info-circle me-2"></i> Informations sur le Programme
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-calendar-alt fa-2x text-primary mb-2"></i>
+                                <h6>Période</h6>
+                                <p class="text-muted">{{ programme.date_debut|date:"d/m/Y" }} - {{ programme.date_fin|date:"d/m/Y" }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-map-marker-alt fa-2x text-info mb-2"></i>
+                                <h6>Lieu</h6>
+                                <p class="text-muted">{{ programme.lieu }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-users fa-2x text-success mb-2"></i>
+                                <h6>Population</h6>
+                                <p class="text-muted">{{ programme.population }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-utensils fa-2x text-warning mb-2"></i>
+                                <h6>Jours configurés</h6>
+                                <p class="text-muted">{{ jours_configures }}/{{ total_jours }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+<!-- Script pour améliorer l'interface utilisateur -->
+<script>
+$(document).ready(function() {
+    // Améliorer l'affichage du select multiple des plats
+    $('.select2-multiple').select2({
+        theme: 'bootstrap4',
+        placeholder: 'Sélectionnez un ou plusieurs plats...',
+        allowClear: true,
+        width: '100%',
+        language: 'fr',
+        tags: false,
+        tokenSeparators: [',', ' '],
+        createTag: function(params) {
+            return undefined; // Empêcher la création de nouveaux tags
+        },
+        templateResult: function(data) {
+            if (data.loading) return data.text;
+            return $('<span><i class="fas fa-utensils mr-2"></i>' + data.text + '</span>');
+        },
+        templateSelection: function(data) {
+            if (!data.id) return data.text;
+            return $('<span><i class="fas fa-check mr-2"></i>' + data.text + '</span>');
+        }
+    }).on('select2:select', function(e) {
+        // Animation et feedback lors de la sélection
+        const selectedText = e.params.data.text;
+        showNotification(`Plat ajouté : ${selectedText}`, 'success');
+        
+        // Mettre à jour le compteur de plats sélectionnés
+        updatePlatCounter();
+    }).on('select2:unselect', function(e) {
+        // Feedback lors de la désélection
+        const removedText = e.params.data.text;
+        showNotification(`Plat retiré : ${removedText}`, 'info');
+        
+        // Mettre à jour le compteur de plats sélectionnés
+        updatePlatCounter();
+    });
+    
+    // Fonction pour afficher des notifications
+    function showNotification(message, type = 'info') {
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-info';
+        const icon = type === 'success' ? 'fa-check-circle' : 'fa-info-circle';
+        
+        const notification = $(`
+            <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+                 style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                <i class="fas ${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `);
+        
+        $('body').append(notification);
+        
+        // Auto-dismiss après 3 secondes
+        setTimeout(function() {
+            notification.fadeOut(function() {
+                $(this).remove();
+            });
+        }, 3000);
+    }
+    
+    // Fonction pour mettre à jour le compteur de plats
+    function updatePlatCounter() {
+        const selectedPlats = $('.select2-multiple').select2('data');
+        const count = selectedPlats.length;
+        
+        // Mettre à jour le label avec le compteur
+        const label = $('label[for="{{ form.plats.id_for_label }}"]');
+        const baseText = '<i class="fas fa-list"></i> Plats sélectionnés';
+        
+        if (count > 0) {
+            label.html(`${baseText} <span class="badge badge-success">${count}</span>`);
+        } else {
+            label.html(baseText);
+        }
+    }
+    
+    // Initialiser le compteur au chargement
+    updatePlatCounter();
+    
+    // Tooltips Bootstrap 5
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+    
+    // Confirmation pour les actions importantes
+    $('button[name="action"][value="cancel"]').click(function(e) {
+        if (!confirm('Êtes-vous sûr de vouloir annuler la configuration ? Toutes les modifications non sauvegardées seront perdues.')) {
+            e.preventDefault();
+        }
+    });
+    
+    $('button[name="action"][value="skip_day"]').click(function(e) {
+        if (!confirm('Êtes-vous sûr de vouloir passer ce jour sans configuration ?')) {
+            e.preventDefault();
+        }
+    });
+    
+    // Validation en temps réel
+    $('form').on('submit', function(e) {
+        const selectedPlats = $('.select2-multiple').select2('data');
+        const heureService = $('input[name="heure_service"]').val();
+        
+        if (selectedPlats.length === 0) {
+            e.preventDefault();
+            showNotification('Veuillez sélectionner au moins un plat.', 'warning');
+            $('.select2-multiple').select2('open');
+            return false;
+        }
+        
+        if (!heureService) {
+            e.preventDefault();
+            showNotification('Veuillez spécifier une heure de service.', 'warning');
+            $('input[name="heure_service"]').focus();
+            return false;
+        }
+    });
+    
+    // Améliorer l'accessibilité avec les raccourcis clavier
+    $(document).keydown(function(e) {
+        // Ctrl+Enter pour sauvegarder et passer au suivant
+        if (e.ctrlKey && e.keyCode === 13) {
+            e.preventDefault();
+            $('button[name="action"][value="save_and_next"]').click();
+        }
+        
+        // Échap pour annuler
+        if (e.keyCode === 27) {
+            e.preventDefault();
+            $('button[name="action"][value="cancel"]').click();
+        }
+    });
+});
+</script>
+{% endblock %} 

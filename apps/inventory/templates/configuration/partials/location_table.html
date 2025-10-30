@@ -1,0 +1,90 @@
+<div class="card table-card mb-4">
+  <div class="card-body">
+    <div class="row align-items-center mb-3">
+      <div class="col-12 col-md-5">
+        <div class="input-group">
+          <span class="input-group-text input-group-text-primary">
+            <i class="fas fa-search"></i>
+          </span>
+          <input type="search" class="form-control search-input-primary" placeholder="Rechercher par nom, type ou parent..." 
+                 oninput="performSearch('location', this.value, 'locations-tbody')" />
+        </div>
+      </div>
+      <div class="col-md-3 d-none d-md-block"></div>
+      {% if request.session.user.permissions.inventory.write %}
+      <div class="col-12 col-md-4 d-flex justify-content-md-end mt-2 mt-md-0">
+        <button id="btn-add-location" class="btn btn-primary w-100 w-md-auto text-nowrap px-3">
+          <i class="fas fa-plus"></i>
+          <span>Ajouter un emplacement</span>
+        </button>
+      </div>
+      {% endif %}
+    </div>
+
+    <table class="table table-hover table-responsive table-striped" style="box-shadow: none;">
+      <thead class="table-light">
+        <tr class="main-row">
+          <th class="sortable" data-sort-field="name">Nom</th>
+          <th class="sortable" data-sort-field="type">Type</th>
+          <th class="sortable" data-sort-field="parent">Parent</th>
+          {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+          <th class="text-center">Actions</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody id="locations-tbody" data-entity="location">
+        {% for location in locations %}
+        <tr data-id="{{ location.location_id }}" data-name="{{ location.name }}" data-type="{{ location.location_type_id }}" data-parent="{{ location.parent_location_id|default:'' }}">
+          <td data-label="Nom">{{ location.name }}</td>
+          <td data-label="Type">
+            {% if location.location_type %}
+              {{ location.location_type.label }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td data-label="Parent">
+            {% if location.parent_location %}
+              {{ location.parent_location.name }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+          <td data-label="Actions" class="text-center">
+            <button type="button" class="btn btn-sm btn-light btn-edit-config" data-entity="location" title="Modifier"><i class="fas fa-edit"></i></button>
+            <button type="button" class="btn btn-sm btn-light text-danger btn-location-delete" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center text-muted">Aucun emplacement</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    
+    {% if locations.has_other_pages %}
+    <nav aria-label="Navigation pages" id="location-pagination" class="mt-3">
+      <ul class="pagination justify-content-center flex-wrap">
+        {% if locations.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?location_page={{ locations.previous_page_number }}&tab=location{% for key, value in request.GET.items %}{% if key != 'location_page' and key != 'tab' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+            <i class="fas fa-chevron-left d-block d-sm-none"></i><span class="d-none d-sm-block">&laquo; Préc</span></a>
+        </li>
+        {% endif %}
+        {% for num in locations.paginator.page_range %}
+        <li class="page-item {% if locations.number == num %}active{% endif %}">
+          <a class="page-link" href="?location_page={{ num }}&tab=location{% for key, value in request.GET.items %}{% if key != 'location_page' and key != 'tab' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if locations.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?location_page={{ locations.next_page_number }}&tab=location{% for key, value in request.GET.items %}{% if key != 'location_page' and key != 'tab' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+            <i class="fas fa-chevron-right d-block d-sm-none"></i><span class="d-none d-sm-block">Suiv &raquo;</span></a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>

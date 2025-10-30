@@ -1,0 +1,44 @@
+{% for supplier in suppliers %}
+<tr data-supplier-id="{{ supplier.pk }}">
+  <td data-label="Sélection"><input type="checkbox" class="row-check"></td>
+  <td data-label="Logo">
+    {% if supplier.logo %}
+    <img src="{{ supplier.logo.url }}" alt="Logo {{ supplier.name }}" width="50" height="50" style="object-fit: contain;" />
+    {% else %}
+    <span class="text-muted">N/A</span>
+    {% endif %}
+  </td>
+  <td data-label="Nom">{{ supplier.name }}</td>
+  <td data-label="Email">{{ supplier.email|default:"" }}</td>
+  <td data-label="Téléphone">{{ supplier.phone|default:"" }}</td>
+  <td data-label="Adresse" class="d-none d-lg-table-cell">
+    {{ supplier.street|default:"" }} {{ supplier.street2|default:"" }}<br>
+    {% if supplier.country %}{{ supplier.country.name }}{% endif %}
+  </td>
+  <td data-label="Ville" class="d-none d-lg-table-cell">
+    {% if supplier.city %}{{ supplier.city.name }}{% endif %}
+  </td>
+  <td data-label="Actions" class="actions-cell">
+    <div class="d-flex gap-1 justify-content-end">
+      <button class="btn btn-sm btn-light border text-info btn-details-pharmacy-supplier" data-id="{{ supplier.pk }}"
+        data-bs-toggle="modal" data-bs-target="#pharmacyOrderHistoryModal" title="Voir">
+        <i class="fas fa-eye"></i>
+      </button>
+      {% if request.session.user.permissions.pharmacy.update %}
+            <a href="{% url 'pharmacy_supplier_update' pk=supplier.pk %}" class="btn btn-sm btn-light border text-dark pharmacy-action-btn" title="Modifier">
+        <i class="fas fa-edit"></i>
+      </a>
+      {% endif %}
+      {% if request.session.user.permissions.pharmacy.delete %}
+      <button class="btn btn-sm btn-light border text-danger pharmacy-action-btn btn-delete" data-id="{{ supplier.pk }}" title="Supprimer">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="8" class="text-center">Aucun fournisseur trouvé.</td>
+</tr>
+{% endfor %}

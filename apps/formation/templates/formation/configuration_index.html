@@ -1,0 +1,904 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration des Formations{% endblock %}
+{% block menu %}
+{% include "formation/menu_formation.html" %}
+{% endblock %}
+{% block content %}
+
+<div class="content">
+  <!-- En-tête supprimé: on affiche directement les onglets et contenus -->
+    <ul class="nav nav-tabs flex-column flex-sm-row mb-3" role="tablist">
+      <li class="nav-item flex-sm-fill text-sm-center">
+        <button class="nav-link {% if not request.GET.active_tab or request.GET.active_tab == 'types' %}active{% endif %} border-bottom-0" 
+                data-bs-toggle="tab" 
+                data-bs-target="#types-tab">Types de Formation</button>
+      </li>
+      <li class="nav-item flex-sm-fill text-sm-center">
+        <button class="nav-link {% if request.GET.active_tab == 'domaines' %}active{% endif %} border-bottom-0" 
+                data-bs-toggle="tab" 
+                data-bs-target="#domaines-tab">Domaines de Formation</button>
+      </li>
+    </ul>
+
+    <div class="tab-content mt-3">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- Tab Types de Formation -->
+      <div class="tab-pane fade {% if not request.GET.active_tab or request.GET.active_tab == 'types' %}show active{% endif %}" id="types-tab">
+        <div class="card mb-2">
+          <div class="card-header text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-list me-2"></i>
+            Types de Formation
+          </div>
+          <div class="card-body">
+            <form method="get" id="search-form-types">
+              <div class="row g-2 mb-3">
+                <!-- Barre de recherche -->
+                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                  <div class="input-group">
+                    <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                      <i class="fas fa-search"></i>
+                    </span>
+                    <input type="search" name="q" id="searchType" class="form-control border-primary" placeholder="Rechercher..." value="{{ query|default:'' }}">
+                  </div>
+                </div>
+                
+                <!-- Boutons d'action -->
+                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                  <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddConfig('types')">
+                      <i class="fas fa-plus"></i>
+                      <span class="d-none d-lg-inline ms-1">Nouveau Type</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+            
+            <div class="table-responsive">
+              <table class="table table-striped table-hover" id="typesTable">
+                <thead class="table-light borderless" style="background-color: #f8f9fa;">
+                  <tr class="main-row">
+                    <th class="d-none d-md-table-cell">
+                      <input type="checkbox" id="selectAllTypes">
+                    </th>
+                    <th>
+                      <div class="d-flex align-items-center">
+                        <span>Valeur</span>
+                        <i class="fas fa-sort ms-1 text-muted"></i>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="d-flex align-items-center">
+                        <span>Libellé</span>
+                        <i class="fas fa-sort ms-1 text-muted"></i>
+                      </div>
+                    </th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for type in formation_types %}
+                  <tr class="main-row">
+                    <td class="d-none d-md-table-cell">
+                      <input type="checkbox" class="row-check-type">
+                    </td>
+                    <td><code>{{ type.value }}</code></td>
+                    <td>{{ type.label }}</td>
+                    <td class="text-end">
+                      <div class="d-none d-md-flex gap-1 justify-content-end">
+                        <button class="btn btn-sm btn-light border text-dark"
+                                data-category="types"
+                                data-old-value="{{ type.value }}"
+                                data-value="{{ type.value }}"
+                                data-label="{{ type.label }}"
+                                onclick="openEditConfig(this)"
+                                title="Modifier ce type">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light border text-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalDeleteConfig"
+                                data-category="types"
+                                data-value="{{ type.value }}" 
+                                data-label="{{ type.label }}"
+                                title="Supprimer ce type">
+                          <i class="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
+                      <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#type-details-{{ forloop.counter }}">
+                        Voir détails
+                      </button>
+                    </td>
+                  </tr>
+                  <tr class="collapse bg-light" id="type-details-{{ forloop.counter }}">
+                    <td colspan="4" class="p-3">
+                      <div class="row">
+                        <div class="col-6">
+                          <p class="mb-2"><strong>Valeur:</strong> <code>{{ type.value }}</code></p>
+                          <p class="mb-2"><strong>Libellé:</strong> {{ type.label }}</p>
+                        </div>
+                        <div class="col-12 mt-3">
+                          <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-dark"
+                                    data-category="types"
+                                    data-old-value="{{ type.value }}"
+                                    data-value="{{ type.value }}"
+                                    data-label="{{ type.label }}"
+                                    onclick="openEditConfig(this)"
+                                    title="Modifier ce type">
+                              <i class="fas fa-edit me-1"></i> Modifier
+                            </button>
+                            <button class="btn btn-sm btn-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalDeleteConfig"
+                                    data-category="types"
+                                    data-value="{{ type.value }}" 
+                                    data-label="{{ type.label }}"
+                                    title="Supprimer ce type">
+                              <i class="fas fa-trash-alt me-1"></i> Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="3" class="text-center">Aucun type de formation disponible</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% if formation_types.has_other_pages %}
+            <nav class="mt-3">
+              <ul class="pagination justify-content-center flex-wrap">
+                {% if formation_types.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?active_tab=types&types_page={{ formation_types.previous_page_number }}{% if request.GET.types_per_page %}&types_per_page={{ request.GET.types_per_page }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="Précédent">
+                      <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                      <span class="d-none d-sm-block">&laquo; Préc</span>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                      <span class="d-none d-sm-block">&laquo; Préc</span>
+                    </span>
+                  </li>
+                {% endif %}
+
+                {% for num in formation_types.paginator.page_range %}
+                  {% if formation_types.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > formation_types.number|add:'-3' and num < formation_types.number|add:'3' %}
+                    <li class="page-item">
+                      <a class="page-link" href="?active_tab=types&types_page={{ num }}{% if request.GET.types_per_page %}&types_per_page={{ request.GET.types_per_page }}{% endif %}{% if query %}&q={{ query }}{% endif %}">{{ num }}</a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+
+                {% if formation_types.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?active_tab=types&types_page={{ formation_types.next_page_number }}{% if request.GET.types_per_page %}&types_per_page={{ request.GET.types_per_page }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="Suivant">
+                      <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                      <span class="d-none d-sm-block">Suiv &raquo;</span>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                      <span class="d-none d-sm-block">Suiv &raquo;</span>
+                    </span>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Domaines de Formation -->
+      <div class="tab-pane fade {% if request.GET.active_tab == 'domaines' %}show active{% endif %}" id="domaines-tab">
+        <div class="card mb-2">
+          <div class="card-header text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-list me-2"></i>
+            Domaines de Formation
+          </div>
+          <div class="card-body">
+            <form method="get" id="search-form-domaines">
+              <div class="row g-2 mb-3">
+                <!-- Barre de recherche -->
+                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                  <div class="input-group">
+                    <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                      <i class="fas fa-search"></i>
+                    </span>
+                    <input type="search" name="q" id="searchDomaine" class="form-control border-primary" placeholder="Rechercher..." value="{{ query|default:'' }}">
+                  </div>
+                </div>
+                
+                <!-- Boutons d'action -->
+                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                  <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddConfig('domaines')">
+                      <i class="fas fa-plus"></i>
+                      <span class="d-none d-lg-inline ms-1">Nouveau Domaine</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+            
+            <div class="table-responsive">
+              <table class="table table-striped table-hover" id="domainesTable">
+                <thead class="table-light borderless" style="background-color: #f8f9fa;">
+                  <tr class="main-row">
+                    <th class="d-none d-md-table-cell">
+                      <input type="checkbox" id="selectAllDomaines">
+                    </th>
+                    <th>
+                      <div class="d-flex align-items-center">
+                        <span>Valeur</span>
+                        <i class="fas fa-sort ms-1 text-muted"></i>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="d-flex align-items-center">
+                        <span>Libellé</span>
+                        <i class="fas fa-sort ms-1 text-muted"></i>
+                      </div>
+                    </th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for domaine in formation_domaines %}
+                  <tr class="main-row">
+                    <td class="d-none d-md-table-cell">
+                      <input type="checkbox" class="row-check-domaine">
+                    </td>
+                    <td><code>{{ domaine.value }}</code></td>
+                    <td>{{ domaine.label }}</td>
+                    <td class="text-end">
+                      <div class="d-none d-md-flex gap-1 justify-content-end">
+                        <button class="btn btn-sm btn-light border text-dark"
+                                data-category="domaines"
+                                data-old-value="{{ domaine.value }}"
+                                data-value="{{ domaine.value }}"
+                                data-label="{{ domaine.label }}"
+                                onclick="openEditConfig(this)"
+                                title="Modifier ce domaine">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light border text-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalDeleteConfig"
+                                data-category="domaines"
+                                data-value="{{ domaine.value }}" 
+                                data-label="{{ domaine.label }}"
+                                title="Supprimer ce domaine">
+                          <i class="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
+                      <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#domaine-details-{{ forloop.counter }}">
+                        Voir détails
+                      </button>
+                    </td>
+                  </tr>
+                  <tr class="collapse bg-light" id="domaine-details-{{ forloop.counter }}">
+                    <td colspan="4" class="p-3">
+                      <div class="row">
+                        <div class="col-6">
+                          <p class="mb-2"><strong>Valeur:</strong> <code>{{ domaine.value }}</code></p>
+                          <p class="mb-2"><strong>Libellé:</strong> {{ domaine.label }}</p>
+                        </div>
+                        <div class="col-12 mt-3">
+                          <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-dark"
+                                    data-category="domaines"
+                                    data-old-value="{{ domaine.value }}"
+                                    data-value="{{ domaine.value }}"
+                                    data-label="{{ domaine.label }}"
+                                    onclick="openEditConfig(this)"
+                                    title="Modifier ce domaine">
+                              <i class="fas fa-edit me-1"></i> Modifier
+                            </button>
+                            <button class="btn btn-sm btn-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalDeleteConfig"
+                                    data-category="domaines"
+                                    data-value="{{ domaine.value }}" 
+                                    data-label="{{ domaine.label }}"
+                                    title="Supprimer ce domaine">
+                              <i class="fas fa-trash-alt me-1"></i> Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="3" class="text-center">Aucun domaine de formation disponible</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% if formation_domaines.has_other_pages %}
+            <nav class="mt-3">
+              <ul class="pagination justify-content-center flex-wrap">
+                {% if formation_domaines.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?active_tab=domaines&domaines_page={{ formation_domaines.previous_page_number }}{% if request.GET.domaines_per_page %}&domaines_per_page={{ request.GET.domaines_per_page }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="Précédent">
+                      <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                      <span class="d-none d-sm-block">&laquo; Préc</span>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                      <span class="d-none d-sm-block">&laquo; Préc</span>
+                    </span>
+                  </li>
+                {% endif %}
+
+                {% for num in formation_domaines.paginator.page_range %}
+                  {% if formation_domaines.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > formation_domaines.number|add:'-3' and num < formation_domaines.number|add:'3' %}
+                    <li class="page-item">
+                      <a class="page-link" href="?active_tab=domaines&domaines_page={{ num }}{% if request.GET.domaines_per_page %}&domaines_per_page={{ request.GET.domaines_per_page }}{% endif %}{% if query %}&q={{ query }}{% endif %}">{{ num }}</a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+
+                {% if formation_domaines.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?active_tab=domaines&domaines_page={{ formation_domaines.next_page_number }}{% if request.GET.domaines_per_page %}&domaines_per_page={{ request.GET.domaines_per_page }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="Suivant">
+                      <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                      <span class="d-none d-sm-block">Suiv &raquo;</span>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                      <span class="d-none d-sm-block">Suiv &raquo;</span>
+                    </span>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+  </div>
+
+  <!-- Modal pour supprimer -->
+  <div class="modal fade" id="modalDeleteConfig" tabindex="-1" aria-labelledby="modalDeleteConfigLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="deleteConfigForm" method="post" action="{% url 'configuration_home' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="category" id="delete_config_category">
+          <input type="hidden" name="value" id="delete_config_value">
+          <input type="hidden" name="active_tab" id="delete_config_active_tab">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalDeleteConfigLabel">Confirmer la suppression</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer : <strong id="delete_config_label"></strong> ?
+            </div>
+            <p class="text-danger mb-0">
+              <i class="fas fa-info-circle me-1"></i>
+              Cette action est irréversible.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times"></i>
+                <span class="d-none d-sm-inline ms-1">Annuler</span>
+              </button>
+              <button type="submit" form="deleteConfigForm" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i>
+                <span class="d-none d-sm-inline ms-1">Supprimer</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Function to get active tab from URL or localStorage
+    function getActiveTab() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlTab = urlParams.get('active_tab');
+      
+      if (urlTab) {
+        // Save to localStorage for persistence
+        localStorage.setItem('activeFormationConfigTab', urlTab);
+        return urlTab;
+      }
+      
+      // Fallback to localStorage
+      return localStorage.getItem('activeFormationConfigTab') || 'types';
+    }
+
+    // Function to show specific tab
+    function showTab(tabName) {
+      const tabButton = document.querySelector(`button[data-bs-target="#${tabName}-tab"]`);
+      const tabPane = document.getElementById(`${tabName}-tab`);
+      
+      if (tabButton && tabPane) {
+        // Remove active classes from all tabs
+        document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+          pane.classList.remove('show', 'active');
+        });
+        
+        // Activate the target tab
+        tabButton.classList.add('active');
+        tabPane.classList.add('show', 'active');
+        
+        // Save to localStorage
+        localStorage.setItem('activeFormationConfigTab', tabName);
+      }
+    }
+
+    // Initialize tab on page load
+    const activeTab = getActiveTab();
+    showTab(activeTab);
+
+    // Add event listeners to all tab buttons
+    document.querySelectorAll('.nav-link[data-bs-target]').forEach(button => {
+      button.addEventListener('click', function() {
+        const target = this.getAttribute('data-bs-target');
+        const tabName = target.replace('#', '').replace('-tab', '');
+        localStorage.setItem('activeFormationConfigTab', tabName);
+      });
+    });
+
+    // Items per page selectors
+    const itemsPerPageSelects = {
+      'types': document.getElementById('types-items-per-page'),
+      'domaines': document.getElementById('domaines-items-per-page')
+    };
+
+    Object.keys(itemsPerPageSelects).forEach(tabName => {
+      const select = itemsPerPageSelects[tabName];
+      if (select) {
+        select.addEventListener('change', function() {
+          const urlParams = new URLSearchParams(window.location.search);
+          const activeTab = urlParams.get('active_tab') || 'types';
+          
+          if (activeTab === tabName) {
+            urlParams.set(`${tabName}_per_page`, this.value);
+            urlParams.set(`${tabName}_page`, '1');
+            window.location.search = urlParams.toString();
+          }
+        });
+      }
+    });
+
+    // Update all form hidden inputs to include active tab
+    function updateActiveTabInputs() {
+      const currentTab = localStorage.getItem('activeFormationConfigTab') || 'types';
+      document.querySelectorAll('input[name="active_tab"]').forEach(input => {
+        input.value = currentTab;
+      });
+    }
+
+    // Call updateActiveTabInputs when modals are shown
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('show.bs.modal', updateActiveTabInputs);
+    });
+
+    // Update active tab inputs initially
+    updateActiveTabInputs();
+
+    // Gérer l'affichage des formulaires selon l'onglet actif
+    function updateFormVisibility() {
+      const currentTab = localStorage.getItem('activeFormationConfigTab') || 'types';
+      
+      // Masquer tous les formulaires
+      document.getElementById('add-type-config').style.display = 'none';
+      document.getElementById('edit-type-config').style.display = 'none';
+      document.getElementById('add-domaine-config').style.display = 'none';
+      document.getElementById('edit-domaine-config').style.display = 'none';
+      
+      // Afficher le formulaire d'ajout de l'onglet actif
+      if (currentTab === 'types') {
+        document.getElementById('add-type-config').style.display = 'block';
+      } else if (currentTab === 'domaines') {
+        document.getElementById('add-domaine-config').style.display = 'block';
+      }
+    }
+
+    // Appeler updateFormVisibility quand l'onglet change
+    document.querySelectorAll('.nav-link[data-bs-target]').forEach(button => {
+      button.addEventListener('click', function() {
+        setTimeout(updateFormVisibility, 100); // Petit délai pour laisser le temps au changement d'onglet
+      });
+    });
+
+    // Appeler updateFormVisibility au chargement de la page
+    updateFormVisibility();
+
+    // Fonctions pour les formulaires dans des cartes séparées
+    function categoryToKey(category) {
+      // Convertit 'types' -> 'type', 'domaines' -> 'domaine'
+      if (category === 'types') return 'type';
+      if (category === 'domaines') return 'domaine';
+      return category; // fallback
+    }
+
+    window.showAddConfig = function(category) {
+      const key = categoryToKey(category);
+
+      // Masquer tous les formulaires
+      document.getElementById('add-type-config').style.display = 'none';
+      document.getElementById('edit-type-config').style.display = 'none';
+      document.getElementById('add-domaine-config').style.display = 'none';
+      document.getElementById('edit-domaine-config').style.display = 'none';
+      
+      // Afficher le formulaire d'ajout de la catégorie demandée
+      const addSection = document.getElementById(`add-${key}-config`);
+      if (addSection) {
+        addSection.style.display = 'block';
+        window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+      }
+    }
+    
+    window.openEditConfig = function(button) {
+      const category = button.getAttribute('data-category');
+      const key = categoryToKey(category);
+      const oldValue = button.getAttribute('data-old-value');
+      const value = button.getAttribute('data-value');
+      const label = button.getAttribute('data-label');
+
+      const editSection = document.getElementById(`edit-${key}-config`);
+      const addSection = document.getElementById(`add-${key}-config`);
+      const oldInput = document.getElementById(`edit_${key}_old_value`);
+      const currentOld = oldInput ? (oldInput.value || '') : '';
+
+      // Si le formulaire d'édition est déjà ouvert pour le même élément, basculer vers l'ajout
+      if (editSection && editSection.style.display !== 'none' && currentOld === oldValue) {
+        document.getElementById('add-type-config').style.display = 'none';
+        document.getElementById('edit-type-config').style.display = 'none';
+        document.getElementById('add-domaine-config').style.display = 'none';
+        document.getElementById('edit-domaine-config').style.display = 'none';
+        if (addSection) {
+          addSection.style.display = 'block';
+          window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+        }
+        return;
+      }
+
+      // Remplir le formulaire d'édition
+      const valueInput = document.getElementById(`edit_${key}_value`);
+      const labelInput = document.getElementById(`edit_${key}_label`);
+      if (oldInput) oldInput.value = oldValue || '';
+      if (valueInput) valueInput.value = value || '';
+      if (labelInput) labelInput.value = label || '';
+
+      // Masquer tous les formulaires
+      document.getElementById('add-type-config').style.display = 'none';
+      document.getElementById('edit-type-config').style.display = 'none';
+      document.getElementById('add-domaine-config').style.display = 'none';
+      document.getElementById('edit-domaine-config').style.display = 'none';
+      
+      // Afficher le formulaire d'édition
+      if (editSection) {
+        editSection.style.display = 'block';
+        window.scrollTo({ top: editSection.offsetTop - 80, behavior: 'smooth' });
+      }
+    }
+    
+    // Modal de suppression
+    const modalDeleteConfig = document.getElementById('modalDeleteConfig');
+    if (modalDeleteConfig) {
+      modalDeleteConfig.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const category = button.getAttribute('data-category');
+        const value = button.getAttribute('data-value');
+        const label = button.getAttribute('data-label');
+        
+        document.getElementById('delete_config_category').value = category;
+        document.getElementById('delete_config_value').value = value;
+        document.getElementById('delete_config_label').textContent = label;
+        document.getElementById('delete_config_active_tab').value = localStorage.getItem('activeFormationConfigTab') || 'types';
+      });
+    }
+
+    // Search functionality
+    const searchInputs = {
+      'types': document.getElementById('searchType'),
+      'domaines': document.getElementById('searchDomaine')
+    };
+
+    Object.keys(searchInputs).forEach(tabName => {
+      const input = searchInputs[tabName];
+      if (input) {
+        input.addEventListener('input', function() {
+          const searchText = this.value.toLowerCase();
+          const rows = document.querySelectorAll(`#${tabName}Table tr`);
+          
+          rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            let shouldShow = false;
+            
+            for (let i = 0; i < cells.length - 1; i++) {
+              const cellText = cells[i].textContent.toLowerCase();
+              if (cellText.includes(searchText)) {
+                shouldShow = true;
+                break;
+              }
+            }
+            
+            row.style.display = shouldShow ? '' : 'none';
+          });
+        });
+      }
+    });
+
+    // Validation des formulaires
+    const forms = document.querySelectorAll('form[id$="Form"]');
+    forms.forEach(function(form) {
+      form.addEventListener('submit', function(e) {
+        const valueInput = form.querySelector('input[name="value"]');
+        const labelInput = form.querySelector('input[name="label"]');
+        
+        if (valueInput && labelInput) {
+          const value = valueInput.value.trim();
+          const label = labelInput.value.trim();
+          
+          if (!value || !label) {
+            e.preventDefault();
+            alert('Veuillez remplir tous les champs obligatoires.');
+            return false;
+          }
+          
+          // Validation du format de la valeur
+          const valuePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+          if (!valuePattern.test(value)) {
+            e.preventDefault();
+            alert('La valeur doit commencer par une lettre ou un underscore et ne contenir que des lettres, chiffres et underscores.');
+            valueInput.focus();
+            return false;
+          }
+        }
+      });
+    });
+    
+    // Indication visuelle pour les éléments modifiés récemment
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasMessages = document.querySelector('.alert-success, .alert-danger');
+    
+    if (hasMessages) {
+      // Scroll vers les messages si présents
+      hasMessages.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Auto-hide des messages de succès après 5 secondes
+      setTimeout(function() {
+        const successAlerts = document.querySelectorAll('.alert-success');
+        successAlerts.forEach(function(alert) {
+          const bsAlert = new bootstrap.Alert(alert);
+          bsAlert.close();
+        });
+      }, 5000);
+    }
+
+    // Select-all handling for Types table
+    (function(){
+      const selectAll = document.getElementById('selectAllTypes');
+      const table = document.getElementById('typesTable');
+      if (!selectAll || !table) return;
+      const getChecks = () => table.querySelectorAll('.row-check-type');
+      selectAll.addEventListener('change', function(){ getChecks().forEach(cb => cb.checked = selectAll.checked); });
+      table.addEventListener('change', function(e){
+        if (!e.target.classList.contains('row-check-type')) return;
+        const checks = getChecks();
+        selectAll.checked = Array.from(checks).every(cb => cb.checked);
+      });
+    })();
+
+    // Select-all handling for Domaines table
+    (function(){
+      const selectAll = document.getElementById('selectAllDomaines');
+      const table = document.getElementById('domainesTable');
+      if (!selectAll || !table) return;
+      const getChecks = () => table.querySelectorAll('.row-check-domaine');
+      selectAll.addEventListener('change', function(){ getChecks().forEach(cb => cb.checked = selectAll.checked); });
+      table.addEventListener('change', function(e){
+        if (!e.target.classList.contains('row-check-domaine')) return;
+        const checks = getChecks();
+        selectAll.checked = Array.from(checks).every(cb => cb.checked);
+      });
+    })();
+  });
+  </script>
+
+</div>
+
+<!-- Formulaires en dehors des cards de titre -->
+<div class="content mt-1">
+
+<!-- Formulaire d'ajout de type de formation -->
+<div class="card mb-4" id="add-type-config" style="display: block;">
+  <div class="card-header text-white" style="background-color: #1e90ff;">
+    <i class="fas fa-plus me-2"></i>
+    Nouveau Type de Formation
+  </div>
+  <div class="card-body">
+    <form method="post" action="{% url 'configuration_home' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add">
+      <input type="hidden" name="category" value="types">
+      <input type="hidden" name="active_tab" value="types">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="type_value">Valeur <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-tag"></i></span>
+            <input type="text" class="form-control" id="type_value" name="value" required pattern="[a-zA-Z_][a-zA-Z0-9_]*" placeholder="Ex: formation_interne">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="type_label">Libellé <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-font"></i></span>
+            <input type="text" class="form-control" id="type_label" name="label" required placeholder="Ex: Formation Interne">
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Ajouter
+        </button>
+      </div>
+    </form>
+  </div>
+ </div>
+
+<!-- Formulaire de modification de type de formation -->
+<div class="card mb-4" id="edit-type-config" style="display: none;">
+  <div class="card-header text-white" style="background-color: #1e90ff;">
+    <i class="fas fa-edit me-2"></i>
+    Modifier le Type de Formation
+  </div>
+  <div class="card-body">
+    <form method="post" action="{% url 'configuration_home' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit">
+      <input type="hidden" name="category" value="types">
+      <input type="hidden" name="old_value" id="edit_type_old_value">
+      <input type="hidden" name="active_tab" value="types">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="edit_type_value">Valeur <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-tag"></i></span>
+            <input type="text" class="form-control" id="edit_type_value" name="value" required pattern="[a-zA-Z_][a-zA-Z0-9_]*">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="edit_type_label">Libellé <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-font"></i></span>
+            <input type="text" class="form-control" id="edit_type_label" name="label" required>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Modifier
+        </button>
+      </div>
+    </form>
+  </div>
+ </div>
+
+<!-- Formulaire d'ajout de domaine de formation -->
+<div class="card mb-4" id="add-domaine-config">
+  <div class="card-header text-white" style="background-color: #1e90ff;">
+    <i class="fas fa-plus me-2"></i>
+    Nouveau Domaine de Formation
+  </div>
+  <div class="card-body">
+    <form method="post" action="{% url 'configuration_home' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add">
+      <input type="hidden" name="category" value="domaines">
+      <input type="hidden" name="active_tab" value="domaines">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="domaine_value">Valeur <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-tag"></i></span>
+            <input type="text" class="form-control" id="domaine_value" name="value" required pattern="[a-zA-Z_][a-zA-Z0-9_]*" placeholder="Ex: informatique">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="domaine_label">Libellé <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-font"></i></span>
+            <input type="text" class="form-control" id="domaine_label" name="label" required placeholder="Ex: Informatique">
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Ajouter
+        </button>
+      </div>
+    </form>
+  </div>
+ </div>
+
+<!-- Formulaire de modification de domaine de formation -->
+<div class="card mb-4" id="edit-domaine-config" style="display: none;">
+  <div class="card-header text-white" style="background-color: #1e90ff;">
+    <i class="fas fa-edit me-2"></i>
+    Modifier le Domaine de Formation
+  </div>
+  <div class="card-body">
+    <form method="post" action="{% url 'configuration_home' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit">
+      <input type="hidden" name="category" value="domaines">
+      <input type="hidden" name="old_value" id="edit_domaine_old_value">
+      <input type="hidden" name="active_tab" value="domaines">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="edit_domaine_value">Valeur <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-tag"></i></span>
+            <input type="text" class="form-control" id="edit_domaine_value" name="value" required pattern="[a-zA-Z_][a-zA-Z0-9_]*">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="edit_domaine_label">Libellé <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-font"></i></span>
+            <input type="text" class="form-control" id="edit_domaine_label" name="label" required>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Modifier
+        </button>
+      </div>
+    </form>
+  </div>
+ </div>
+
+</div>
+
+{% endblock %}

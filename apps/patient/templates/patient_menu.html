@@ -1,0 +1,62 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+      <div class="menu-items">
+        <a href="{% url 'patient:patient_statistics' %}" class="menu-item">
+          <i class="fas fa-chart-line"></i>
+          <span class="menu-text">Statistiques</span>
+        </a>
+        <div class='sub-menu'>
+          <a href="#" class="menu-item">
+            <i class="fas fa-calendar-alt"></i>
+            <span class="menu-text">PATIENTS</span>
+            <i class="fas fa-caret-down right"></i>
+          </a>
+          <ul>
+                            <li><a href="{% url 'patient:patient_list_create' %}"><i class="fas fa-user-injured"></i> Liste Des Patients</a></li>
+                            <li><a class="dropdown-item" href="{% url 'patient:billing_management' %}"><i class="fas fa-file-invoice-dollar"></i> Gestion Facturation</a></li>
+                            <li><a class="dropdown-item" href="{% url 'patient:payments_list' %}"><i class="fas fa-credit-card"></i> Historique Des Paiements</a></li>
+                            <li><a class="dropdown-item" href="{% url 'patient:patient_summary' %}"><i class="fas fa-calculator"></i> Facturation Patient</a></li>
+          </ul>
+        </div>
+        
+        <div class='sub-menu'>
+          <a href="#" class="menu-item">
+            <i class="fas fa-file-medical"></i>
+            <span class="menu-text">GESTION DES FLUX</span>
+            <i class="fas fa-caret-down right"></i>
+          </a>
+          <ul>
+            <li><a href="{% url 'patient:appointment' %}"><i class="fas fa-calendar-check"></i> Rendez-vous</a></li>
+            <li><a href="{% url 'patient:consultation' %}"><i class="fas fa-user-md"></i> Consultation</a></li>
+            <li><a href="{% url 'patient:admission_list' %}"><i class="fas fa-hospital"></i> Admission</a></li>
+          </ul>
+        </div>
+        <div class='sub-menu'>
+          <a href="#" class="menu-item">
+            <i class="fas fa-cog"></i>
+            <span class="menu-text">ASSURANCES</span>
+            <i class="fas fa-caret-down right"></i>
+          </a>
+          <ul>
+                        <li><a href="{% url 'patient:insurance_records' %}"><i class="fas fa-folder-plus"></i> Dossiers Mutuelle</a></li>
+          </ul>
+        </div>
+        
+        <a href="{% url 'patient:patient_settings' %}" class="menu-item">
+          <i class="fas fa-sliders-h"></i>
+          <span class="menu-text">Paramètres</span>
+        </a>
+      </div>
+    </nav>
+  </div>

@@ -1,0 +1,697 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block menu %}
+  {% include 'therapeutic_activities_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-user-md text-primary me-2"></i>
+    Sessions de Coaching
+  </h3>
+
+  <div class="card">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <div>
+        <i class="fas fa-user-md me-2"></i>
+        Liste des sessions de coaching
+      </div>
+    </div>
+    
+    <div class="card-body">
+      <!-- Search and Filter Form -->
+      <form id="search-form">
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+            <div class="input-group">
+              <span class="input-group-text input-group-text-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" class="form-control search-input-primary"
+                     placeholder="Rechercher par patient, activité, plan, résultat..."
+                     id="searchInput">
+            </div>
+          </div>
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-2">
+            <select class="form-select" title="Filtrer par patient" id="filterPatient">
+              <option value="">Tous les patients</option>
+              {% for patient in patients %}
+                <option value="{{ patient.id }}">
+                  {{ patient.get_full_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% if request.session.user.permissions.therapeutic_activities.write %}
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-3">
+            <button type="button" class="btn btn-primary w-100 text-nowrap px-2" 
+                    id="showCreateFormBtn" title="Nouvelle session">
+              <i class="fas fa-plus"></i>
+              <span class="d-lg-inline ms-1">Nouvelle session</span>
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </form>
+
+      <!-- Table des sessions de coaching -->
+        <table class="table table-striped table-hover table-responsive" id="coaching-table">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="sortable" data-sort="patient" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Patient</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="activity" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Activité</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="date" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Date de session</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="plan" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Plan de coaching</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="sortable" data-sort="result" style="cursor: pointer;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span>Résultat</span>
+                  <i class="fas fa-sort sort-icon text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center action-column no-sort">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="coaching-tbody">
+            {% for coaching in coaching_sessions %}
+            <tr>
+              <td data-label="Patient">
+                <div class="d-flex align-items-center">
+                    {{ coaching.participation.patient.get_full_name }}
+                </div>
+              </td>
+              <td data-label="Session">
+                <div>
+                  <strong>{{ coaching.participation.session.activity.title }}</strong>
+                  <br><small class="text-muted">{{ coaching.participation.session.location.name }}</small>
+                </div>
+              </td>
+              <td data-label="Date de session">{{ coaching.session_date|date:"d/m/Y" }}</td>
+              <td data-label="Plan">{% if coaching.plan %}
+                  <div class="text-truncate" style="max-width: 200px;" title="{{ coaching.plan }}">
+                    {{ coaching.plan|truncatechars:80 }}
+                  </div>
+                {% else %}
+                  <span class="text-muted">Aucun plan défini</span>
+                {% endif %}
+              </td>
+              <td data-label="Résultat">
+                {% if coaching.result %}
+                  <div class="text-truncate" style="max-width: 200px;" title="{{ coaching.result }}">
+                    {{ coaching.result|truncatechars:80 }}
+                  </div>
+                {% else %}
+                  <span class="text-muted">Aucun résultat</span>
+                {% endif %}
+              </td>
+              <td class="text-center" data-label="Actions">
+                <div class="d-flex gap-1 justify-content-end">
+                  <button type="button" class="btn btn-sm btn-light border text-info view-coaching-details" 
+                          title="Voir détails" 
+                          data-coaching-id="{{ coaching.id }}"
+                          data-patient-name="{{ coaching.participation.patient.get_full_name }}"
+                          data-activity="{{ coaching.participation.session.activity.title }}"
+                          data-session-date="{{ coaching.participation.session.date|date:'d/m/Y' }}"
+                          data-location="{{ coaching.participation.session.location.name }}"
+                          data-coaching-date="{{ coaching.session_date|date:'d/m/Y' }}"
+                          data-plan="{{ coaching.plan|default:'Aucun plan défini' }}"
+                          data-result="{{ coaching.result|default:'Aucun résultat enregistré' }}"
+                          data-bs-toggle="modal" 
+                          data-bs-target="#coachingDetailsModal">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  {% if request.session.user.permissions.therapeutic_activities.update %}
+                  <button type="button" class="btn btn-sm btn-light border text-dark edit-btn" title="Modifier"
+                          data-id="{{ coaching.id }}"
+                          data-patient-id="{{ coaching.participation.patient.id }}"
+                          data-plan="{{ coaching.plan|default:'' }}"
+                          data-result="{{ coaching.result|default:'' }}">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted">
+                <br>Aucune session de coaching trouvée.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+      <!-- Pagination dynamique -->
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center mb-0" id="coaching-pagination-controls">
+          <!-- Pagination générée dynamiquement -->
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- Formulaire de création de session de coaching (collapsible) -->
+<div class="collapse" id="coachingCreateFormCollapse">
+  <div class="content">
+    <div class="card shadow-sm">
+      <div class="card-header text-white d-flex align-items-center" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+        Ajouter une nouvelle session de coaching
+      </div>
+    <div class="card-body">
+      <form id="coachingCreateForm" method="post" action="{% url 'therapeutic_activities:coaching_session_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create">
+        
+        <!-- Sélection du patient -->
+        <div class="mb-4">
+          <label class="form-label">
+            Patient : <span class="text-danger">*</span>
+          </label>
+          <select name="patient" class="form-select" id="create_patient" required>
+            <option value="">Sélectionner un patient</option>
+            {% for patient in patients %}
+              <option value="{{ patient.id }}">{{ patient.get_full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Plan de coaching -->
+        <div class="mb-4">
+          <label for="create_plan" class="form-label">
+            Plan de coaching :
+          </label>
+          <textarea name="plan" id="create_plan" class="form-control" rows="4" 
+                    placeholder="Définir le plan de coaching pour cette session..."></textarea>
+        </div>
+
+        <!-- Résultat -->
+        <div class="mb-4">
+          <label for="create_result" class="form-label">
+            Résultat :
+          </label>
+          <textarea name="result" id="create_result" class="form-control" rows="4" 
+                    placeholder="Saisir les résultats de la session..."></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex justify-content-end gap-2">
+          <div>
+            <button type="button" class="btn btn-sm btn-secondary" id="cancelCreateBtn">
+              <i class="fas fa-times"></i><span class="d-none d-sm-inline ms-1">Annuler</span>
+            </button>
+          </div>
+          <div>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- Formulaire d'édition de session de coaching (collapsible) -->
+<div class="collapse" id="coachingEditFormCollapse">
+  <div class="content">
+    <div class="card shadow-sm">
+      <div class="card-header text-white d-flex align-items-center" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+        <span class="fw-medium">Modifier la session de coaching</span>
+      </div>
+    <div class="card-body">
+      <form id="coachingEditForm" method="post" action="{% url 'therapeutic_activities:coaching_session_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="coaching_id" id="edit_coaching_id">
+        
+        <!-- Sélection du patient -->
+        <div class="mb-4">
+          <label class="form-label">
+            Patient : <span class="text-danger">*</span>
+          </label>
+          <select name="patient" class="form-select" id="edit_patient" required>
+            <option value="">Sélectionner un patient</option>
+            {% for patient in patients %}
+              <option value="{{ patient.id }}">{{ patient.get_full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Plan de coaching -->
+        <div class="mb-4">
+          <label for="edit_plan" class="form-label">
+            Plan de coaching :
+          </label>
+          <textarea name="plan" id="edit_plan" class="form-control" rows="4" 
+                    placeholder="Définir le plan de coaching pour cette session..."></textarea>
+        </div>
+
+        <!-- Résultat -->
+        <div class="mb-4">
+          <label for="edit_result" class="form-label">
+            Résultat :
+          </label>
+          <textarea name="result" id="edit_result" class="form-control" rows="4" 
+                    placeholder="Saisir les résultats de la session..."></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex justify-content-end gap-2">
+          <div>
+            <button type="button" class="btn btn-sm btn-secondary" id="cancelEditBtn">
+              <i class="fas fa-times"></i><span class="d-none d-sm-inline ms-1">Annuler</span>
+            </button>
+          </div>
+          <div>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- Modal Détails Session de Coaching -->
+<div class="modal fade" id="coachingDetailsModal" tabindex="-1" aria-labelledby="coachingDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: #1e90ff; color: white;">
+        <h5 class="modal-title" id="coachingDetailsModalLabel">
+          <i class="fas fa-eye me-2"></i>
+          Détails de la session
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <strong>Patient:</strong>
+            <p id="coaching-modal-patient-name" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Activité:</strong>
+            <p id="coaching-modal-activity" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Date session:</strong>
+            <p id="coaching-modal-session-date" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Lieu:</strong>
+            <p id="coaching-modal-location" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Date coaching:</strong>
+            <p id="coaching-modal-coaching-date" class="mb-2"></p>
+          </div>
+          <div class="col-md-6">
+            <strong>Plan de coaching:</strong>
+            <p id="coaching-modal-plan" class="mb-2"></p>
+          </div>
+          <div class="col-12">
+            <strong>Résultats:</strong>
+            <p id="coaching-modal-result" class="mb-2"></p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+</style>
+
+<script>
+// Variables globales pour la pagination
+let allCoachingSessions = [];
+let filteredCoachingSessions = [];
+let currentCoachingPage = 1;
+let coachingSessionsPerPage = 5;
+let totalCoachingPages = 0;
+
+// Charger les données des sessions de coaching
+function loadAllCoachingSessions() {
+    const coachingRows = document.querySelectorAll('#coaching-tbody tr');
+    
+    allCoachingSessions = Array.from(coachingRows).map(row => {
+        if (row.cells.length > 1 && !row.textContent.includes('Aucune session de coaching trouvée')) {
+            return {
+                element: row,
+                patient: row.cells[0].textContent.toLowerCase().trim(),
+                activity: row.cells[1].textContent.toLowerCase().trim(),
+                date: row.cells[2].textContent.toLowerCase().trim(),
+                plan: row.cells[3].textContent.toLowerCase().trim(),
+                result: row.cells[4].textContent.toLowerCase().trim(),
+                patientId: row.querySelector('.edit-btn') ? row.querySelector('.edit-btn').dataset.patientId : ''
+            };
+        }
+        return null;
+    }).filter(item => item !== null);
+    
+    return allCoachingSessions;
+}
+
+// Fonction de tri pour les sessions de coaching
+function setupCoachingSorting() {
+    const sortableHeaders = document.querySelectorAll('#coaching-table .sortable');
+    
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const sortField = this.dataset.sort;
+            const currentDirection = this.dataset.direction || 'asc';
+            const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            
+            // Mettre à jour l'icône de tri
+            updateCoachingSortIcons(this, newDirection);
+            
+            // Trier le tableau
+            sortCoachingTable(sortField, newDirection);
+            
+            // Réappliquer la pagination
+            showCoachingPage(1);
+            currentCoachingPage = 1;
+            
+            // Sauvegarder la direction
+            this.dataset.direction = newDirection;
+        });
+    });
+}
+
+function sortCoachingTable(sortField, direction) {
+    allCoachingSessions.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch(sortField) {
+            case 'patient':
+                aValue = a.patient;
+                bValue = b.patient;
+                break;
+            case 'activity':
+                aValue = a.activity;
+                bValue = b.activity;
+                break;
+            case 'date':
+                // Convertir dd/mm/yyyy en yyyy-mm-dd pour tri correct
+                aValue = a.date;
+                bValue = b.date;
+                if (aValue.includes('/')) {
+                    const [day, month, year] = aValue.trim().split('/');
+                    aValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+                if (bValue.includes('/')) {
+                    const [day, month, year] = bValue.trim().split('/');
+                    bValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+                break;
+            case 'plan':
+                aValue = a.plan;
+                bValue = b.plan;
+                break;
+            case 'result':
+                aValue = a.result;
+                bValue = b.result;
+                break;
+            default:
+                return 0;
+        }
+        
+        const comparison = aValue.localeCompare(bValue, 'fr', { numeric: true });
+        return direction === 'asc' ? comparison : -comparison;
+    });
+    
+    // Recharger la liste filtrée avec le nouvel ordre
+    filterCoachingSessions();
+}
+
+function updateCoachingSortIcons(activeHeader, direction) {
+    // Réinitialiser toutes les icônes
+    document.querySelectorAll('#coaching-table .sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon text-muted';
+    });
+    
+    // Mettre à jour l'icône active
+    const activeIcon = activeHeader.querySelector('.sort-icon');
+    if (activeIcon) {
+        if (direction === 'asc') {
+            activeIcon.className = 'fas fa-sort-up sort-icon text-primary';
+        } else {
+            activeIcon.className = 'fas fa-sort-down sort-icon text-primary';
+        }
+    }
+}
+
+// Fonction de filtrage des sessions de coaching
+function filterCoachingSessions() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+    const patientFilter = document.getElementById('filterPatient').value;
+    
+    filteredCoachingSessions = allCoachingSessions.filter(coaching => {
+        const matchesSearch = !searchTerm || 
+            coaching.patient.includes(searchTerm) ||
+            coaching.activity.includes(searchTerm) ||
+            coaching.plan.includes(searchTerm) ||
+            coaching.result.includes(searchTerm) ||
+            coaching.date.includes(searchTerm);
+        
+        const matchesPatient = !patientFilter || coaching.patientId === patientFilter;
+        
+        return matchesSearch && matchesPatient;
+    });
+    
+    totalCoachingPages = Math.ceil(filteredCoachingSessions.length / coachingSessionsPerPage);
+    if (totalCoachingPages === 0) totalCoachingPages = 1;
+    
+    if (currentCoachingPage > totalCoachingPages) {
+        currentCoachingPage = 1;
+    }
+    
+    showCoachingPage(currentCoachingPage);
+}
+
+// Fonction d'affichage d'une page de sessions de coaching
+function showCoachingPage(page) {
+    const startIndex = (page - 1) * coachingSessionsPerPage;
+    const endIndex = startIndex + coachingSessionsPerPage;
+    
+    // Cacher toutes les lignes de sessions de coaching
+    allCoachingSessions.forEach(coaching => {
+        coaching.element.style.display = 'none';
+    });
+    
+    // Afficher les lignes filtrées pour la page courante
+    const pageCoachingSessions = filteredCoachingSessions.slice(startIndex, endIndex);
+    pageCoachingSessions.forEach(coaching => {
+        coaching.element.style.display = '';
+    });
+    
+    // Gérer le message "Aucune session de coaching trouvée"
+    const tbody = document.getElementById('coaching-tbody');
+    const noDataRow = tbody.querySelector('tr td[colspan="6"]');
+    if (noDataRow) {
+        noDataRow.parentElement.style.display = filteredCoachingSessions.length === 0 ? '' : 'none';
+    }
+    
+    // Mettre à jour les contrôles de pagination
+    updateCoachingPaginationControls();
+}
+
+// Mettre à jour les contrôles de pagination
+function updateCoachingPaginationControls() {
+    const paginationControls = document.getElementById('coaching-pagination-controls');
+    paginationControls.innerHTML = '';
+    
+    if (totalCoachingPages <= 1) return;
+    
+    // Bouton Précédent
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentCoachingPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<button class="page-link" ${currentCoachingPage === 1 ? 'disabled' : ''}>Préc</button>`;
+    if (currentCoachingPage > 1) {
+        prevLi.querySelector('button').onclick = () => {
+            currentCoachingPage--;
+            showCoachingPage(currentCoachingPage);
+        };
+    }
+    paginationControls.appendChild(prevLi);
+    
+    // Boutons de page
+    for (let i = 1; i <= totalCoachingPages; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === currentCoachingPage ? 'active' : ''}`;
+        pageLi.innerHTML = `<button class="page-link">${i}</button>`;
+        pageLi.querySelector('button').onclick = () => {
+            currentCoachingPage = i;
+            showCoachingPage(currentCoachingPage);
+        };
+        paginationControls.appendChild(pageLi);
+    }
+    
+    // Bouton Suivant
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentCoachingPage === totalCoachingPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<button class="page-link" ${currentCoachingPage === totalCoachingPages ? 'disabled' : ''}>Suiv</button>`;
+    if (currentCoachingPage < totalCoachingPages) {
+        nextLi.querySelector('button').onclick = () => {
+            currentCoachingPage++;
+            showCoachingPage(currentCoachingPage);
+        };
+    }
+    paginationControls.appendChild(nextLi);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Charger les sessions de coaching et initialiser la pagination
+  loadAllCoachingSessions();
+  
+  // Event listeners pour les filtres
+  document.getElementById('searchInput').addEventListener('input', function() {
+      currentCoachingPage = 1;
+      filterCoachingSessions();
+  });
+  
+  document.getElementById('filterPatient').addEventListener('change', function() {
+      currentCoachingPage = 1;
+      filterCoachingSessions();
+  });
+  
+  // Initialiser le tri
+  setupCoachingSorting();
+  
+  // Initialiser l'affichage
+  filterCoachingSessions();
+  // Fonction pour masquer tous les formulaires
+  function hideAllForms() {
+    const createForm = document.getElementById('coachingCreateFormCollapse');
+    const editForm = document.getElementById('coachingEditFormCollapse');
+    
+    if (createForm) {
+      const createCollapse = bootstrap.Collapse.getInstance(createForm);
+      if (createCollapse) createCollapse.hide();
+    }
+    
+    if (editForm) {
+      const editCollapse = bootstrap.Collapse.getInstance(editForm);
+      if (editCollapse) editCollapse.hide();
+    }
+  }
+  
+  // Fonction pour afficher le formulaire de création
+  function showCreateForm() {
+    hideAllForms();
+    const createForm = document.getElementById('coachingCreateFormCollapse');
+    const createCollapse = bootstrap.Collapse.getInstance(createForm) || new bootstrap.Collapse(createForm);
+    createCollapse.show();
+    createForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  
+  // Fonction pour afficher le formulaire de modification
+  function showEditForm() {
+    hideAllForms();
+    const editForm = document.getElementById('coachingEditFormCollapse');
+    const editCollapse = bootstrap.Collapse.getInstance(editForm) || new bootstrap.Collapse(editForm);
+    editCollapse.show();
+    editForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  
+  // Gestionnaire pour le bouton "Nouvelle session"
+  const showCreateBtn = document.getElementById('showCreateFormBtn');
+  if (showCreateBtn) {
+    showCreateBtn.addEventListener('click', showCreateForm);
+  }
+  
+  // Gestionnaire pour le bouton "Annuler" du formulaire de création
+  const cancelCreateBtn = document.getElementById('cancelCreateBtn');
+  if (cancelCreateBtn) {
+    cancelCreateBtn.addEventListener('click', hideAllForms);
+  }
+  
+  // Gestionnaire pour le bouton "Annuler" du formulaire de modification
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', hideAllForms);
+  }
+  
+  // Gestionnaires d'événements pour les boutons d'édition
+  const editButtons = document.querySelectorAll('.edit-btn');
+  editButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const id = this.dataset.id;
+      const patientId = this.dataset.patientId;
+      const plan = this.dataset.plan;
+      const result = this.dataset.result;
+
+      // Remplir le formulaire
+      document.getElementById('edit_coaching_id').value = id;
+      document.getElementById('edit_patient').value = patientId;
+      document.getElementById('edit_plan').value = plan || '';
+      document.getElementById('edit_result').value = result || '';
+
+      // Afficher le formulaire de modification
+      showEditForm();
+    });
+  });
+  // Gestionnaire pour les boutons "Voir détails" coaching
+  document.querySelectorAll('.view-coaching-details').forEach(button => {
+    button.addEventListener('click', function() {
+      // Récupérer les données depuis les attributs data-*
+      const patientName = this.getAttribute('data-patient-name');
+      const activity = this.getAttribute('data-activity');
+      const sessionDate = this.getAttribute('data-session-date');
+      const location = this.getAttribute('data-location');
+      const coachingDate = this.getAttribute('data-coaching-date');
+      const plan = this.getAttribute('data-plan');
+      const result = this.getAttribute('data-result');
+      
+      // Remplir les éléments de la modal
+      document.getElementById('coaching-modal-patient-name').textContent = patientName;
+      document.getElementById('coaching-modal-activity').textContent = activity;
+      document.getElementById('coaching-modal-session-date').textContent = sessionDate;
+      document.getElementById('coaching-modal-location').textContent = location;
+      document.getElementById('coaching-modal-coaching-date').textContent = coachingDate;
+      document.getElementById('coaching-modal-plan').textContent = plan || 'Aucun plan défini';
+      document.getElementById('coaching-modal-result').textContent = result || 'Aucun résultat enregistré';
+    });
+  });
+});
+</script>
+{% endblock %}

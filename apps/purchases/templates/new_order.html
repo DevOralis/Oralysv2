@@ -1,0 +1,336 @@
+{% if request.session.user.permissions.purchases.write %}
+<!DOCTYPE html>
+<html lang="fr">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}">
+    <script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+    <div class="content">
+        <!-- Conteneur pour les alertes -->
+        <div id="alert-container"></div>
+
+        <!-- Inclure les messages Django -->
+        {% if messages %}
+            <script>
+                const djangoMessages = [
+                    {% for message in messages %}
+                        {
+                            level: "{{ message.tags }}",
+                            message: "{{ message|escapejs }}"
+                        }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ];
+            </script>
+        {% endif %}
+
+        <div class="card mb-4 ">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-edit me-2"></i>
+                Nouvelle Commande
+            </div>
+            <div class="card-body">
+                <form id="order-form" method="post" action="{% url 'order_create' %}">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="supplier" class="form-label">Fournisseur</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <select id="supplier" name="supplier" class="form-select" required>
+                                    <option value="">Sélectionner un fournisseur</option>
+                                    {% for supplier in suppliers %}
+                                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="hidden" id="reference" name="reference" class="form-control" value="{{ reference }}">
+                            <label for="order_date" class="form-label">Date de commande</label>
+                            <div class="input-group">
+                                <input type="date" id="order_date" name="order_date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="currency" class="form-label">Devise</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                <select id="currency" name="currency" class="form-select">
+                                    <option value="">Sélectionner une devise</option>
+                                    {% for currency in currencies %}
+                                    <option value="{{ currency.id }}">{{ currency.libelle }} ({{ currency.abreviation }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h6>Lignes de commande</h6>
+                    <table class="table" id="order-lines-table">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Taxe</th>
+                                <th>Sous-total HT</th>
+                                <th>Taxe</th>
+                                <th>Total TTC</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="position-relative">
+                                    <select name="product[]" class="form-select" required>
+                                        <option value="">Sélectionner un produit</option>
+                                        {% for product in products %}
+                                        <option value="{{ product.product_id }}">{{ product.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td><input type="number" name="quantity[]" class="form-control" value="1" min="0" required></td>
+                                <td><input type="number" name="unit_price[]" class="form-control" value="0.00" step="0.01" required></td>
+                                <td>
+                                    <select name="tax[]" class="form-select">
+                                        <option value="">Aucune</option>
+                                        {% for tax in taxes %}
+                                        <option value="{{ tax.id }}" data-rate="{{ tax.valeur }}">{{ tax.libelle }} ({{ tax.valeur }}%)</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="line-subtotal">0.00</td>
+                                <td class="line-tax">0.00</td>
+                                <td class="line-total">0.00</td>
+                                <td>
+                                    <button class="btn btn-sm btn-light border text-danger btn-remove-line" title="Supprimer">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="4" class="text-end">Totaux :</td>
+                                <td id="order-subtotal">0.00</td>
+                                <td id="order-tax">0.00</td>
+                                <td id="order-total">0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <button type="button" class="btn btn-outline-primary btn-sm me-2" id="add-line">
+                        <i class="fas fa-plus"></i> Ajouter une ligne
+                    </button>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Remarques..."></textarea>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+                        <a href="{% url 'order_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i>
+                            <span class="d-none d-sm-inline ms-1">Annuler</span>
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            <span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fonction pour afficher l'alerte de succès
+            function showSuccessAlert(message) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Succès',
+                    text: message,
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.href = "{% url 'order_list' %}";
+                });
+            }
+
+            // Fonction pour afficher l'alerte d'erreur
+            function showErrorAlert(message) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: message,
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+
+            // Afficher les messages Django au chargement de la page
+            if (typeof djangoMessages !== 'undefined') {
+                djangoMessages.forEach(msg => {
+                    if (msg.level === 'success') {
+                        showSuccessAlert(msg.message);
+                    } else if (msg.level === 'error') {
+                        showErrorAlert(msg.message);
+                    }
+                });
+            }
+
+            // Fonction pour mettre à jour les totaux d'une ligne
+            function updateLineTotals(row) {
+                const qty = parseFloat(row.querySelector('input[name="quantity[]"]').value || 0);
+                const price = parseFloat(row.querySelector('input[name="unit_price[]"]').value || 0);
+                const taxSelect = row.querySelector('select[name="tax[]"]');
+                const taxRate = taxSelect ? parseFloat(taxSelect.selectedOptions[0]?.dataset.rate || 0) : 0;
+                const subtotal = qty * price;
+                const taxAmount = subtotal * (taxRate / 100);
+                const total = subtotal + taxAmount;
+
+                row.querySelector('.line-subtotal').textContent = subtotal.toFixed(2);
+                row.querySelector('.line-tax').textContent = taxAmount.toFixed(2);
+                row.querySelector('.line-total').textContent = total.toFixed(2);
+
+                updateOrderTotals();
+            }
+
+            // Fonction pour mettre à jour les totaux généraux
+            function updateOrderTotals() {
+                let subtotal = 0, tax = 0;
+                document.querySelectorAll('#order-lines-table tbody tr').forEach(row => {
+                    subtotal += parseFloat(row.querySelector('.line-subtotal').textContent) || 0;
+                    tax += parseFloat(row.querySelector('.line-tax').textContent) || 0;
+                });
+                document.getElementById('order-subtotal').textContent = subtotal.toFixed(2);
+                document.getElementById('order-tax').textContent = tax.toFixed(2);
+                document.getElementById('order-total').textContent = (subtotal + tax).toFixed(2);
+            }
+
+            // Fonction pour configurer les événements d'une ligne
+            function setupRowEvents(row) {
+                row.querySelectorAll('input, select').forEach(input => {
+                    input.addEventListener('input', () => updateLineTotals(row));
+                });
+
+                const removeBtn = row.querySelector('.btn-remove-line');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        row.remove();
+                        updateOrderTotals();
+                    });
+                }
+            }
+
+            // Initialisation des lignes existantes
+            document.querySelectorAll('#order-lines-table tbody tr').forEach(setupRowEvents);
+
+            // Gestion de l'ajout d'une nouvelle ligne
+            document.getElementById('add-line').addEventListener('click', function(e) {
+                e.preventDefault();
+                const tbody = document.querySelector('#order-lines-table tbody');
+                if (!tbody || tbody.rows.length === 0) return;
+
+                const newRow = tbody.rows[0].cloneNode(true);
+                newRow.querySelectorAll('input').forEach(input => {
+                    if (input.type === 'number') {
+                        input.value = input.name.includes('quantity') ? '1' : '0.00';
+                    }
+                });
+                newRow.querySelectorAll('select').forEach(select => {
+                    select.selectedIndex = 0;
+                });
+                newRow.querySelectorAll('.line-subtotal, .line-tax, .line-total').forEach(cell => {
+                    cell.textContent = '0.00';
+                });
+                tbody.appendChild(newRow);
+                setupRowEvents(newRow);
+            });
+
+            // Initialiser les totaux au chargement
+            updateOrderTotals();
+
+            // Gestion de la soumission du formulaire
+            document.getElementById('order-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                let isValid = true;
+                document.getElementById('alert-container').innerHTML = '';
+                this.querySelectorAll('[required]').forEach(field => {
+                    if (!field.value.trim()) {
+                        isValid = false;
+                        field.classList.add('is-invalid');
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
+                });
+
+                if (!isValid) {
+                    showErrorAlert('Veuillez remplir tous les champs obligatoires.');
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'question',
+                    title: 'Confirmer la création',
+                    text: 'Voulez-vous vraiment créer cette commande ?',
+                    showCancelButton: true,
+                    confirmButtonText: 'Oui, créer',
+                    cancelButtonText: 'Annuler'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const form = this;
+                        const formData = new FormData(form);
+                        Swal.fire({
+                            title: 'Traitement en cours...',
+                            text: 'Veuillez patienter',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+                                'X-Requested-With': 'XMLHttpRequest' // Ensure AJAX request
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            Swal.close();
+                            if (data.success) {
+                                showSuccessAlert(data.message || 'Commande créée avec succès !');
+                            } else {
+                                showErrorAlert(data.error || 'Erreur lors de la création de la commande.');
+                            }
+                        })
+                        .catch(error => {
+                            Swal.close();
+                            console.error('Erreur:', error);
+                            showErrorAlert('Une erreur réseau est survenue. Veuillez réessayer.');
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>            
+{% endif %}

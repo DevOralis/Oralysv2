@@ -1,0 +1,74 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    <div class="menu-items">
+      <a href="{% url 'hosting:hosting_dashboard' %}" class="menu-item">
+        <i class="fas fa-chart-line"></i>
+        <span class="menu-text">Tableau de bord</span>
+      </a>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-hospital-user"></i>
+          <span class="menu-text">Gestion des admissions&nbsp;</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'hosting:admission_list' %}"><i class="fas fa-user-injured"></i> Admissions</a></li>
+        </ul>
+      </div>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-bed"></i>
+          <span class="menu-text">Gestion des chambres&nbsp;</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'hosting:room_list' %}"><i class="fas fa-hotel"></i> Chambres</a></li>
+          <li><a href="{% url 'hosting:bed_list' %}"><i class="fas fa-bed"></i> Lits</a></li>
+        </ul>
+      </div>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-calendar-check"></i>
+          <span class="menu-text">Gestion des réservations&nbsp;</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'hosting:reservation_list' %}"><i class="fas fa-calendar"></i> Réservations</a></li>
+          <li><a href="{% url 'hosting:reservation_planning' %}"><i class="fas fa-calendar-alt"></i> Planning</a></li>
+        </ul>
+      </div>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-users"></i>
+          <span class="menu-text">Accompagnants &nbsp;</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'hosting:companion_list' %}"><i class="fas fa-users"></i> Accompagnants</a></li>
+        </ul>
+      </div>
+
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-cog"></i>
+          <span class="menu-text">Paramètres&nbsp;</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'hosting:hosting_configuration' %}"><i class="fas fa-cog"></i> Configuration</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+</div>

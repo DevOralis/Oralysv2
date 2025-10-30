@@ -1,0 +1,706 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Oralys - Gestion Facturation{% endblock %}
+{% block menu %}
+  {% include 'patient_menu.html' %}
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+{% endblock %}
+{% block content %}
+{% csrf_token %}
+<div class="content">
+    <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-file-invoice-dollar me-2"></i>
+            Générer Une Facture Patient
+        </div>
+        <div class="card-body">
+            <form id="billingForm" class="row g-3 mb-4" method="get">
+                <div class="col-md-4">
+                    <label for="patientSelect" class="form-label">Patient</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <select id="patientSelect" name="patient_id" class="form-select" required>
+                            <option value="">Sélectionner un patient</option>
+                            {% for patient in patients %}
+                            <option value="{{ patient.id }}">{{ patient.last_name }} {{ patient.first_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label for="billingDate" class="form-label">Date de facturation</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border">
+                            <i class="fas fa-calendar-alt"></i>
+                        </span>
+                        <input type="date" id="billingDate" name="billing_date" class="form-control" value="{{ today }}" required>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100" target="_blank">
+                        <i class="fas fa-file-pdf me-1"></i>
+                        <span class="d-none d-lg-inline">Générer Facture</span>
+                        <span class="d-lg-none">Générer</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-history me-2"></i>
+            Historique Des Facturations
+        </div>
+        <div class="card-body">
+            <form id="billingHistoryFilters" class="row g-2 mb-3" method="get">
+                <!-- Barre de recherche -->
+                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                    <div class="input-group">
+                        <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control border-primary" placeholder="Rechercher un patient..." value="{{ request.GET.search|default:'' }}">
+                    </div>
+                </div>
+                <!-- Filtre patient -->
+                <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+                    <select name="patient_id" class="form-select" title="Filtrer par patient">
+                        <option value="">Tous les patients</option>
+                        {% for patient in patients %}
+                        <option value="{{ patient.id }}" {% if request.GET.patient_id == patient.id|stringformat:'s' %}selected{% endif %}>{{ patient.last_name }} {{ patient.first_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Bouton de filtrage -->
+                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                    <button type="submit" class="btn btn-light border w-100 text-nowrap px-2">
+                        <i class="fas fa-filter"></i>
+                        <span class="d-none d-lg-inline ms-1">Filtrer</span>
+                    </button>
+                </div>
+            </form>
+            
+            <div id="billingHistoryContainer">
+                {% include 'billing_history_partial.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulaire de paiement -->
+<div class="card mb-4" id="paymentFormContainer" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+        <i class="fas fa-credit-card me-2"></i>
+        Formulaire De Paiement - Facture <span id="paymentInvoiceNumber">-</span>
+    </div>
+    <div class="card-body">
+        <form id="paymentForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" id="paymentBillId" name="bill_id" value="">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label for="journal" class="form-label">Journal</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-book"></i></span>
+                        <input type="text" class="form-control" id="journal" name="journal" placeholder="Journal de paiement">
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label for="payment_date" class="form-label">Date de règlement</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                        <input type="date" class="form-control" id="payment_date" name="payment_date">
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label for="payment_channel" class="form-label">Canal de paiement</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-credit-card"></i></span>
+                        <select class="form-select" id="payment_channel" name="payment_channel">
+                            <option value="cash">Espèces</option>
+                            <option value="check">Chèque</option>
+                            <option value="transfer">Virement</option>
+                            <option value="card">Carte bancaire</option>
+                            <option value="mobile">Mobile money</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label for="payment_mode" class="form-label">Mode de paiement</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-money-bill-wave"></i></span>
+                        <select class="form-select" id="payment_mode" name="payment_mode">
+                            <option value="full">Paiement total</option>
+                            <option value="partial">Paiement partiel</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Section paiement partiel (cachée par défaut) -->
+                <div class="col-12" id="partial_payments_section" style="display:none;">
+                    <label class="form-label">Versements partiels</label>
+                    <div class="card border-primary">
+                        <div class="card-body p-3">
+                            <div id="partial-payments-container">
+                                <!-- Premier versement -->
+                                <div class="row mb-2 align-items-end payment-row" data-row="0">
+                                    <div class="col-md-1">
+                                        <label class="form-label small">N°</label>
+                                        <input type="text" class="form-control form-control-sm" value="1" readonly>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Canal</label>
+                                        <select class="form-select form-select-sm payment-channel" name="partial_channel[]">
+                                            <option value="cash">Espèces</option>
+                                            <option value="check">Chèque</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Montant</label>
+                                        <input type="number" class="form-control form-control-sm payment-amount" name="partial_amount[]" step="0.01" min="0" placeholder="0.00">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Date paiement</label>
+                                        <input type="date" class="form-control form-control-sm" name="partial_payment_date[]">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Date échéance</label>
+                                        <input type="date" class="form-control form-control-sm" name="partial_due_date[]">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-success btn-sm w-100" onclick="addPartialPaymentRow()" title="Ajouter un versement">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 border-top pt-2">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle"></i> 
+                                            Total versé: <strong><span id="total-partial-payments">0,00</span> DH</strong>
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <small class="text-muted">
+                                            <i class="fas fa-wallet"></i> 
+                                            Montant restant: <strong class="text-danger"><span id="remaining-amount">0,00</span> DH</strong>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12" id="full_payment_amount">
+                    <label for="amount" class="form-label">Montant</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-coins"></i></span>
+                        <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0" readonly>
+                        <span class="input-group-text">DH</span>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label for="memo" class="form-label">Mémo</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-sticky-note"></i></span>
+                        <input type="text" class="form-control" id="memo" name="memo" placeholder="Mémo du paiement" readonly>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 d-flex justify-content-end">
+                <button type="button" class="btn btn-secondary me-2" id="cancelPayment">
+                    <i class="fas fa-times me-1"></i>Annuler
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check me-1"></i>Enregistrer le paiement
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal pour les détails de la facturation -->
+<div class="modal fade" id="billingDetailsModal" tabindex="-1" aria-labelledby="billingDetailsModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="billingDetailsModalLabel">
+                    Détails de la facture <span id="modalInvoiceNumberTitle">-</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">N° Facture</label>
+                            <p class="form-control-plaintext" id="modalInvoiceNumber">-</p>
+                        </div>
+                            </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Patient</label>
+                            <p class="form-control-plaintext" id="modalPatient">-</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Généré par</label>
+                            <p class="form-control-plaintext" id="modalGeneratedBy">-</p>
+                        </div>
+                            </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Date de génération</label>
+                            <p class="form-control-plaintext" id="modalGeneratedAt">-</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Date d'échéance</label>
+                            <p class="form-control-plaintext" id="modalDueDate">-</p>
+                        </div>
+                            </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">État</label>
+                            <p class="form-control-plaintext" id="modalStatus">-</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Montant total</label>
+                            <p class="form-control-plaintext" id="modalTotal">-</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Notes</label>
+                            <p class="form-control-plaintext" id="modalNotes">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" id="payBill" style="display: none;">Payer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let partialPaymentCounter = 0;
+let totalInvoiceAmount = 0;
+
+// Fonction pour ajouter une ligne de versement partiel
+function addPartialPaymentRow() {
+    partialPaymentCounter++;
+    const container = document.getElementById('partial-payments-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'row mb-2 align-items-end payment-row';
+    newRow.setAttribute('data-row', partialPaymentCounter);
+    newRow.innerHTML = `
+        <div class="col-md-1">
+            <input type="text" class="form-control form-control-sm" value="${partialPaymentCounter + 1}" readonly>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select form-select-sm payment-channel" name="partial_channel[]">
+                <option value="cash">Espèces</option>
+                <option value="check">Chèque</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="number" class="form-control form-control-sm payment-amount" name="partial_amount[]" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="col-md-3">
+            <input type="date" class="form-control form-control-sm" name="partial_payment_date[]">
+        </div>
+        <div class="col-md-2">
+            <input type="date" class="form-control form-control-sm" name="partial_due_date[]">
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-danger btn-sm w-100" onclick="removePartialPaymentRow(this)" title="Supprimer">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newRow);
+    
+    // Attacher l'événement de calcul au nouveau champ montant
+    const newAmountInput = newRow.querySelector('.payment-amount');
+    newAmountInput.addEventListener('input', calculatePartialPayments);
+}
+
+// Fonction pour supprimer une ligne de versement
+function removePartialPaymentRow(button) {
+    const row = button.closest('.payment-row');
+    row.remove();
+    
+    // Recalculer les numéros et totaux
+    updatePaymentNumbers();
+    calculatePartialPayments();
+}
+
+// Fonction pour mettre à jour les numéros de versements
+function updatePaymentNumbers() {
+    const rows = document.querySelectorAll('.payment-row');
+    rows.forEach((row, index) => {
+        row.querySelector('input[readonly]').value = index + 1;
+        row.setAttribute('data-row', index);
+    });
+    partialPaymentCounter = rows.length - 1;
+}
+
+// Fonction pour calculer le total des paiements partiels et le montant restant
+function calculatePartialPayments() {
+    const amountInputs = document.querySelectorAll('.payment-amount');
+    let totalPaid = 0;
+    
+    amountInputs.forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        totalPaid += value;
+    });
+    
+    const remaining = totalInvoiceAmount - totalPaid;
+    
+    // Mettre à jour l'affichage
+    document.getElementById('total-partial-payments').textContent = totalPaid.toFixed(2);
+    document.getElementById('remaining-amount').textContent = remaining.toFixed(2);
+    
+    // Changer la couleur du montant restant selon qu'il soit positif ou négatif
+    const remainingElement = document.getElementById('remaining-amount');
+    if (remaining < 0) {
+        remainingElement.parentElement.classList.remove('text-danger');
+        remainingElement.parentElement.classList.add('text-warning');
+    } else if (remaining === 0) {
+        remainingElement.parentElement.classList.remove('text-danger', 'text-warning');
+        remainingElement.parentElement.classList.add('text-success');
+    } else {
+        remainingElement.parentElement.classList.remove('text-warning', 'text-success');
+        remainingElement.parentElement.classList.add('text-danger');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du changement de mode de paiement
+    const paymentModeSelect = document.getElementById('payment_mode');
+    const partialPaymentsSection = document.getElementById('partial_payments_section');
+    const fullPaymentAmount = document.getElementById('full_payment_amount');
+    const paymentChannelSelect = document.getElementById('payment_channel');
+    
+    paymentModeSelect.addEventListener('change', function() {
+        if (this.value === 'partial') {
+            // Afficher la section paiement partiel
+            partialPaymentsSection.style.display = 'block';
+            // Garder le champ montant visible mais en lecture seule
+            fullPaymentAmount.style.display = 'block';
+            // Cacher le canal de paiement (il est géré par ligne dans le tableau)
+            paymentChannelSelect.closest('.col-12').style.display = 'none';
+            
+            // Initialiser le calcul
+            calculatePartialPayments();
+        } else {
+            // Mode paiement total
+            partialPaymentsSection.style.display = 'none';
+            fullPaymentAmount.style.display = 'block';
+            paymentChannelSelect.closest('.col-12').style.display = 'block';
+        }
+    });
+    
+    // Attacher l'événement de calcul aux champs montant existants
+    document.querySelectorAll('.payment-amount').forEach(input => {
+        input.addEventListener('input', calculatePartialPayments);
+    });
+    
+    // Gestion du formulaire de génération de facture
+    document.getElementById('billingForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const patientId = document.getElementById('patientSelect').value;
+        const billingDate = document.getElementById('billingDate').value;
+        
+        if (patientId && billingDate) {
+            const url = `{% url 'patient:generate_patient_invoice_pdf' 0 %}`.replace('0', patientId);
+            window.open(url + `?billing_date=${billingDate}`, '_blank');
+        } else {
+            alert('Veuillez sélectionner un patient et une date de facturation.');
+        }
+    });
+    
+    // Gestion des modales de détails
+    document.querySelectorAll('.view-billing-details').forEach(button => {
+        button.addEventListener('click', function() {
+            const invoiceNumber = this.dataset.invoiceNumber || '-';
+            const patient = this.dataset.patient;
+            const status = this.dataset.status;
+            
+            // Mettre à jour le titre du modal avec le numéro de facture
+            document.getElementById('modalInvoiceNumberTitle').textContent = invoiceNumber;
+            
+            // Remplir les données du modal
+            document.getElementById('modalInvoiceNumber').textContent = invoiceNumber;
+            document.getElementById('modalPatient').textContent = patient;
+            document.getElementById('modalGeneratedBy').textContent = this.dataset.generatedBy;
+            document.getElementById('modalGeneratedAt').textContent = this.dataset.generatedAt;
+            document.getElementById('modalTotal').textContent = this.dataset.total + ' DH';
+            document.getElementById('modalDueDate').textContent = this.dataset.dueDate || '-';
+            document.getElementById('modalNotes').textContent = this.dataset.notes || '-';
+            
+            // Gestion de l'état avec texte simple
+            const statusElement = document.getElementById('modalStatus');
+            if (status === 'paid') {
+                statusElement.textContent = 'Payée';
+            } else if (status === 'overdue') {
+                statusElement.textContent = 'En retard';
+            } else if (status === 'pending') {
+                statusElement.textContent = 'En attente';
+            } else {
+                statusElement.textContent = 'Brouillon';
+            }
+            
+            // Stocker l'ID bill pour paiement
+            document.getElementById('payBill').dataset.billId = this.dataset.billId;
+            document.getElementById('payBill').dataset.invoiceNumber = invoiceNumber;
+            document.getElementById('payBill').dataset.patient = patient;
+            document.getElementById('payBill').dataset.total = this.dataset.total;
+            
+            // Afficher/masquer le bouton payer selon le statut
+            const payButton = document.getElementById('payBill');
+            if (status === 'paid') {
+                payButton.style.display = 'none';
+            } else {
+                payButton.style.display = 'inline-block';
+            }
+            
+            new bootstrap.Modal(document.getElementById('billingDetailsModal')).show();
+        });
+    });
+    
+    // Fonctionnalité de paiement depuis le modal
+    document.getElementById('payBill').addEventListener('click', function() {
+        const billId = this.dataset.billId;
+        const invoiceNumber = this.dataset.invoiceNumber;
+        const patient = this.dataset.patient;
+        const total = this.dataset.total;
+        
+        // Fermer le modal
+        bootstrap.Modal.getInstance(document.getElementById('billingDetailsModal')).hide();
+        
+        // Afficher le formulaire de paiement
+        showPaymentForm(billId, invoiceNumber, total);
+    });
+    
+    
+    // Fonction pour afficher le formulaire de paiement
+    function showPaymentForm(billId, invoiceNumber, total) {
+        const formContainer = document.getElementById('paymentFormContainer');
+        const paymentInvoiceNumber = document.getElementById('paymentInvoiceNumber');
+        const paymentBillId = document.getElementById('paymentBillId');
+        const amountField = document.getElementById('amount');
+        const memoField = document.getElementById('memo');
+        const paymentDateField = document.getElementById('payment_date');
+        
+        // Nettoyer le montant (enlever "DH" et espaces)
+        const cleanAmount = total.replace(/[^\d.,]/g, '').replace(',', '.');
+        
+        // Stocker le montant total de la facture pour les calculs de paiement partiel
+        totalInvoiceAmount = parseFloat(cleanAmount);
+        
+        // Remplir les champs automatiquement
+        paymentInvoiceNumber.textContent = invoiceNumber;
+        paymentBillId.value = billId;
+        amountField.value = cleanAmount;
+        memoField.value = invoiceNumber;
+        
+        // Définir la date d'aujourd'hui par défaut
+        const today = new Date().toISOString().split('T')[0];
+        paymentDateField.value = today;
+        
+        // Réinitialiser le mode de paiement à "Paiement total"
+        document.getElementById('payment_mode').value = 'full';
+        document.getElementById('partial_payments_section').style.display = 'none';
+        // Le champ montant est toujours visible
+        document.getElementById('full_payment_amount').style.display = 'block';
+        document.getElementById('payment_channel').closest('.col-12').style.display = 'block';
+        
+        // Réinitialiser les montants du paiement partiel
+        document.getElementById('total-partial-payments').textContent = '0,00';
+        document.getElementById('remaining-amount').textContent = totalInvoiceAmount.toFixed(2);
+        
+        // Afficher le formulaire
+        formContainer.style.display = 'block';
+        
+        // Faire défiler vers le formulaire
+        formContainer.scrollIntoView({ behavior: 'smooth' });
+        
+        // Debug: afficher les valeurs dans la console
+        console.log('Bill ID:', billId);
+        console.log('Invoice Number:', invoiceNumber);
+        console.log('Total (raw):', total);
+        console.log('Total (cleaned):', cleanAmount);
+    }
+    
+    // Fonction pour masquer le formulaire de paiement
+    function hidePaymentForm() {
+        const formContainer = document.getElementById('paymentFormContainer');
+        formContainer.style.display = 'none';
+        
+        // Réinitialiser le formulaire
+        document.getElementById('paymentForm').reset();
+        
+        // Réinitialiser la section paiement partiel
+        const container = document.getElementById('partial-payments-container');
+        const rows = container.querySelectorAll('.payment-row');
+        
+        // Supprimer toutes les lignes sauf la première
+        for (let i = 1; i < rows.length; i++) {
+            rows[i].remove();
+        }
+        
+        // Réinitialiser la première ligne
+        if (rows.length > 0) {
+            const firstRow = rows[0];
+            firstRow.querySelectorAll('input[type="number"], input[type="date"]').forEach(input => {
+                input.value = '';
+            });
+            firstRow.querySelector('.payment-channel').value = 'cash';
+        }
+        
+        // Réinitialiser le compteur
+        partialPaymentCounter = 0;
+        totalInvoiceAmount = 0;
+    }
+    
+    // Gestionnaire pour le bouton Annuler
+    document.getElementById('cancelPayment').addEventListener('click', function() {
+        hidePaymentForm();
+    });
+    
+    // Gestionnaire pour la soumission du formulaire de paiement
+    document.getElementById('paymentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const billId = formData.get('bill_id');
+        
+        // Envoyer les données de paiement
+        fetch(`/patient/billing/${billId}/process-payment/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Paiement enregistré avec succès !');
+                hidePaymentForm();
+                // Recharger la page pour mettre à jour l'affichage
+                location.reload();
+            } else {
+                alert('Erreur lors de l\'enregistrement du paiement : ' + (data.error || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de l\'enregistrement du paiement. Veuillez réessayer.');
+        });
+    });
+});
+</script>
+
+<style>
+/* S'assurer que le formulaire de paiement a le même espacement que le formulaire d'ajout des patients */
+#paymentFormContainer {
+    /* Le formulaire de paiement doit avoir le même espacement que le formulaire d'ajout des patients */
+    /* Il est déjà dans le conteneur .content qui gère l'espacement par rapport au menu */
+    position: relative;
+    z-index: 1;
+    /* Ajouter un espacement supplémentaire pour s'assurer qu'il y a de l'espace entre le menu et le formulaire */
+    margin-left: 20px;
+    margin-right: 20px;
+    max-width: calc(100% - 40px);
+}
+
+/* S'assurer que le formulaire de paiement respecte l'espacement du conteneur content */
+.content #paymentFormContainer {
+    /* Ajouter un padding supplémentaire pour créer l'espacement avec le menu */
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+/* Style pour la section paiement partiel */
+#partial_payments_section .card {
+    background-color: #f8f9ff;
+}
+
+#partial_payments_section .payment-row {
+    transition: all 0.3s ease;
+}
+
+#partial_payments_section .payment-row:hover {
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 5px;
+    box-shadow: 0 2px 4px rgba(0,123,255,0.1);
+}
+
+#partial_payments_section .form-control-sm,
+#partial_payments_section .form-select-sm {
+    border-color: #dee2e6;
+}
+
+#partial_payments_section .form-control-sm:focus,
+#partial_payments_section .form-select-sm:focus {
+    border-color: #1e90ff;
+    box-shadow: 0 0 0 0.2rem rgba(30, 144, 255, 0.25);
+}
+
+#partial_payments_section .form-label.small {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.25rem;
+}
+
+/* Style pour les totaux */
+#partial_payments_section .border-top {
+    border-color: #dee2e6 !important;
+}
+
+/* Responsive: ajuster l'espacement sur les petits écrans */
+@media (max-width: 768px) {
+    #paymentFormContainer {
+        margin-left: 10px;
+        margin-right: 10px;
+        max-width: calc(100% - 20px);
+    }
+    
+    .content #paymentFormContainer {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    #partial_payments_section .payment-row {
+        margin-bottom: 1rem !important;
+    }
+    
+    #partial_payments_section .col-md-1,
+    #partial_payments_section .col-md-2,
+    #partial_payments_section .col-md-3 {
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+
+{% endblock %}

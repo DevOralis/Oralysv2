@@ -1,0 +1,491 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Oralys - Dashboard RH{% endblock %}
+{% block menu %}
+  {% include 'dashboard/dashboard_menu.html' %}
+{% endblock %}
+{% block content %}
+<div class="content">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-users fa-xl text-primary"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-primary mb-0">{{ total_employees }}</h3>
+                        <p class="text-muted mb-0">Employés Actifs</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-calendar-check fa-xl text-success"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-success mb-0">{{ total_leave_requests }}</h3>
+                        <p class="text-muted mb-0">Total Congés</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-building fa-xl text-info"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-info mb-0">{{ total_departments }}</h3>
+                        <p class="text-muted mb-0">Départements</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-file-invoice-dollar fa-xl text-warning"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-warning mb-0">{{ total_payrolls }}</h3>
+                        <p class="text-muted mb-0">Total Bulletins</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row">
+        <!-- Pie Chart -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header card-header-primary">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Répartition Départements
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <canvas id="departmentChart" width="200" height="150"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-legend" id="departmentLegend">
+                                <!-- Legend will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line Chart -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header card-header-primary">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Évolution Congés (Mois)
+                </div>
+                <div class="card-body">
+                    <canvas id="leavesChart" width="300" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Tables Section -->
+    <div class="row">
+        <!-- Demandes en attente -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header card-header-primary">
+                    <i class="fas fa-clock me-2"></i>
+                    Demandes Attente
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Employé</th>
+                                    <th>Type</th>
+                                    <th>Date Début</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in pending_leave_requests %}
+                                <tr>
+                                    <td>{{ request.employee.full_name }}</td>
+                                    <td>{{ request.leave_type.name }}</td>
+                                    <td>{{ request.start_date|date:"d/m/Y" }}</td>
+                                    <td><span class="badge bg-warning">En attente</span></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Aucune Demande Attente</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employés récents -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header card-header-primary">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Employés Récents
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Département</th>
+                                    <th>Poste</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employee in new_employees %}
+                                <tr>
+                                    <td>{{ employee.full_name }}</td>
+                                    <td>{{ employee.department.name }}</td>
+                                    <td>{{ employee.position.name }}</td>
+                                    <td><span class="badge bg-success">Actif</span></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Aucun Employé Récent</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header card-header-primary">
+                    <i class="fas fa-history me-2"></i>
+                    Activités Récentes
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for activity in recent_activities %}
+                        <div class="list-group-item d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">{{ activity.title }}</div>
+                                <p class="mb-1">{{ activity.description }}</p>
+                                <small class="text-muted">{{ activity.date|timesince }} ago</small>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">Nouveau</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques détaillées -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Répartition Statut Marital</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="maritalChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Répartition Genre</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="genderChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Répartition Tranches Salariales</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="salaryChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Employés Avec/Sans Enfants</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="childrenChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.border-left-primary {
+  border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+  border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+  border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+  border-left: 0.25rem solid #f6c23e !important;
+}
+.text-xs {
+  font-size: 0.7rem;
+}
+.text-gray-800 {
+  color: #5a5c69 !important;
+}
+.text-gray-300 {
+  color: #dddfeb !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Données pour les graphiques (générées côté serveur)
+const departmentStatsData = {{ department_stats_json|safe }};
+const leavesMonthData = {{ leaves_by_month_json|safe }};
+const maritalStatsData = {{ marital_stats_json|safe }};
+const genderStatsData = {{ gender_stats_json|safe }};
+const salaryStatsData = {{ salary_stats_json|safe }};
+const childrenStatsData = {{ children_stats_json|safe }};
+
+const departmentData = {
+    labels: departmentStatsData.map(item => item.name),
+    counts: departmentStatsData.map(item => item.employee_count)
+};
+
+const leavesData = {
+    labels: leavesMonthData.map(item => item.month_name),
+    counts: leavesMonthData.map(item => item.count)
+};
+
+// Graphique en camembert des départements
+const departmentCtx = document.getElementById('departmentChart').getContext('2d');
+const departmentColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+
+const departmentChart = new Chart(departmentCtx, {
+    type: 'pie',
+    data: {
+        labels: departmentData.labels,
+        datasets: [{
+            data: departmentData.counts,
+            backgroundColor: departmentColors,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Créer la légende personnalisée
+const legendContainer = document.getElementById('departmentLegend');
+departmentData.labels.forEach((label, index) => {
+    const total = departmentData.counts.reduce((a, b) => a + b, 0);
+    const percentage = Math.round((departmentData.counts[index] / total) * 100);
+    
+    const legendItem = document.createElement('div');
+    legendItem.className = 'legend-item';
+    legendItem.innerHTML = `
+        <span class="legend-color" style="background-color: ${departmentColors[index]};"></span>
+        <span>${label} (${percentage}%)</span>
+    `;
+    legendContainer.appendChild(legendItem);
+});
+
+// Graphique linéaire des congés
+const leavesCtx = document.getElementById('leavesChart').getContext('2d');
+const leavesChart = new Chart(leavesCtx, {
+    type: 'line',
+    data: {
+        labels: leavesData.labels,
+        datasets: [{
+            label: 'Demandes de congés',
+            data: leavesData.counts,
+            borderColor: '#4e73df',
+            backgroundColor: 'rgba(78, 115, 223, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#4e73df',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
+            }
+        }
+    }
+});
+
+// Graphique statut marital
+const maritalCtx = document.getElementById('maritalChart').getContext('2d');
+const maritalChart = new Chart(maritalCtx, {
+    type: 'doughnut',
+    data: {
+        labels: maritalStatsData.map(item => item.status),
+        datasets: [{
+            data: maritalStatsData.map(item => item.count),
+            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Graphique genre
+const genderCtx = document.getElementById('genderChart').getContext('2d');
+const genderChart = new Chart(genderCtx, {
+    type: 'pie',
+    data: {
+        labels: genderStatsData.map(item => item.gender),
+        datasets: [{
+            data: genderStatsData.map(item => item.count),
+            backgroundColor: ['#36A2EB', '#FF6384'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Graphique salaires
+const salaryCtx = document.getElementById('salaryChart').getContext('2d');
+const salaryChart = new Chart(salaryCtx, {
+    type: 'bar',
+    data: {
+        labels: salaryStatsData.map(item => item.range),
+        datasets: [{
+            label: 'Nombre d\'employés',
+            data: salaryStatsData.map(item => item.count),
+            backgroundColor: '#4e73df',
+            borderColor: '#4e73df',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Graphique enfants
+const childrenCtx = document.getElementById('childrenChart').getContext('2d');
+const childrenChart = new Chart(childrenCtx, {
+    type: 'doughnut',
+    data: {
+        labels: childrenStatsData.map(item => item.category),
+        datasets: [{
+            data: childrenStatsData.map(item => item.count),
+            backgroundColor: ['#1cc88a', '#e74a3b'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

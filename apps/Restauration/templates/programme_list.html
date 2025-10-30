@@ -1,0 +1,768 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Programmes de Restauration{% endblock %}
+{% block menu %}
+{% include "menu_restauration.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+
+    {% if messages %}
+        {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% else %}Information :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+  <!-- Table Header Component -->
+  <div class="card mb-1">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-list me-2"></i>
+      Liste des Programmes
+    </div>
+    <div class="card-body">
+      <form method="get" id="search-form">
+        <div class="row g-3 align-items-end">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" name="q" id="search-programme" class="form-control" style="border-color: #1e90ff;" 
+                     placeholder="Rechercher par nom, lieu..." value="{{ request.GET.q }}">
+            </div>
+          </div>
+          <!-- Filtre statut -->
+          <div class="col-6 col-sm-6 col-md-3 col-lg-3 order-2">
+            <select name="statut" id="search-statut" class="form-select" title="Filtrer par statut">
+              <option value="">Tous les statuts</option>
+              <option value="en_cours" {% if request.GET.statut == 'en_cours' %}selected{% endif %}>En cours</option>
+              <option value="planifie" {% if request.GET.statut == 'planifie' %}selected{% endif %}>Planifié</option>
+              <option value="termine" {% if request.GET.statut == 'termine' %}selected{% endif %}>Terminé</option>
+            </select>
+          </div>
+          <!-- Bouton Nouveau -->
+          <div class="col-6 col-sm-6 col-md-3 col-lg-3 order-3">
+            <button type="button" class="btn btn-primary w-100 text-nowrap px-3 py-2" id="toggleProgrammeFormBtn" data-original-text='<i class="fas fa-plus me-2"></i><span class="d-none d-lg-inline">Nouveau</span>'>
+              <i class="fas fa-plus me-2"></i>
+              <span class="d-none d-lg-inline">Nouveau</span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+
+
+      <!-- Espacement entre la recherche et le tableau -->
+      <div class="mb-4"></div>
+
+      <!-- Table Component -->
+      <div class="table-container">
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Nom du Programme</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Lieu</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Période</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Statut</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for programme in programmes %}
+            <tr class="main-row">
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div>
+                    <h6 class="mb-0 fw-semibold">{{ programme.nom }}</h6>
+                    <small class="text-muted">Programme de restauration</small>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div>
+                    <h6 class="mb-0 fw-semibold">{{ programme.lieu }}</h6>
+                    <small class="text-muted">Lieu d'exécution</small>
+                  </div>
+                </div>
+                                        </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div>
+                    <h6 class="mb-0 fw-semibold">
+                      {{ programme.date_debut|date:"d/m/Y" }}
+                    </h6>
+                    <small class="text-muted">
+                      {{ programme.date_fin|date:"d/m/Y" }}
+                                            </small>
+                  </div>
+                </div>
+                                        </td>
+                                        <td>
+                                            {% if programme.date_debut <= today and programme.date_fin >= today %}
+                  <span class="badge bg-success text-white">
+                    En cours
+                  </span>
+                                            {% elif programme.date_debut > today %}
+                  <span class="badge bg-info text-white">
+                    Planifié
+                  </span>
+                                            {% else %}
+                  <span class="badge bg-secondary text-white">
+                    Terminé
+                  </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="d-flex gap-1 justify-content-end">
+                                                <a href="{% url 'programme_detail' programme.pk %}" class="btn btn-sm btn-light border text-info" title="Voir les détails">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                  <button type="button" class="btn btn-sm btn-light border text-dark btn-edit-programme" title="Modifier" 
+                          data-programme-id="{{ programme.id }}"
+                          data-programme-nom="{{ programme.nom }}"
+                          data-programme-lieu="{{ programme.lieu }}"
+                          data-programme-date-debut="{{ programme.date_debut|date:'Y-m-d' }}"
+                          data-programme-date-fin="{{ programme.date_fin|date:'Y-m-d' }}">
+                                                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal{{ programme.id }}" title="Supprimer">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-4">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Aucun programme créé</p>
+                <small class="text-muted">Commencez par créer votre premier programme de restauration.</small>
+              </td>
+            </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+      </div>
+
+            <!-- Pagination Component -->
+      {% if pagination_info and pagination_info.total_pages > 1 %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if pagination_info.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ pagination_info.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Préc</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Préc</span>
+              </span>
+            </li>
+          {% endif %}
+
+          {% for num in pagination_info.page_range %}
+            {% if num == '...' %}
+              <li class="page-item disabled">
+                <span class="page-link">…</span>
+              </li>
+            {% else %}
+              {% if num == pagination_info.current_page %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% else %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+
+          {% if pagination_info.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ pagination_info.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv</span>
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+                </div>
+            </div>
+        </div>
+
+<!-- Formulaire d'ajout inline - Card séparée -->
+<div class="content">
+<div class="card mt-0" id="addProgrammeFormCard" style="display: block;">
+  <div class="card-header text-white" style="background-color: #1e90ff;">
+    <i class="fas fa-plus-circle me-2"></i>
+    Créer un Programme
+  </div>
+  <div class="card-body">
+    <form id="addProgrammeForm" method="post" action="{% url 'programme_create' %}">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="nom" class="form-label fw-semibold">Nom du programme <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-tag"></i></span>
+          <input type="text" class="form-control" id="nom" name="nom" 
+                 placeholder="Donnez un nom descriptif à votre programme (ex: 'Programme Été 2024')" required>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="lieu" class="form-label fw-semibold">Lieu <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+          <input type="text" class="form-control" id="lieu" name="lieu" 
+                 placeholder="Lieu où se déroule le programme (ex: 'Salle de restauration principale')" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="date_debut" class="form-label fw-semibold">Date de début <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="date" class="form-control" id="date_debut" name="date_debut" required>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="date_fin" class="form-label fw-semibold">Date de fin <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="date" class="form-control" id="date_fin" name="date_fin" required>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alert alert-info mt-3" role="alert">
+        <div class="d-flex align-items-start">
+          <i class="fas fa-info-circle me-2 mt-1"></i>
+          <div>
+            <strong>Conseil :</strong> Après avoir créé le programme, vous pourrez générer automatiquement tous les jours entre la date de début et la date de fin.
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 justify-content-end">
+        <button type="button" class="btn btn-secondary" id="cancelProgrammeFormBtn">
+          <i class="fas fa-times me-2"></i>Annuler
+        </button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-plus me-2"></i>Créer le Programme
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Formulaire d'édition inline - Card séparée -->
+<div class="card mt-3" id="editProgrammeFormCard" style="display: none;">
+  <div class="card-header text-white" style="background-color: #1e90ff;">
+    <i class="fas fa-edit me-2"></i>
+    Modifier le Programme
+  </div>
+  <div class="card-body">
+    <form id="editProgrammeForm" method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="edit_nom" class="form-label fw-semibold">Nom du programme <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-tag"></i></span>
+          <input type="text" class="form-control" id="edit_nom" name="nom" 
+                 placeholder="Donnez un nom descriptif à votre programme (ex: 'Programme Été 2024')" required>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="edit_lieu" class="form-label fw-semibold">Lieu <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+          <input type="text" class="form-control" id="edit_lieu" name="lieu" 
+                 placeholder="Lieu où se déroule le programme (ex: 'Salle de restauration principale')" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="edit_date_debut" class="form-label fw-semibold">Date de début <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="date" class="form-control" id="edit_date_debut" name="date_debut" required>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="edit_date_fin" class="form-label fw-semibold">Date de fin <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="date" class="form-control" id="edit_date_fin" name="date_fin" required>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alert alert-info mt-3" role="alert">
+        <div class="d-flex align-items-start">
+          <i class="fas fa-info-circle me-2 mt-1"></i>
+          <div>
+            <strong>Conseil :</strong> Après avoir modifié le programme, vous pourrez régénérer automatiquement tous les jours entre la nouvelle date de début et la nouvelle date de fin.
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 justify-content-end">
+        <button type="button" class="btn btn-secondary" id="cancelEditProgrammeFormBtn">
+          <i class="fas fa-times me-2"></i>Annuler
+        </button>
+        <button type="submit" class="btn text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+          <i class="fas fa-save me-2"></i>Modifier le Programme
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- Modal Ajout Programme -->
+<div class="modal fade" id="modalProgramme" tabindex="-1" aria-labelledby="modalProgrammeLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header text-white" style="background-color: #1e90ff;">
+        <h5 class="modal-title" id="modalProgrammeLabel">
+          <i class="fas fa-plus me-2"></i>Créer un Programme
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="formAjoutProgramme" method="post" action="{% url 'programme_create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="nom" class="form-label">Nom du programme *</label>
+            <input type="text" class="form-control" id="nom" name="nom" 
+                   placeholder="Donnez un nom descriptif à votre programme (ex: 'Programme Été 2024')" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="lieu" class="form-label">Lieu *</label>
+            <input type="text" class="form-control" id="lieu" name="lieu" 
+                   placeholder="Lieu où se déroule le programme (ex: 'Salle de restauration principale')" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="date_debut" class="form-label">Date de début *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-calendar"></i>
+              </span>
+              <input type="date" class="form-control" id="date_debut" name="date_debut" required>
+              <span class="input-group-text">
+                <i class="fas fa-calendar"></i>
+              </span>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="date_fin" class="form-label">Date de fin *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-calendar"></i>
+              </span>
+              <input type="date" class="form-control" id="date_fin" name="date_fin" required>
+              <span class="input-group-text">
+                <i class="fas fa-calendar"></i>
+              </span>
+            </div>
+          </div>
+
+          <!-- Boîte de conseil -->
+          <div class="alert alert-info mt-3" role="alert">
+            <div class="d-flex align-items-start">
+              <i class="fas fa-info-circle me-2 mt-1"></i>
+              <div>
+                <strong>Conseil :</strong> Après avoir créé le programme, vous pourrez générer automatiquement tous les jours entre la date de début et la date de fin.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+            <i class="fas fa-plus me-1"></i>Créer le Programme
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Modifier Programme supprimé: remplacé par formulaire inline -->
+
+{% for programme in programmes %}
+<div class="modal fade" id="confirmDeleteModal{{ programme.id }}" tabindex="-1" aria-labelledby="confirmDeleteModalLabel{{ programme.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="confirmDeleteModalLabel{{ programme.id }}">
+          <i class="fas fa-trash-alt me-2"></i>Confirmation de suppression
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Voulez-vous vraiment supprimer le programme <strong>{{ programme.nom }}</strong> ?
+      </div>
+      <div class="modal-footer">
+        <form method="post" action="{% url 'programme_delete' programme.pk %}">
+          {% csrf_token %}
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash-alt me-1"></i>Supprimer
+          </button>
+        </form>
+        </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Gestion des messages de succès/erreur
+  const alerts = document.querySelectorAll('.alert');
+  alerts.forEach(alert => {
+    // Auto-fermeture des alertes après 5 secondes
+    setTimeout(() => {
+      if (alert && !alert.classList.contains('alert-dismissed')) {
+        const closeButton = alert.querySelector('.btn-close');
+        if (closeButton) {
+          closeButton.click();
+        }
+      }
+    }, 5000);
+  });
+
+  // Recherche et filtre instantanés
+  const searchInput = document.getElementById('search-programme');
+  const statutFilter = document.getElementById('search-statut');
+  let searchTimeout;
+
+  // Amélioration de l'accessibilité
+  if (searchInput) {
+    searchInput.setAttribute('aria-label', 'Rechercher dans les programmes');
+    searchInput.setAttribute('title', 'Tapez un nom de programme ou un lieu pour rechercher');
+  }
+
+  if (statutFilter) {
+    statutFilter.setAttribute('aria-label', 'Filtrer par statut du programme');
+  }
+
+  // Gestion du formulaire d'édition inline
+  const editProgrammeFormCard = document.getElementById('editProgrammeFormCard');
+  const editProgrammeForm = document.getElementById('editProgrammeForm');
+  const cancelEditProgrammeFormBtn = document.getElementById('cancelEditProgrammeFormBtn');
+
+  // Ouvrir le formulaire d'édition avec les données du programme
+  document.addEventListener('click', function(e) {
+    const button = e.target.closest('.btn-edit-programme');
+    if (!button) return;
+
+      const programmeId = button.getAttribute('data-programme-id');
+      const programmeNom = button.getAttribute('data-programme-nom');
+      const programmeLieu = button.getAttribute('data-programme-lieu');
+      const programmeDateDebut = button.getAttribute('data-programme-date-debut');
+      const programmeDateFin = button.getAttribute('data-programme-date-fin');
+
+      // Remplir les champs du formulaire
+    document.getElementById('edit_nom').value = programmeNom || '';
+    document.getElementById('edit_lieu').value = programmeLieu || '';
+    document.getElementById('edit_date_debut').value = programmeDateDebut || '';
+    document.getElementById('edit_date_fin').value = programmeDateFin || '';
+
+      // Mettre à jour l'action du formulaire
+    if (editProgrammeForm) {
+      editProgrammeForm.action = `/restauration/programme/${programmeId}/update/`;
+    }
+
+    // Afficher le formulaire d'édition et masquer le formulaire d'ajout si ouvert
+    if (addProgrammeFormCard) {
+      addProgrammeFormCard.style.display = 'none';
+      if (toggleProgrammeFormBtn) {
+        toggleProgrammeFormBtn.innerHTML = toggleProgrammeFormBtn.getAttribute('data-original-text');
+        toggleProgrammeFormBtn.classList.remove('btn-secondary');
+        toggleProgrammeFormBtn.classList.add('btn-primary');
+        if (addProgrammeForm) addProgrammeForm.reset();
+      }
+    }
+
+    if (editProgrammeFormCard) {
+      editProgrammeFormCard.style.display = 'block';
+      editProgrammeFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  // Bouton annuler du formulaire d'édition
+  if (cancelEditProgrammeFormBtn) {
+    cancelEditProgrammeFormBtn.addEventListener('click', function() {
+      if (editProgrammeFormCard) {
+        editProgrammeFormCard.style.display = 'none';
+      }
+      if (editProgrammeForm) {
+        editProgrammeForm.reset();
+      }
+      // Réouvrir le formulaire d'ajout pour l'alternance si souhaité
+      if (toggleProgrammeFormBtn && addProgrammeFormCard) {
+        addProgrammeFormCard.style.display = 'block';
+        addProgrammeFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        toggleProgrammeFormBtn.innerHTML = '<i class="fas fa-times me-2"></i><span class="d-none d-lg-inline">Annuler</span>';
+        toggleProgrammeFormBtn.classList.remove('btn-primary');
+        toggleProgrammeFormBtn.classList.add('btn-secondary');
+      }
+    });
+  }
+
+  // Gestion de la soumission du formulaire d'ajout
+  const formAjoutProgramme = document.getElementById('formAjoutProgramme');
+  if (formAjoutProgramme) {
+    formAjoutProgramme.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Succès - recharger la page
+          location.reload();
+        } else {
+          // Erreur - afficher le message
+          alert('Erreur lors de la création : ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la création du programme');
+      });
+    });
+  }
+
+  // Gestion de la soumission du formulaire de modification
+  if (editProgrammeForm) {
+    editProgrammeForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Succès - recharger la page
+          location.reload();
+        } else {
+          // Erreur - afficher le message
+          alert('Erreur lors de la modification : ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la modification du programme');
+      });
+    });
+  }
+
+  // Gestion des modals et des checkboxes
+  // Gestion de la checkbox "Sélectionner tout"
+  const selectAllCheckbox = document.getElementById('selectAll');
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      const rowCheckboxes = document.querySelectorAll('.row-check');
+      rowCheckboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+    });
+  }
+
+  // Gestion des checkboxes individuelles
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('row-check')) {
+      const rowCheckboxes = document.querySelectorAll('.row-check');
+      const selectAllCheckbox = document.getElementById('selectAll');
+      
+      if (selectAllCheckbox) {
+        const checkedCount = Array.from(rowCheckboxes).filter(cb => cb.checked).length;
+        const totalCount = rowCheckboxes.length;
+        
+        if (checkedCount === 0) {
+          selectAllCheckbox.checked = false;
+          selectAllCheckbox.indeterminate = false;
+        } else if (checkedCount === totalCount) {
+          selectAllCheckbox.checked = true;
+          selectAllCheckbox.indeterminate = false;
+        } else {
+          selectAllCheckbox.checked = false;
+          selectAllCheckbox.indeterminate = true;
+        }
+      }
+    }
+  });
+
+  // Fonction pour effectuer la recherche
+  function performSearch() {
+    const query = searchInput ? searchInput.value.trim() : '';
+    const statut = statutFilter ? statutFilter.value : '';
+    
+    // Construire l'URL avec les paramètres
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (statut) params.append('statut', statut);
+    
+    // Rediriger vers la nouvelle URL
+    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.location.href = newUrl;
+  }
+
+  // Écouter les changements dans la barre de recherche
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      searchTimeout = setTimeout(() => {
+        performSearch();
+      }, 500); // Délai de 500ms pour éviter trop de requêtes
+    });
+
+    // Écouter la touche Entrée
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+        performSearch();
+      }
+    });
+  }
+
+  // Écouter les changements dans le filtre de statut
+  if (statutFilter) {
+    statutFilter.addEventListener('change', function() {
+      performSearch();
+    });
+  }
+
+  // Gestion du formulaire inline
+  const toggleProgrammeFormBtn = document.getElementById('toggleProgrammeFormBtn');
+  const addProgrammeFormCard = document.getElementById('addProgrammeFormCard');
+  const cancelProgrammeFormBtn = document.getElementById('cancelProgrammeFormBtn');
+  const addProgrammeForm = document.getElementById('addProgrammeForm');
+
+  if (toggleProgrammeFormBtn && addProgrammeFormCard) {
+    toggleProgrammeFormBtn.addEventListener('click', function() {
+      if (addProgrammeFormCard.style.display === 'none') {
+        // Masquer le formulaire d'édition si ouvert
+        if (editProgrammeFormCard) {
+          editProgrammeFormCard.style.display = 'none';
+          if (editProgrammeForm) editProgrammeForm.reset();
+        }
+        addProgrammeFormCard.style.display = 'block';
+        addProgrammeFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        toggleProgrammeFormBtn.innerHTML = '<i class="fas fa-times me-2"></i><span class="d-none d-lg-inline">Annuler</span>';
+        toggleProgrammeFormBtn.classList.remove('btn-primary');
+        toggleProgrammeFormBtn.classList.add('btn-secondary');
+      } else {
+        addProgrammeFormCard.style.display = 'none';
+        toggleProgrammeFormBtn.innerHTML = toggleProgrammeFormBtn.getAttribute('data-original-text');
+        toggleProgrammeFormBtn.classList.remove('btn-secondary');
+        toggleProgrammeFormBtn.classList.add('btn-primary');
+        addProgrammeForm.reset();
+      }
+    });
+  }
+
+  if (cancelProgrammeFormBtn) {
+    cancelProgrammeFormBtn.addEventListener('click', function() {
+      addProgrammeFormCard.style.display = 'none';
+      toggleProgrammeFormBtn.innerHTML = toggleProgrammeFormBtn.getAttribute('data-original-text');
+      toggleProgrammeFormBtn.classList.remove('btn-secondary');
+      toggleProgrammeFormBtn.classList.add('btn-primary');
+      addProgrammeForm.reset();
+    });
+  }
+
+  // Initial state: show add form and set toggle to "Annuler"
+  if (addProgrammeFormCard && addProgrammeFormCard.style.display !== 'none') {
+    if (toggleProgrammeFormBtn) {
+      toggleProgrammeFormBtn.innerHTML = '<i class="fas fa-times me-2"></i><span class="d-none d-lg-inline">Annuler</span>';
+      toggleProgrammeFormBtn.classList.remove('btn-primary');
+      toggleProgrammeFormBtn.classList.add('btn-secondary');
+    }
+  }
+});
+</script>
+{% endblock %}

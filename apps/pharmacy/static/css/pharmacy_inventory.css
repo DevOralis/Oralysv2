@@ -1,0 +1,44 @@
+/* Styles for location tables */
+.location-row {
+    background-color: #f8f9fa;
+}
+
+.location-table {
+    margin: 10px;
+    width: calc(100% - 20px);
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    transition: all 0.3s ease-in-out;
+}
+
+.location-table.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.chevron-toggle {
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+    color: #0d6efd;
+}
+
+.chevron-toggle:hover {
+    color: #0a58ca;
+}
+
+.chevron-toggle.fa-chevron-up {
+    transform: rotate(180deg);
+}
+
+/* Responsive adjustments */
+@media (max-width: 991.98px) {
+    .location-row {
+        display: none !important;
+    }
+}
+
+@media (min-width: 992px) {
+    .chevron-toggle {
+        display: block;
+    }
+}

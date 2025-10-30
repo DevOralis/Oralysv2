@@ -1,0 +1,676 @@
+{% extends "base.html" %}
+{% block title %}Demandes Internes{% endblock %}
+{% block menu %}
+{% include "menu_demandes.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+  <!-- Header Section -->
+  
+
+  <!-- Messages (style recrutement) -->
+  {% if messages %}
+    <div class="mb-4">
+      {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+          <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+          <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Barre de recherche et filtres -->
+  <div class="card mb-4">
+    <div class="card-header bg-gradient-primary text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-exchange-alt me-2"></i>
+      Gestion des Demandes Internes
+    </div>
+    <div class="card-body">
+      <form method="get" id="search-form" class="mb-4">
+        <div class="row g-2">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-1">
+            <div class="input-group">
+              <span class="input-group-text bg-primary text-white border-primary"style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search"
+                     class="form-control border-primary"
+                     id="search-description"
+                     placeholder="Rechercher par description..."
+                     value="{{ query|default:'' }}">
+            </div>
+          </div>
+          <!-- Filtre département source -->
+          <div class="col-6 col-sm-6 col-md-3 col-lg-3 order-2">
+            <select id="search-source" class="form-select" title="Filtrer par département source">
+              <option value="">Tous les départements source</option>
+              {% for dept in departements %}
+                <option value="{{ dept.id }}" {% if dept.id|stringformat:'s' == source_id %}selected{% endif %}>{{ dept.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Filtre département destinataire -->
+          <div class="col-6 col-sm-6 col-md-3 col-lg-3 order-3">
+            <select id="search-dest" class="form-select" title="Filtrer par département destinataire">
+              <option value="">Tous les départements destinataire</option>
+              {% for dept in departements %}
+                <option value="{{ dept.id }}" {% if dept.id|stringformat:'s' == dest_id %}selected{% endif %}>{{ dept.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-12 col-sm-12 col-md-2 col-lg-2 order-4">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm()">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouvelle</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Tableau moderne -->
+      <div class="table-container">
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Produits</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell">
+                <div class="d-flex align-items-center">
+                  <span>Description</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell">Source</th>
+              <th class="d-none d-md-table-cell">Destinataire</th>
+              <th class="d-none d-md-table-cell">Priorité</th>
+              <th class="d-none d-md-table-cell">Statut</th>
+              <th class="d-none d-md-table-cell">Date</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="demandes-table">
+            {% for demande in demandes %}
+            <tr class="main-row">
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td>
+                {% for item in demande.produits_dans_demande.all %}
+                  <span class="badge bg-secondary">{{ item.produit.nom }} ({{ item.quantite }})</span>
+                {% empty %}
+                  -
+                {% endfor %}
+              </td>
+              <td class="d-none d-md-table-cell">{{ demande.description }}</td>
+              <td class="d-none d-md-table-cell" data-source-id="{{ demande.departement_source.id }}">{{ demande.departement_source.name }}</td>
+              <td class="d-none d-md-table-cell">{{ demande.departement_destinataire.name }}</td>
+              <td class="d-none d-md-table-cell"><span class="badge bg-info">{{ demande.priorite.nom }}</span></td>
+              <td class="d-none d-md-table-cell">
+                {% with level=demande.statut.couleur|default:'secondary' %}
+                  <span class="badge bg-{{ level }}">{{ demande.statut.nom }}</span>
+                {% endwith %}
+              </td>
+              <td class="d-none d-md-table-cell">{{ demande.date_souhaitee|date:"d/m/Y"|default:"-" }}</td>
+              <td class="text-end">
+                <div class="d-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-dark" title="Modifier"
+                          data-demande-id="{{ demande.id }}"
+                          data-demande-produits="{% for item in demande.produits_dans_demande.all %}{{ item.produit.id }}:{{ item.quantite }};{% endfor %}"
+                          data-demande-description="{{ demande.description }}"
+                          data-demande-source="{{ demande.departement_source.id }}"
+                          data-demande-destinataire="{{ demande.departement_destinataire.id }}"
+                          data-demande-priorite="{{ demande.priorite.id }}"
+                          data-demande-statut="{{ demande.statut.id }}"
+                          data-demande-date="{{ demande.date_souhaitee|date:'Y-m-d'|default:'' }}"
+                          onclick="openEditForm(this)">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" title="Supprimer" data-bs-toggle="modal" data-bs-target="#modalDeleteDemande"
+                          data-demande-id="{{ demande.id }}"
+                          data-demande-description="{{ demande.description }}">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9" class="text-center py-5">
+                <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Aucune demande enregistrée</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        
+        <!-- Pagination Component - Centered and functional -->
+        {% if demandes.paginator and demandes.paginator.num_pages > 1 %}
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap">
+            {% if demandes.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ demandes.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if source_id %}&source_id={{ source_id }}{% endif %}{% if dest_id %}&dest_id={{ dest_id }}{% endif %}" aria-label="Page précédente">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Préc</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Préc</span>
+                </span>
+              </li>
+            {% endif %}
+
+            {% for num in demandes.paginator.page_range %}
+              {% if demandes.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > demandes.number|add:'-2' and num < demandes.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if source_id %}&source_id={{ source_id }}{% endif %}{% if dest_id %}&dest_id={{ dest_id }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if demandes.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ demandes.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if source_id %}&source_id={{ source_id }}{% endif %}{% if dest_id %}&dest_id={{ dest_id }}{% endif %}" aria-label="Page suivante">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv</span>
+                </span>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+<!-- Formulaires inline (pas de pop-up) -->
+
+<!-- Formulaire d'ajout de demande interne -->
+<div class="card mb-4" id="add-demande-interne">
+  <div class="card-header bg-gradient-primary text-white">
+    <i class="fas fa-plus me-2"></i>
+    Nouvelle Demande Interne
+      </div>
+  <div class="card-body">
+        <form method="post" id="createForm">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <div id="product-qty-container"></div>
+          <button type="button" class="btn btn-success btn-sm mb-3" id="add-product">Ajouter produit</button>
+          <div class="mb-3">
+            <label for="description" class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
+            <input type="text" name="description" class="form-control" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-6">
+              <label for="departement_source" class="form-label fw-semibold">Source <span class="text-danger">*</span></label>
+              <select name="departement_source" id="create_source" class="form-select" required>
+                <option value="">Sélectionner une source</option>
+                {% for d in departements %}
+                  <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="departement_destinataire" class="form-label fw-semibold">Destinataire <span class="text-danger">*</span></label>
+              <select name="departement_destinataire" id="create_dest" class="form-select" required>
+                <option value="">Sélectionner un destinataire</option>
+                {% for d in departements %}
+                  <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="priorite" class="form-label fw-semibold">Priorité <span class="text-danger">*</span></label>
+              <select name="priorite" class="form-select" required>
+                {% for p in priorites %}
+                  <option value="{{ p.id }}">{{ p.nom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="statut" class="form-label fw-semibold">Statut <span class="text-danger">*</span></label>
+              <select name="statut" class="form-select" required>
+                {% for s in statuts %}
+                  <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="date_souhaitee" class="form-label fw-semibold">Date souhaitée</label>
+              <input type="date" name="date_souhaitee" class="form-control">
+            </div>
+          </div>
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Formulaire de modification de demande interne -->
+<div class="card mb-4" id="edit-demande-interne" style="display: none;">
+  <div class="card-header bg-gradient-primary text-white">
+    <i class="fas fa-edit me-2"></i>
+    Modifier la Demande Interne
+  </div>
+  <div class="card-body">
+        <form method="post" id="editForm">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="edit">
+          <input type="hidden" name="demande_id" id="edit_id">
+          <div id="edit-product-qty-container"></div>
+          <button type="button" class="btn btn-success btn-sm mb-3" id="add-edit-product">Ajouter produit</button>
+          <div class="mb-3">
+            <label for="description" class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
+            <input type="text" name="description" id="edit_description" class="form-control" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-6">
+              <label for="departement_source" class="form-label fw-semibold">Source <span class="text-danger">*</span></label>
+              <select name="departement_source" id="edit_source" class="form-select" required>
+                <option value="">Sélectionner une source</option>
+                {% for d in departements %}
+                  <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="departement_destinataire" class="form-label fw-semibold">Destinataire <span class="text-danger">*</span></label>
+              <select name="departement_destinataire" id="edit_dest" class="form-select" required>
+                <option value="">Sélectionner un destinataire</option>
+                {% for d in departements %}
+                  <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="priorite" class="form-label fw-semibold">Priorité <span class="text-danger">*</span></label>
+              <select name="priorite" id="edit_priorite" class="form-select" required>
+                {% for p in priorites %}
+                  <option value="{{ p.id }}">{{ p.nom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="statut" class="form-label fw-semibold">Statut <span class="text-danger">*</span></label>
+              <select name="statut" id="edit_statut" class="form-select" required>
+                {% for s in statuts %}
+                  <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="date_souhaitee" class="form-label fw-semibold">Date souhaitée</label>
+              <input type="date" name="date_souhaitee" id="edit_date" class="form-control">
+            </div>
+          </div>
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Mettre à jour
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Supprimer Demande - Style moderne -->
+<div class="modal fade" id="modalDeleteDemande">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" id="deleteForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="demande_id" id="delete_demande_id">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body text-center">
+          <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+          <h5 class="text-danger">Attention!</h5>
+          <p>Êtes-vous sûr de vouloir supprimer cette demande ?</p>
+          <p><em id="delete-description"></em></p>
+          <p class="text-danger"><small>Cette action est irréversible et supprimera définitivement toutes les données associées.</small></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>Annuler
+          </button>
+          <button type="submit" form="deleteForm" class="btn btn-danger">
+            <i class="fas fa-trash-alt me-2"></i>Supprimer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Template: Produit + Quantité -->
+<template id="product-template">
+  <div class="row g-2 mb-3 product-qty-pair">
+    <div class="col-8">
+      <select name="produits[]" class="form-select" required>
+        <option value="">Sélectionner un produit</option>
+        {% for p in produits_internes %}
+          <option value="{{ p.id }}">{{ p.nom }}</option>
+        {% empty %}
+          <option disabled>Aucun produit interne disponible</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-3">
+      <input type="number" name="quantites[]" class="form-control" min="1" value="1" required>
+    </div>
+    <div class="col-1 d-flex align-items-end">
+      <button type="button" class="btn btn-danger remove-btn"><i class="fas fa-minus"></i></button>
+    </div>
+  </div>
+</template>
+
+<style>
+  /* Error message styling */
+  .product-error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: none;
+  }
+
+  /* Page-scoped overrides to use #1e90ff instead of default Bootstrap primary */
+  .bg-gradient-primary,
+  .bg-primary {
+    background-color: #1e90ff !important;
+    background-image: none !important;
+  }
+
+  .text-primary { color: #1e90ff !important; }
+
+  .border-primary { border-color: #1e90ff !important; }
+
+  .form-control.border-primary,
+  .input-group-text.border-primary { border-color: #1e90ff !important; }
+
+  .btn-primary {
+    background-color: #1e90ff !important;
+    border-color: #1e90ff !important;
+  }
+
+  .btn-outline-primary {
+    color: #1e90ff !important;
+    border-color: #1e90ff !important;
+  }
+
+  .btn-outline-primary:hover,
+  .btn-outline-primary:focus {
+    background-color: #1e90ff !important;
+    color: #fff !important;
+    border-color: #1e90ff !important;
+  }
+
+  .page-link { color: #1e90ff; }
+  .page-link:hover { color: #1e90ff; }
+  .page-item.active .page-link {
+    background-color: #1e90ff !important;
+    border-color: #1e90ff !important;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const hasProducts = {{ produits_internes|length|default:0 }} > 0;
+    if (!hasProducts) {
+      document.getElementById('add-product')?.setAttribute('disabled', 'disabled');
+      document.getElementById('add-edit-product')?.setAttribute('disabled', 'disabled');
+      // Create an inline error message instead of alert
+      const container = document.getElementById('product-qty-container');
+      if (container) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-warning mt-2';
+        errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Aucun produit interne disponible. Veuillez en ajouter.';
+        container.appendChild(errorDiv);
+      }
+    }
+
+    function addProduct(containerId) {
+      const container = document.getElementById(containerId);
+      const template = document.getElementById('product-template');
+      const clone = document.importNode(template.content, true);
+      const row = clone.querySelector('.product-qty-pair');
+      
+      // Add error message container
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'product-error';
+      errorDiv.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i>Ce produit est déjà sélectionné';
+      row.appendChild(errorDiv);
+
+      const select = row.querySelector('[name="produits[]"]');
+      select.addEventListener('change', function () {
+        validateProductSelection(containerId);
+      });
+
+      container.appendChild(clone);
+    }
+
+    function validateProductSelection(containerId) {
+      const container = document.getElementById(containerId);
+      const selects = container.querySelectorAll('[name="produits[]"]');
+      const values = Array.from(selects).map(s => s.value).filter(v => v);
+      
+      // Reset all error messages first
+      container.querySelectorAll('.product-error').forEach(el => {
+        el.style.display = 'none';
+      });
+      
+      // Check for duplicates
+      const duplicates = values.filter((item, index) => values.indexOf(item) !== index);
+      
+      if (duplicates.length > 0) {
+        // Show error messages for all duplicate selections
+        selects.forEach(select => {
+          if (duplicates.includes(select.value) && select.value) {
+            const errorDiv = select.closest('.product-qty-pair').querySelector('.product-error');
+            if (errorDiv) {
+              errorDiv.style.display = 'block';
+              select.setCustomValidity("Un produit ne peut être sélectionné qu'une seule fois.");
+            }
+          }
+        });
+      } else {
+        // Clear validation messages if no duplicates
+        selects.forEach(select => {
+          select.setCustomValidity("");
+        });
+      }
+    }
+
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('.remove-btn')) {
+        const row = e.target.closest('.product-qty-pair');
+        if (document.querySelectorAll('.product-qty-pair').length > 1) {
+          row.remove();
+          // Revalidate after removal
+          const containerId = row.closest('[id$="container"]').id;
+          validateProductSelection(containerId);
+        }
+      }
+    });
+
+    document.getElementById('add-product')?.addEventListener('click', () => {
+      addProduct('product-qty-container');
+      validateProductSelection('product-qty-container');
+    });
+    
+    document.getElementById('add-edit-product')?.addEventListener('click', () => {
+      addProduct('edit-product-qty-container');
+      validateProductSelection('edit-product-qty-container');
+    });
+
+    function setupDepartmentCheck(sourceId, destId) {
+      const source = document.getElementById(sourceId);
+      const dest = document.getElementById(destId);
+      function validate() {
+        if (source && dest && source.value && dest.value && source.value === dest.value) {
+          dest.setCustomValidity("La source et le destinataire doivent être différents.");
+        } else {
+          dest.setCustomValidity("");
+        }
+      }
+      source?.addEventListener('change', validate);
+      dest?.addEventListener('change', validate);
+      validate();
+    }
+
+    setupDepartmentCheck('create_source', 'create_dest');
+    setupDepartmentCheck('edit_source', 'edit_dest');
+
+    // Inline edit form logic (no modal)
+    window.showAddForm = function(){
+      const editSection = document.getElementById('edit-demande-interne');
+      const addSection = document.getElementById('add-demande-interne');
+      editSection.style.display = 'none';
+      addSection.style.display = 'block';
+      window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+    }
+
+    window.openEditForm = function(button){
+      const demandeId = button.getAttribute('data-demande-id');
+      const demandeProduits = button.getAttribute('data-demande-produits');
+      const demandeDescription = button.getAttribute('data-demande-description');
+      const demandeSource = button.getAttribute('data-demande-source');
+      const demandeDest = button.getAttribute('data-demande-destinataire');
+      const demandePriorite = button.getAttribute('data-demande-priorite');
+      const demandeStatut = button.getAttribute('data-demande-statut');
+      const demandeDate = button.getAttribute('data-demande-date');
+
+      const editSection = document.getElementById('edit-demande-interne');
+      const addSection = document.getElementById('add-demande-interne');
+      const currentId = document.getElementById('edit_id').value || '';
+
+      if (editSection.style.display !== 'none' && currentId === demandeId) {
+        editSection.style.display = 'none';
+        addSection.style.display = 'block';
+        window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+        return;
+      }
+
+      document.getElementById('edit_id').value = demandeId;
+      document.getElementById('edit_description').value = demandeDescription;
+      document.getElementById('edit_source').value = demandeSource;
+      document.getElementById('edit_dest').value = demandeDest;
+      document.getElementById('edit_priorite').value = demandePriorite;
+      document.getElementById('edit_statut').value = demandeStatut;
+      document.getElementById('edit_date').value = demandeDate || '';
+
+      const container = document.getElementById('edit-product-qty-container');
+      container.innerHTML = '';
+      const produits = demandeProduits.split(';').filter(Boolean);
+      produits.forEach(pq => {
+        if (pq.includes(':')) {
+          const [pid, qty] = pq.split(':');
+          addProduct('edit-product-qty-container');
+          const row = container.lastElementChild;
+          row.querySelector('[name="produits[]"]').value = pid;
+          row.querySelector('[name="quantites[]"]').value = qty;
+        }
+      });
+
+      editSection.style.display = 'block';
+      addSection.style.display = 'none';
+      window.scrollTo({ top: editSection.offsetTop - 80, behavior: 'smooth' });
+
+      setTimeout(() => validateProductSelection('edit-product-qty-container'), 100);
+    }
+
+    // Handle Delete Modal
+    const deleteModal = document.getElementById('modalDeleteDemande');
+    deleteModal?.addEventListener('show.bs.modal', function (e) {
+      const btn = e.relatedTarget;
+      const demandeId = btn.getAttribute('data-demande-id');
+      const description = btn.getAttribute('data-demande-description') || 'cette demande';
+
+      document.getElementById('delete_demande_id').value = demandeId;
+      document.getElementById('delete-description').textContent = description;
+    });
+    
+    // Add initial product row to create form
+    if (hasProducts) {
+      addProduct('product-qty-container');
+    }
+
+    // Recherche AJAX avec la même logique que parcauto
+    const searchInput = document.getElementById('search-description');
+    const searchSourceSelect = document.getElementById('search-source');
+    const searchDestSelect = document.getElementById('search-dest');
+    const demandesTable = document.getElementById('demandes-table');
+
+    function performSearch() {
+      const query = searchInput.value.trim();
+      const sourceId = searchSourceSelect.value;
+      const destId = searchDestSelect.value;
+      
+      const urlParams = new URLSearchParams();
+      if (query) urlParams.set('q', query);
+      if (sourceId) urlParams.set('source_id', sourceId);
+      if (destId) urlParams.set('dest_id', destId);
+      
+      fetch(`${window.location.pathname}?${urlParams.toString()}`, {
+        headers: { 
+          'X-Requested-With': 'XMLHttpRequest',
+        }
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Erreur réseau: ' + response.status);
+        return response.json();
+      })
+      .then(data => {
+        if (data.html) {
+          demandesTable.innerHTML = data.html;
+        } else if (data.error) {
+          demandesTable.innerHTML = `<tr><td colspan="9" class="text-center text-danger">${data.error}</td></tr>`;
+        }
+      })
+      .catch(error => {
+        demandesTable.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Erreur lors de la recherche: ${error.message}</td></tr>`;
+      });
+    }
+
+    // Recherche et filtrage en temps réel et instantané
+    searchInput?.addEventListener('input', performSearch);
+    searchSourceSelect?.addEventListener('change', performSearch);
+    searchDestSelect?.addEventListener('change', performSearch);
+  });
+</script>
+{% endblock %}

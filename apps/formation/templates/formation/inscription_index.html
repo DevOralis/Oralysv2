@@ -1,0 +1,647 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Inscriptions{% endblock %}
+{% block menu %}
+{% include "formation/menu_formation.html" %}
+{% endblock %}
+{% block content %}
+
+<div class="content">
+  
+
+  <!-- Alerts Section - Utilisation des composants standards -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- KPI Cards Section - Utilisation du composant standard -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-chart-line me-2"></i>
+      Statistiques des Inscriptions
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-3">
+          <div class="kpi-card bg-primary text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-users fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ stats.total_inscriptions }}</h3>
+                <p class="mb-0">Total Inscriptions</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card bg-info text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-user-check fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ stats.inscrits }}</h3>
+                <p class="mb-0">Inscrits</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card bg-success text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-user-tie fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ stats.presents }}</h3>
+                <p class="mb-0">Présents</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card bg-warning text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-user-times fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ stats.absents }}</h3>
+                <p class="mb-0">Absents</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Card -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-list me-2"></i>
+      Liste des Inscriptions
+    </div>
+    <div class="card-body">
+      <!-- Search Bar Component - Utilisation du composant standard -->
+      <form method="get" id="search-form" class="mb-4">
+        <div class="row g-2">
+          <!-- Filtre Formation -->
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-graduation-cap"></i>
+              </span>
+              <select class="form-select border-primary" id="filter-formation" title="Filtrer par formation">
+                <option value="">Toutes les formations</option>
+                {% for formation in formations %}
+                  <option value="{{ formation.code }}" {% if formation.code == formation_filter %}selected{% endif %}>
+                    {{ formation.titre }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <!-- Filtre Session -->
+          <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-calendar-alt"></i>
+              </span>
+              <select class="form-select border-primary" id="filter-session" title="Filtrer par session">
+                <option value="">Toutes les sessions</option>
+                {% for session in sessions %}
+                  <option value="{{ session.id }}" {% if session.id|stringformat:"s" == session_filter %}selected{% endif %}>
+                    {{ session.formation.titre }} - {{ session.date_debut|date:"d/m/Y" }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <!-- Filtre Statut -->
+          <div class="col-8 col-sm-8 col-md-2 col-lg-2 order-3">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-info-circle"></i>
+              </span>
+              <select class="form-select border-primary" id="filter-statut" title="Filtrer par statut">
+                <option value="">Tous les statuts</option>
+                {% for value, label in inscription_statuts %}
+                  <option value="{{ value }}" {% if value == statut_filter %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <!-- Filtre Employé -->
+          <div class="col-8 col-sm-8 col-md-2 col-lg-2 order-4">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-user"></i>
+              </span>
+              <select class="form-select border-primary" id="filter-employee" title="Filtrer par employé">
+                <option value="">Tous les employés</option>
+                {% for employee in all_employees %}
+                   <option value="{{ employee.id }}" {% if employee.id|stringformat:"s" == employee_filter %}selected{% endif %}>
+                     {{ employee.full_name }} - {{ employee.employee_id }}
+                     {% if employee.department %}({{ employee.department.name }}){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-4 col-sm-4 col-md-2 col-lg-2 order-5">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="clear-filters" title="Effacer les filtres">
+                <i class="fas fa-times"></i>
+              </button>
+              <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm()">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Table Component - Utilisation du composant standard -->
+      <div class="table-container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="text-muted">Total: {{ page_obj.paginator.count }} inscription(s)</span>
+        </div>
+        
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Employé</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell">Formation</th>
+              <th class="d-none d-md-table-cell">Session</th>
+              <th class="d-none d-md-table-cell">Formateur</th>
+              <th class="d-none d-md-table-cell">Date inscription</th>
+              <th class="d-none d-md-table-cell">Statut</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inscriptions-table">
+            {% for inscription in page_obj %}
+            <tr class="main-row">
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td>
+                <div>
+                  <strong>{{ inscription.employee.full_name }}</strong><br>
+                  <small class="text-muted">
+                    {{ inscription.employee.employee_id }}
+                    {% if inscription.employee.department %} - {{ inscription.employee.department.name }}{% endif %}
+                  </small>
+                </div>
+              </td>
+              <td class="d-none d-md-table-cell">
+                <div>
+                  <strong>{{ inscription.session.formation.titre }}</strong><br>
+                  <small class="text-muted">{{ inscription.session.formation.code }}</small>
+                </div>
+              </td>
+              <td class="d-none d-md-table-cell">
+                <div>
+                  <strong>{{ inscription.session.date_debut|date:"d/m/Y H:i" }}</strong><br>
+                  <small class="text-muted">{{ inscription.session.lieu|default:"Lieu non défini" }}</small>
+                </div>
+              </td>
+              <td class="d-none d-md-table-cell">{{ inscription.session.formateur.prenom }} {{ inscription.session.formateur.nom }}</td>
+              <td class="d-none d-md-table-cell">{{ inscription.date_inscription|date:"d/m/Y H:i" }}</td>
+              <td class="d-none d-md-table-cell text-center">
+                <span class="badge bg-{% if inscription.statut == 'inscrit' %}secondary{% elif inscription.statut == 'present' %}success{% elif inscription.statut == 'absent' %}warning{% else %}danger{% endif %}">
+                  {{ inscription.get_statut_display }}
+                </span>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ inscription.id }}">
+                  Voir détails
+                </button>
+                <div class="d-none d-md-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-dark" 
+                          data-inscription-id="{{ inscription.id }}"
+                          data-session-id="{{ inscription.session.id }}"
+                          data-employee-id="{{ inscription.employee.id }}"
+                          data-statut="{{ inscription.statut }}"
+                          onclick="openEditForm(this)"
+                          title="Modifier cette inscription">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#modalDeleteInscription"
+                          data-inscription-id="{{ inscription.id }}"
+                          data-employee-nom="{{ inscription.employee.full_name }}"
+                          data-formation-titre="{{ inscription.session.formation.titre }}"
+                          title="Supprimer cette inscription">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="collapse bg-light" id="details-{{ inscription.id }}">
+              <td colspan="8" class="p-3">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Employé:</strong> {{ inscription.employee.full_name }} ({{ inscription.employee.employee_id }})</p>
+                    <p class="mb-2"><strong>Formation:</strong> {{ inscription.session.formation.titre }} ({{ inscription.session.formation.code }})</p>
+                    <p class="mb-2"><strong>Session:</strong> {{ inscription.session.date_debut|date:"d/m/Y H:i" }}</p>
+                    <p class="mb-2"><strong>Formateur:</strong> {{ inscription.session.formateur.prenom }} {{ inscription.session.formateur.nom }}</p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Date inscription:</strong> {{ inscription.date_inscription|date:"d/m/Y H:i" }}</p>
+                    <p class="mb-2"><strong>Statut:</strong> 
+                      <span class="badge bg-{% if inscription.statut == 'inscrit' %}secondary{% elif inscription.statut == 'present' %}success{% elif inscription.statut == 'absent' %}warning{% else %}danger{% endif %}">
+                        {{ inscription.get_statut_display }}
+                      </span>
+                    </p>
+                    <p class="mb-2"><strong>Lieu:</strong> {{ inscription.session.lieu|default:"Lieu non défini" }}</p>
+                  </div>
+                  <div class="col-12 mt-3">
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-dark" 
+                              data-inscription-id="{{ inscription.id }}"
+                              data-session-id="{{ inscription.session.id }}"
+                              data-employee-id="{{ inscription.employee.id }}"
+                              data-statut="{{ inscription.statut }}"
+                              onclick="openEditForm(this)"
+                              title="Modifier cette inscription">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                      </button>
+                      <button class="btn btn-sm btn-danger" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#modalDeleteInscription"
+                              data-inscription-id="{{ inscription.id }}"
+                              data-employee-nom="{{ inscription.employee.full_name }}"
+                              data-formation-titre="{{ inscription.session.formation.titre }}"
+                              title="Supprimer cette inscription">
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="text-center text-muted">Aucune inscription disponible</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination Component - Utilisation du composant standard -->
+      {% if page_obj.has_other_pages %}
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap">
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page=1{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if session_filter %}&session={{ session_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if employee_filter %}&employee={{ employee_filter }}{% endif %}" aria-label="Première page">
+                  <i class="fas fa-angle-double-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Prem</span>
+                </a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if session_filter %}&session={{ session_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if employee_filter %}&employee={{ employee_filter }}{% endif %}" aria-label="Précédent">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </a>
+              </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+              {% if page_obj.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if session_filter %}&session={{ session_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if employee_filter %}&employee={{ employee_filter }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if session_filter %}&session={{ session_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if employee_filter %}&employee={{ employee_filter }}{% endif %}" aria-label="Suivant">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if session_filter %}&session={{ session_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if employee_filter %}&employee={{ employee_filter }}{% endif %}" aria-label="Dernière page">
+                  <i class="fas fa-angle-double-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Dern &raquo;</span>
+                </a>
+              </li>
+            {% endif %}
+          </ul>
+          
+          <div class="text-center text-muted mt-3">
+            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }} 
+            ({{ page_obj.start_index }}-{{ page_obj.end_index }} sur {{ page_obj.paginator.count }} inscription(s))
+          </div>
+        </nav>
+      {% endif %}
+    </div>
+  </div>
+  <!-- Formulaire d'ajout d'inscription -->
+  <div class="card mb-4" id="add-inscription">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-plus me-2"></i>
+          Nouvelle Inscription
+      </div>
+    <div class="card-body">
+        <form id="inscriptionForm" method="post" action="{% url 'inscription_home' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="id_session">Session <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                <select class="form-select" id="id_session" name="session" required>
+                  <option value="">Sélectionner une session</option>
+                  {% for session in sessions %}
+                    <option value="{{ session.id }}" 
+                            data-formation="{{ session.formation.titre }}"
+                            data-formateur="{{ session.formateur.prenom }} {{ session.formateur.nom }}"
+                            data-date-debut="{{ session.date_debut|date:'d/m/Y H:i' }}"
+                            data-date-fin="{{ session.date_fin|date:'d/m/Y H:i' }}"
+                            data-places-totales="{{ session.places_totales }}"
+                            data-inscriptions-count="{{ session.inscription_set.count }}">
+                      {{ session.formation.titre }} - {{ session.date_debut|date:"d/m/Y" }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_employee">Employé <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                <select class="form-select" id="id_employee" name="employee" required>
+                  <option value="">Sélectionner un employé</option>
+                  {% for employee in active_employees %}
+                    <option value="{{ employee.id }}">
+                            {{ employee.full_name }} - {{ employee.employee_id }}
+                            {% if employee.department %}({{ employee.department.name }}){% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label" for="id_statut">Statut <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                <select class="form-select" id="id_statut" name="statut" required>
+                  {% for value, label in inscription_statuts %}
+                    <option value="{{ value }}" {% if value == 'inscrit' %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-12" id="session-info" style="display: none;">
+              <div class="card">
+                <div class="card-body">
+                  <h6 class="card-title">Informations de la session</h6>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <p><strong>Formation:</strong> <span id="info-formation"></span></p>
+                      <p><strong>Formateur:</strong> <span id="info-formateur"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                      <p><strong>Début:</strong> <span id="info-date-debut"></span></p>
+                      <p><strong>Fin:</strong> <span id="info-date-fin"></span></p>
+                      <p><strong>Places:</strong> <span id="info-places"></span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Enregistrer
+        </button>
+      </div>
+      </form>
+  </div>
+</div>
+
+  <!-- Formulaire de modification d'inscription -->
+  <div class="card mb-4" id="edit-inscription" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-edit me-2"></i>
+          Modifier l'inscription
+      </div>
+    <div class="card-body">
+        <form id="editInscriptionForm" method="post" action="{% url 'inscription_home' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="edit">
+          <input type="hidden" name="inscription_id" id="edit_inscription_id">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="edit_session">Session <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                <select class="form-select" id="edit_session" name="session" required>
+                  <option value="">Sélectionner une session</option>
+                  {% for session in sessions %}
+                    <option value="{{ session.id }}">
+                      {{ session.formation.titre }} - {{ session.date_debut|date:"d/m/Y" }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_employee">Employé <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                <select class="form-select" id="edit_employee" name="employee" required>
+                  <option value="">Sélectionner un employé</option>
+                  {% for employee in all_employees %}
+                    <option value="{{ employee.id }}">
+                      {{ employee.full_name }} - {{ employee.employee_id }}
+                      {% if employee.department %}({{ employee.department.name }}){% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label" for="edit_statut">Statut <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                <select class="form-select" id="edit_statut" name="statut" required>
+                  {% for value, label in inscription_statuts %}
+                    <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Modifier
+        </button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour supprimer une inscription -->
+<div class="modal fade" id="modalDeleteInscription" tabindex="-1" aria-labelledby="modalDeleteInscriptionLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalDeleteInscriptionLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Confirmer la suppression
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+          <div><strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer cette inscription ?</div>
+        </div>
+        <div class="alert alert-info">
+          <strong id="delete_employee_nom"></strong> à la formation <strong id="delete_formation_titre"></strong><br>
+          <small>Cette action est irréversible.</small>
+        </div>
+        <form id="deleteInscriptionForm" method="post" action="{% url 'inscription_home' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="inscription_id" id="delete_inscription_id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="deleteInscriptionForm" class="btn btn-danger">
+          <i class="fas fa-trash-alt me-1"></i> Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript pour gérer les formulaires, modals de suppression et la recherche -->
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des filtres
+    const filterFormation = document.getElementById('filter-formation');
+    const filterSession = document.getElementById('filter-session');
+    const filterStatut = document.getElementById('filter-statut');
+    const filterEmployee = document.getElementById('filter-employee');
+    const clearFiltersBtn = document.getElementById('clear-filters');
+
+    function applyFilters() {
+        const params = new URLSearchParams();
+        
+        if (filterFormation.value) params.set('formation', filterFormation.value);
+        if (filterSession.value) params.set('session', filterSession.value);
+        if (filterStatut.value) params.set('statut', filterStatut.value);
+        if (filterEmployee.value) params.set('employee', filterEmployee.value);
+        
+        window.location.href = '?' + params.toString();
+    }
+
+    filterFormation.addEventListener('change', applyFilters);
+    filterSession.addEventListener('change', applyFilters);
+    filterStatut.addEventListener('change', applyFilters);
+    filterEmployee.addEventListener('change', applyFilters);
+
+    clearFiltersBtn.addEventListener('click', function() {
+        window.location.href = window.location.pathname;
+    });
+
+    // Gestion de l'affichage des informations de session (formulaire d'ajout)
+    const sessionSelect = document.getElementById('id_session');
+    const sessionInfo = document.getElementById('session-info');
+    
+    sessionSelect.addEventListener('change', function() {
+        const selectedOption = this.selectedOptions[0];
+        if (selectedOption && selectedOption.value) {
+            document.getElementById('info-formation').textContent = selectedOption.dataset.formation || '';
+            document.getElementById('info-formateur').textContent = selectedOption.dataset.formateur || '';
+            document.getElementById('info-date-debut').textContent = selectedOption.dataset.dateDebut || '';
+            document.getElementById('info-date-fin').textContent = selectedOption.dataset.dateFin || '';
+            document.getElementById('info-places').textContent = `${selectedOption.dataset.inscriptionsCount || 0} / ${selectedOption.dataset.placesTotales || 0}`;
+            sessionInfo.style.display = 'block';
+        } else {
+            sessionInfo.style.display = 'none';
+        }
+    });
+
+    // Ouverture du formulaire d'édition en section
+    window.openEditForm = function(button) {
+        const inscriptionId = button.getAttribute('data-inscription-id');
+        const sessionId = button.getAttribute('data-session-id');
+        const employeeId = button.getAttribute('data-employee-id');
+        const statut = button.getAttribute('data-statut');
+
+        const editSection = document.getElementById('edit-inscription');
+        const addSection = document.getElementById('add-inscription');
+
+        document.getElementById('edit_inscription_id').value = inscriptionId;
+        document.getElementById('edit_session').value = sessionId;
+        document.getElementById('edit_employee').value = employeeId;
+        document.getElementById('edit_statut').value = statut;
+
+        editSection.style.display = 'block';
+        addSection.style.display = 'none';
+        window.scrollTo({ top: editSection.offsetTop - 80, behavior: 'smooth' });
+    };
+
+    // Afficher la section d'ajout
+    window.showAddForm = function(){
+        const editSection = document.getElementById('edit-inscription');
+        const addSection = document.getElementById('add-inscription');
+        editSection.style.display = 'none';
+        addSection.style.display = 'block';
+        window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+    };
+
+    // Gestion du modal de suppression
+    const deleteModal = document.getElementById('modalDeleteInscription');
+    deleteModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const inscriptionId = button.getAttribute('data-inscription-id');
+        const employeeNom = button.getAttribute('data-employee-nom');
+        const formationTitre = button.getAttribute('data-formation-titre');
+
+        document.getElementById('delete_inscription_id').value = inscriptionId;
+        document.getElementById('delete_employee_nom').textContent = employeeNom;
+        document.getElementById('delete_formation_titre').textContent = formationTitre;
+    });
+});
+</script>
+
+{% endblock %}

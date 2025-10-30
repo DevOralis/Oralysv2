@@ -1,0 +1,932 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Oralys - Chambres{% endblock %}
+{% block menu %}
+  {% include 'hosting_menu.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const checkboxes = document.querySelectorAll('input.row-check');
+  const importExportButton = document.querySelector('#import-export-button');
+
+  // Logique corrigée pour import/export
+  function updateImportExportLogic() {
+    const checkedBoxes = Array.from(checkboxes).filter(checkbox => checkbox.checked);
+    
+    if (checkedBoxes.length > 0) {
+      // Mode Export - au moins une case cochée
+      importExportButton.innerHTML = '<i class="fas fa-file-export"></i><span class="d-none d-lg-inline ms-1">Exporter</span>';
+      importExportButton.title = 'Exporter les chambres sélectionnées';
+    } else {
+      // Mode Import - aucune case cochée
+      importExportButton.innerHTML = '<i class="fas fa-file-import"></i><span class="d-none d-lg-inline ms-1">Importer</span>';
+      importExportButton.title = 'Importer des chambres depuis un fichier';
+    }
+  }
+
+  // Écouter les changements sur les checkboxes
+  checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateImportExportLogic);
+  });
+
+  // Écouter les changements sur "Sélectionner tout"
+  const selectAllCheckbox = document.getElementById('selectAll');
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+      updateImportExportLogic();
+    });
+  }
+
+  // Gérer le clic sur le bouton Import/Export
+  if (importExportButton) {
+    importExportButton.addEventListener('click', function() {
+      const checkedBoxes = Array.from(checkboxes).filter(checkbox => checkbox.checked);
+      
+      if (checkedBoxes.length > 0) {
+        // Mode Export
+        exportSelectedRooms(checkedBoxes);
+      } else {
+        // Mode Import
+        showImportDialog();
+      }
+    });
+  }
+
+  // Fonction d'exportation
+  function exportSelectedRooms(selectedBoxes) {
+    const selectedRoomIds = selectedBoxes.map(checkbox => {
+      // Récupérer l'ID de la chambre depuis la ligne du tableau
+      const row = checkbox.closest('tr');
+      return row.cells[1].textContent; // ID est dans la 2ème colonne (index 1)
+    });
+
+    Swal.fire({
+      title: 'Exporter les chambres',
+      text: `Exporter ${selectedRoomIds.length} chambre(s) sélectionnée(s) ?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Exporter',
+      cancelButtonText: 'Annuler',
+      showLoaderOnConfirm: true,
+      preConfirm: () => {
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        selectedRoomIds.forEach(id => {
+          formData.append('room_ids', id);
+        });
+
+        return fetch('', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Erreur lors de l\'exportation');
+          }
+          return response.blob();
+        })
+        .then(blob => {
+          // Télécharger le fichier
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = `chambres_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          
+          // Décocher tous les éléments après export
+          checkboxes.forEach(checkbox => checkbox.checked = false);
+          selectAllCheckbox.checked = false;
+          updateImportExportLogic();
+        })
+        .catch(error => {
+          Swal.showValidationMessage(`Erreur: ${error.message}`);
+        });
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Export réussi',
+          text: 'Les chambres ont été exportées avec succès',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    });
+  }
+
+  // Fonction d'importation
+  function showImportDialog() {
+    Swal.fire({
+      title: 'Importer des chambres',
+      html: `
+        <div class="mb-3">
+          <label for="import-file" class="form-label">Sélectionner un fichier Excel (.xlsx)</label>
+          <input type="file" id="import-file" class="form-control" accept=".xlsx,.xls" required>
+        </div>
+        <div class="alert alert-info">
+          <small>
+            <strong>Format attendu:</strong><br>
+            - Colonne A: Nom de la chambre<br>
+            - Colonne B: Type de chambre<br>
+            - Colonne C: Capacité<br>
+            - Colonne D: Statut<br>
+            - Colonne E: Description
+          </small>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Importer',
+      cancelButtonText: 'Annuler',
+      showLoaderOnConfirm: true,
+      preConfirm: () => {
+        const fileInput = document.getElementById('import-file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+          Swal.showValidationMessage('Veuillez sélectionner un fichier');
+          return false;
+        }
+
+        if (!file.name.match(/\.(xlsx|xls)$/)) {
+          Swal.showValidationMessage('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+          return false;
+        }
+
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        formData.append('import_file', file);
+
+        return fetch('', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Erreur lors de l\'importation');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.status === 'success') {
+            return data;
+          } else {
+            throw new Error(data.message || 'Erreur lors de l\'importation');
+          }
+        })
+        .catch(error => {
+          Swal.showValidationMessage(`Erreur: ${error.message}`);
+        });
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const data = result.value;
+        Swal.fire({
+          icon: 'success',
+          title: 'Import réussi',
+          html: `
+            <div class="text-start">
+              <p><strong>${data.imported_count}</strong> chambre(s) importée(s) avec succès</p>
+              ${data.errors_count > 0 ? `<p class="text-warning"><strong>${data.errors_count}</strong> erreur(s) détectée(s)</p>` : ''}
+              ${data.duplicates_count > 0 ? `<p class="text-info"><strong>${data.duplicates_count}</strong> doublon(s) ignoré(s)</p>` : ''}
+            </div>
+          `,
+          confirmButtonText: 'Actualiser la page'
+        }).then(() => {
+          location.reload();
+        });
+      }
+    });
+  }
+
+  // Initialiser l'état du bouton au chargement
+  updateImportExportLogic();
+
+  // Reste du code existant pour rooms.html...
+  // Afficher/masquer le formulaire
+  const addRoomBtn = document.getElementById('add-room-btn');
+  if (addRoomBtn) {
+    addRoomBtn.addEventListener('click', function() {
+      resetForm();
+      const editingRoom = document.getElementById('editing-room');
+      const formTitle = document.getElementById('form-title');
+      const submitText = document.getElementById('submit-text');
+      const formSection = document.getElementById('room-form-section');
+      
+      if (editingRoom && formTitle && submitText && formSection) {
+        editingRoom.value = 'false';
+        formTitle.textContent = 'Nouvelle chambre';
+        submitText.textContent = 'Sauvegarder';
+        formSection.style.display = 'block';
+        
+        fetch('{% url "hosting:generate_room_id" %}')
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'success') {
+              const roomIdField = document.getElementById('room-id-field');
+              if (roomIdField) {
+                roomIdField.value = data.generated_id;
+              } else {
+                console.error('Element room-id-field not found');
+              }
+            } else {
+              console.error('Error fetching room ID:', data.message);
+            }
+          })
+          .catch(error => console.error('Error fetching room ID:', error));
+      } else {
+        console.error('Missing elements for add-room-btn:', {
+          editingRoom: !editingRoom,
+          formTitle: !formTitle,
+          submitText: !submitText,
+          formSection: !formSection
+        });
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Un ou plusieurs éléments nécessaires pour afficher le formulaire sont manquants.'
+        });
+      }
+    });
+  }
+
+  // Gérer les boutons de modification
+  document.querySelectorAll('.edit-room-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const roomId = this.getAttribute('data-room-id');
+      
+      const formSection = document.getElementById('room-form-section');
+      if (!formSection) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Le formulaire n\'est pas trouvé dans la page.'
+        });
+        return;
+      }
+      formSection.style.display = 'block';
+
+      const editingRoom = document.getElementById('editing-room');
+      const formTitle = document.getElementById('form-title');
+      const submitText = document.getElementById('submit-text');
+      const roomIdField = document.getElementById('room-id-field');
+      const roomName = document.getElementById('id_room_name');
+      const roomType = document.getElementById('id_room_type');
+      const roomCapacity = document.getElementById('id_capacity');
+      const roomStatus = document.getElementById('id_status');
+      const description = document.getElementById('id_description');
+
+      if (!editingRoom || !formTitle || !submitText || !roomIdField || !roomName || !roomType || !roomCapacity || !roomStatus || !description) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Un ou plusieurs champs du formulaire sont manquants.'
+        });
+        console.error('Missing form elements:', {
+          editingRoom: !editingRoom,
+          formTitle: !formTitle,
+          submitText: !submitText,
+          roomIdField: !roomIdField,
+          roomName: !roomName,
+          roomType: !roomType,
+          roomCapacity: !roomCapacity,
+          roomStatus: !roomStatus,
+          description: !description
+        });
+        return;
+      }
+
+      fetch(`{% url 'hosting:room_detail' 'ROOM_ID' %}`.replace('ROOM_ID', roomId), {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Response from room_detail:', data);
+        if (data.status === 'success') {
+          editingRoom.value = 'true';
+          formTitle.textContent = 'Modifier la chambre';
+          submitText.textContent = 'Mettre à jour';
+          roomIdField.value = data.room.room_id || '';
+          roomName.value = data.room.room_name || '';
+          roomType.value = data.room.room_type || '';
+          roomCapacity.value = data.room.capacity || '';
+          roomStatus.value = data.room.status || '';
+          description.value = data.room.description || '';
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: data.message || 'Erreur lors du chargement des données.'
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching room details:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Erreur lors du chargement des données : ' + error.message
+        });
+      });
+    });
+  });
+
+  // Annuler
+  const cancelBtn = document.getElementById('cancel-btn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', function() {
+      const formSection = document.getElementById('room-form-section');
+      if (formSection) {
+        formSection.style.display = 'none';
+        resetForm();
+      }
+    });
+  }
+
+  // Soumission du formulaire
+  const roomForm = document.getElementById('room-form');
+  if (roomForm) {
+    roomForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      const submitBtn = document.getElementById('submit-btn');
+      const originalText = submitBtn.innerHTML;
+      
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+      
+      const isEditing = document.getElementById('editing-room').value === 'true';
+      const roomId = document.getElementById('room-id-field').value;
+      const url = isEditing ? `{% url 'hosting:room_update' 'ROOM_ID' %}`.replace('ROOM_ID', roomId) : '{% url 'hosting:room_create' %}';
+      
+      fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.status === 'success') {
+          document.getElementById('room-form-section').style.display = 'none';
+          Swal.fire({
+            icon: 'success',
+            title: 'Succès',
+            text: isEditing ? 'Chambre mise à jour avec succès.' : 'Chambre créée avec succès.',
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => location.reload());
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: data.message || 'Erreur lors de l\'enregistrement.'
+          });
+          console.error('Form errors:', data.errors);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Erreur lors de l\'enregistrement : ' + error.message
+        });
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      });
+    });
+  }
+
+  // Réinitialiser le formulaire
+  function resetForm() {
+    const form = document.getElementById('room-form');
+    if (form) {
+      form.reset();
+    }
+    const roomIdField = document.getElementById('room-id-field');
+    const editingRoom = document.getElementById('editing-room');
+    if (roomIdField) roomIdField.value = '';
+    if (editingRoom) editingRoom.value = 'false';
+    document.querySelectorAll('.text-danger').forEach(el => el.remove());
+  }
+
+  // Filtrer les chambres
+  const departmentFilter = document.getElementById('department-filter');
+  if (departmentFilter) {
+    departmentFilter.addEventListener('change', function() {
+      document.getElementById('search-form').submit();
+    });
+  }
+
+  // Recherche en temps réel
+  const roomSearch = document.getElementById('room-search');
+  if (roomSearch) {
+    roomSearch.addEventListener('input', function() {
+      const searchValue = this.value.toLowerCase();
+      const rows = document.querySelectorAll('#searchableTable tbody tr');
+      rows.forEach(row => {
+        if (row.cells.length > 1) {
+          const roomName = row.cells[2].textContent.toLowerCase();
+          const roomId = row.cells[1].textContent.toLowerCase();
+          const roomType = row.cells[3].textContent.toLowerCase();
+          const isVisible = roomName.includes(searchValue) || 
+                           roomId.includes(searchValue) || 
+                           roomType.includes(searchValue);
+          row.style.display = isVisible ? '' : 'none';
+        }
+      });
+    });
+  }
+
+  // Charger les détails dans le modal
+  document.querySelectorAll('.view-room-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const row = this.closest('tr');
+      const id = row.cells[1].textContent;
+      const name = row.cells[2].textContent;
+      const type = row.cells[3].textContent;
+      const capacity = row.querySelector('[data-label="Capacité"]') ? 
+                      row.querySelector('[data-label="Capacité"]').textContent : 
+                      'N/A';
+      const status = row.cells[5].textContent;
+      
+      const roomDetailsContent = document.getElementById('room-details-content');
+      if (roomDetailsContent) {
+        roomDetailsContent.innerHTML = `
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>ID :</strong> ${id}</p>
+              <p><strong>Nom :</strong> ${name}</p>
+              <p><strong>Type :</strong> ${type}</p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Capacité :</strong> ${capacity}</p>
+              <p><strong>Statut :</strong> ${status}</p>
+            </div>
+          </div>
+        `;
+        const modal = new bootstrap.Modal(document.getElementById('roomDetailsModal'));
+        modal.show();
+      }
+    });
+  });
+
+  // Imprimer
+  const printRoomBtn = document.getElementById('print-room-btn');
+  if (printRoomBtn) {
+    printRoomBtn.addEventListener('click', function() {
+      window.print();
+    });
+  }
+
+  // Tri des colonnes
+  document.querySelectorAll('th .fa-sort').forEach(sortIcon => {
+    sortIcon.closest('th').addEventListener('click', function() {
+      console.log('Tri de la colonne:', this.textContent.trim());
+    });
+  });
+
+  // Gérer la suppression
+  document.querySelectorAll('.delete-room-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const roomId = this.getAttribute('data-room-id');
+      Swal.fire({
+        title: 'Êtes-vous sûr ?',
+        text: 'Voulez-vous vraiment supprimer cette chambre ?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const formData = new FormData();
+          formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+          
+          fetch(`{% url 'hosting:room_delete' 'ROOM_ID' %}`.replace('ROOM_ID', roomId), {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.status === 'success') {
+              Swal.fire({
+                icon: 'success',
+                title: 'Succès',
+                text: 'Chambre supprimée avec succès.',
+                timer: 1500,
+                showConfirmButton: false
+              }).then(() => location.reload());
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: data.message || 'Erreur lors de la suppression.'
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Erreur',
+              text: 'Erreur lors de la suppression : ' + error.message
+            });
+          });
+        }
+      });
+    });
+  });
+
+  // Gérer la libération
+  document.querySelectorAll('.release-room-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const roomId = this.getAttribute('data-room-id');
+      Swal.fire({
+        title: 'Êtes-vous sûr ?',
+        text: 'Voulez-vous vraiment libérer cette chambre ?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, libérer',
+        cancelButtonText: 'Annuler'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const formData = new FormData();
+          formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+          
+          fetch(`{% url 'hosting:room_release' 'ROOM_ID' %}`.replace('ROOM_ID', roomId), {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.status === 'success') {
+              Swal.fire({
+                icon: 'success',
+                title: 'Succès',
+                text: 'Chambre libérée avec succès.',
+                timer: 1500,
+                showConfirmButton: false
+              }).then(() => location.reload());
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: data.message || 'Erreur lors de la libération.'
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Erreur',
+              text: 'Erreur lors de la libération : ' + error.message
+            });
+          });
+        }
+      });
+    });
+  });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid py-4">
+    <!-- Messages -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Liste des chambres -->
+    <div class="card mb-4">
+      <div class="card-header card-header-primary">
+        <i class="fas fa-bed me-2"></i>
+        Gestion des Chambres
+      </div>
+      <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form" action="{% url 'hosting:room_list' %}">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+              <div class="input-group">
+                <span class="input-group-text input-group-text-primary">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="room-search" class="form-control search-input-primary" placeholder="Recherche..." value="{{ request.GET.q }}">
+              </div>
+            </div>
+            <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+              <select name="room_type" class="form-select" title="Filtrer par type" id="department-filter">
+                <option value="">Tous les types</option>
+                {% for room_type in room_types %}
+                  <option value="{{ room_type.id }}" {% if room_type.id|stringformat:"s" == request.GET.room_type %}selected{% endif %}>{{ room_type.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+  <div class="d-flex gap-1">
+    <button type="button" id="import-export-button" class="btn btn-light border w-100 text-nowrap px-2" title="Importer des chambres depuis un fichier">
+      <i class="fas fa-file-import"></i>
+      <span class="d-none d-lg-inline ms-1">Importer</span>
+    </button>
+    {% if request.session.user.permissions.hosting.write %}
+    <button type="button" class="btn btn-primary w-100 text-nowrap px-2" id="add-room-btn">
+      <i class="fas fa-plus"></i>
+      <span class="d-none d-lg-inline ms-1">Nouveau</span>
+    </button>
+   {% endif %}
+
+  </div>
+            </div>
+          </div>
+        </form>
+
+        <!-- Table responsive -->
+        <table class="table table-responsive table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th>
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>ID</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Nom</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Type</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-lg-table-cell">
+                <div class="d-flex align-items-center">
+                  <span>Capacité</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Statut</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for room in rooms %}
+              <tr>
+                <td data-label="Sélection"><input type="checkbox" class="row-check"></td>
+                <td data-label="ID">{{ room.room_id }}</td>
+                <td data-label="Nom">{{ room.room_name }}</td>
+                <td data-label="Type">{{ room.room_type.name }}</td>
+                <td data-label="Capacité" class="d-none d-lg-table-cell">{{ room.capacity }}</td>
+                <td data-label="Statut">
+                  {% if room.status == 'available' %}
+                    <span class="badge bg-success">{{ room.get_status_display }}</span>
+                  {% elif room.status == 'occupied' %}
+                    <span class="badge bg-warning">{{ room.get_status_display }}</span>
+                  {% else %}
+                    <span class="badge bg-danger">{{ room.get_status_display }}</span>
+                  {% endif %}
+                </td>
+                <td data-label="Actions" class="actions-cell">
+                  <div class="d-flex gap-1 justify-content-end">
+                    <a href="{% url 'hosting:room_pdf' room.room_id %}" class="btn btn-sm btn-light border text-primary" title="Imprimer">
+                      <i class="fas fa-print"></i>
+                    </a>
+                    <button class="btn btn-sm btn-light border text-info view-room-btn" title="Voir" data-room-id="{{ room.room_id }}">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    {% if request.session.user.permissions.hosting.update %}
+                    <button class="btn btn-sm btn-light border text-dark edit-room-btn" title="Modifier" data-room-id="{{ room.room_id }}">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    {% endif %}
+                    {% if request.session.user.permissions.hosting.delete %}
+                    <button class="btn btn-sm btn-light border text-danger delete-room-btn" title="Supprimer" data-room-id="{{ room.room_id }}">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                    {% endif %}
+                    {% if request.session.user.permissions.hosting.update %}
+                    {% if room.status != 'available' %}
+                      <button class="btn btn-sm btn-light border text-success release-room-btn" title="Libérer" data-room-id="{{ room.room_id }}">
+                        <i class="fas fa-unlock"></i>
+                      </button>
+                    {% endif %}
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="7" class="text-center">Aucune chambre enregistrée</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <!-- Pagination Component -->
+        {% if page_obj %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="{% url 'hosting:room_list' %}?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.room_type %}&room_type={{ request.GET.room_type }}{% endif %}" aria-label="Précédent">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">&laquo; Préc</span>
+                  </a>
+                </li>
+              {% endif %}
+              {% for num in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                  <a class="page-link" href="{% url 'hosting:room_list' %}?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.room_type %}&room_type={{ request.GET.room_type }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endfor %}
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="{% url 'hosting:room_list' %}?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.room_type %}&room_type={{ request.GET.room_type }}{% endif %}" aria-label="Suivant">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                  </a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Formulaire d'ajout/modification -->
+    <div class="card mb-4" id="room-form-section" style="display: none;">
+      <div class="card-header card-header-primary">
+        <i class="fas fa-edit me-2"></i>
+        <span id="form-title">Nouvelle chambre</span>
+      </div>
+      <div class="card-body">
+        {% if error %}
+          <div class="alert alert-danger" role="alert">
+            Erreur : {{ error }}
+          </div>
+        {% endif %}
+        {% if messages %}
+          {% for message in messages %}
+            {% if message.tags != 'success' %}
+              <div class="alert alert-warning" role="alert">
+                {{ message }}
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" id="room-form">
+          {% csrf_token %}
+          <input type="hidden" id="editing-room" value="false">
+          <input type="hidden" id="room-id-field" name="room_id" value="{{ form.room_id.value|default:'' }}">
+          
+          <div class="row g-3">
+            <div class="col-12 col-sm-6 col-md-6">
+              <label class="form-label">Nom de la chambre :</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-bed"></i></span>
+                {{ form.room_name }}
+              </div>
+              {% if form.room_name.errors %}
+                <div class="text-danger small">{{ form.room_name.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-sm-6 col-md-6">
+              <label class="form-label">Type de chambre :</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-home"></i></span>
+                {{ form.room_type }}
+              </div>
+              {% if form.room_type.errors %}
+                <div class="text-danger small">{{ form.room_type.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="form-label">Capacité :</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-users"></i></span>
+                {{ form.capacity }}
+              </div>
+              {% if form.capacity.errors %}
+                <div class="text-danger small">{{ form.capacity.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+              <label class="form-label">Statut :</label>
+              {{ form.status }}
+              {% if form.status.errors %}
+                <div class="text-danger small">{{ form.status.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description :</label>
+              {{ form.description }}
+              {% if form.description.errors %}
+                <div class="text-danger small">{{ form.description.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+            <button type="button" class="btn btn-secondary btn-sm" id="cancel-btn">
+              <i class="fas fa-times"></i>
+              <span class="d-none d-sm-inline ms-1">Annuler</span>
+            </button>
+            <button type="submit" class="btn btn-primary btn-sm" id="submit-btn">
+              <i class="fas fa-save"></i>
+              <span class="d-none d-sm-inline ms-1" id="submit-text">Sauvegarder</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal pour détails -->
+    <div class="modal fade" id="roomDetailsModal" tabindex="-1" aria-labelledby="roomDetailsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="roomDetailsModalLabel">Détails de la chambre</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" id="room-details-content">
+            Chargement...
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            <button type="button" class="btn btn-info" id="print-room-btn">Imprimer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

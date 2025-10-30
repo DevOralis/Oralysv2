@@ -1,0 +1,770 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestion des Incidents - MiniERP{% endblock %}
+
+{% block menu %}
+  {% include "menu_maintenance.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+        </div>
+    </div>
+
+    <!-- Messages (style recrutement) -->
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+            <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Barre de recherche et filtres -->
+    <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Liste des Incidents
+        </div>
+        <div class="card-body">
+            <form method="get" id="search-form" class="mb-4">
+                <div class="row g-2">
+                    <!-- Barre de recherche -->
+                    <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-1">
+                        <div class="input-group">
+                            <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="search" name="q" id="incident-search" class="form-control" style="border-color: #1e90ff;" placeholder="Recherche incidents..." value="{{ request.GET.q|default:'' }}">
+                        </div>
+                    </div>
+                    <!-- Filtre statut -->
+                    <div class="col-6 col-sm-6 col-md-2 col-lg-2 order-2">
+                        <select name="statut" class="form-select" title="Filtrer par statut">
+                            <option value="" {% if not request.GET.statut %}selected{% endif %}>Tous les statuts</option>
+                            <option value="ouvert" {% if request.GET.statut == 'ouvert' %}selected{% endif %}>Ouvert</option>
+                            <option value="en_cours" {% if request.GET.statut == 'en_cours' %}selected{% endif %}>En cours</option>
+                            <option value="resolu" {% if request.GET.statut == 'resolu' %}selected{% endif %}>Résolu</option>
+                            <option value="ferme" {% if request.GET.statut == 'ferme' %}selected{% endif %}>Fermé</option>
+                        </select>
+                    </div>
+                    <!-- Filtre type -->
+                    <div class="col-6 col-sm-6 col-md-2 col-lg-2 order-3">
+                        <select name="type" class="form-select" title="Filtrer par type">
+                            <option value="" {% if not request.GET.type %}selected{% endif %}>Tous les types</option>
+                            <option value="panne" {% if request.GET.type == 'panne' %}selected{% endif %}>Panne</option>
+                            <option value="maintenance" {% if request.GET.type == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                            <option value="accident" {% if request.GET.type == 'accident' %}selected{% endif %}>Accident</option>
+                            <option value="defaillance" {% if request.GET.type == 'defaillance' %}selected{% endif %}>Défaillance</option>
+                        </select>
+                    </div>
+                    <!-- Boutons d'action -->
+                    <div class="col-6 col-sm-6 col-md-5 col-lg-5 order-4">
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="window.location.href='{% url 'maintenance:incident_list' %}'">
+                                <i class="fas fa-undo"></i>
+                                <span class="d-none d-lg-inline ms-1">Réinitialiser</span>
+                            </button>
+                            <button type="submit" class="btn btn-primary w-100 text-nowrap px-2">
+                                <i class="fas fa-filter"></i>
+                                <span class="d-none d-lg-inline ms-1">Filtrer</span>
+                            </button>
+                            <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="toggleAddForm()">
+                                <i class="fas fa-plus"></i>
+                                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="table-container">
+                <table class="table table-striped table-hover" id="searchableTable">
+                    <thead class="table-light borderless">
+                        <tr class="main-row">
+                            <th class="d-none d-md-table-cell">
+                                <input type="checkbox" id="selectAll">
+                            </th>
+                            <th class="d-none d-md-table-cell">#</th>
+                            <th>
+                                <div class="d-flex align-items-center">
+                                    <span>Équipement</span>
+                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="d-none d-md-table-cell">Date</th>
+                            <th class="d-none d-md-table-cell">Type</th>
+                            <th class="d-none d-md-table-cell">Gravité</th>
+                            <th class="d-none d-md-table-cell">Description</th>
+                            <th class="d-none d-md-table-cell">Statut</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="incident-table">
+                        {% for incident in incidents %}
+                        <tr class="main-row">
+                            <td class="d-none d-md-table-cell">
+                                <input type="checkbox" class="row-check">
+                            </td>
+                            <td class="text-center fw-bold text-primary">{{ forloop.counter }}</td>
+                            <td class="d-none d-md-table-cell">
+                                <h6 class="mb-0 fw-semibold">{{ incident.equipement.nom }}</h6>
+                                <small class="text-muted">{{ incident.equipement.reference }}</small>       
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <small class="text-muted">{{ incident.date_declaration|date:"d/m/Y" }}</small>
+                                <small class="text-muted d-block">{{ incident.date_declaration|date:"H:i" }}</small>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <span class="badge bg-{{ incident.get_type_badge_class }}">
+                                    {{ incident.get_type_display }}
+                                </span>
+                            </td>
+                            <td class="d-none d-md-table-cell text-center">
+                                <span class="badge bg-{{ incident.get_gravite_badge_class }}">
+                                    {{ incident.get_gravite_display }}
+                                </span>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <small class="text-truncate d-block" style="max-width: 200px;" title="{{ incident.description|default:'' }}">
+                                    {{ incident.description|truncatewords:5|default:"-" }}
+                                </small>
+                            </td>
+                            <td class="d-none d-md-table-cell text-center">
+                                <span class="badge bg-{{ incident.get_statut_badge_class }}">{{ incident.get_statut_display }}</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-sm btn-light border text-info" title="Voir" onclick="toggleDetailsForm(this)"
+                                            data-incident-id="{{ incident.id }}"
+                                            data-incident-equipement="{{ incident.equipement.nom }} ({{ incident.equipement.reference }})"
+                                            data-incident-date="{{ incident.date_declaration|date:'d/m/Y H:i' }}"
+                                            data-incident-type="{{ incident.get_type_display }}"
+                                            data-incident-statut="{{ incident.get_statut_display }}"
+                                            data-incident-gravite="{{ incident.get_gravite_display }}"
+                                            data-incident-gravite-class="{{ incident.get_gravite_badge_class }}"
+                                            data-incident-statut-class="{{ incident.get_statut_badge_class }}"
+                                            data-incident-description="{{ incident.description|default:'Aucune description' }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-light border text-dark" title="Modifier" onclick="toggleEditForm(this)"
+                                            data-incident-id="{{ incident.id }}"
+                                            data-incident-equipement-id="{{ incident.equipement.id }}"
+                                            data-incident-date="{{ incident.date_declaration|date:'Y-m-d\\TH:i' }}"
+                                            data-incident-type="{{ incident.type }}"
+                                            data-incident-statut="{{ incident.statut }}"
+                                            data-incident-gravite="{{ incident.gravite }}"
+                                            data-incident-description="{{ incident.description }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-light border text-danger" title="Supprimer" data-bs-toggle="modal" data-bs-target="#modalIncidentDelete"
+                                            data-incident-id="{{ incident.id }}"
+                                            data-incident-equipement-nom="{{ incident.equipement.nom }}">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Aucun incident enregistré</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </table>
+                
+                <!-- Pagination Component - Centered and functional -->
+                {% if is_paginated %}
+                <nav class="mt-3">
+                  <ul class="pagination justify-content-center flex-wrap">
+                    {% if page_obj.has_previous %}
+                      <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}" aria-label="Page précédente">
+                          <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Préc</span>
+                        </a>
+                      </li>
+                    {% else %}
+                      <li class="page-item disabled">
+                        <span class="page-link">
+                          <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Préc</span>
+                        </span>
+                      </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                      {% if page_obj.number == num %}
+                        <li class="page-item active">
+                          <span class="page-link">{{ num }}</span>
+                        </li>
+                      {% elif num > page_obj.number|add:'-2' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                          <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">{{ num }}</a>
+                        </li>
+                      {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                      <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}" aria-label="Page suivante">
+                          <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Suiv</span>
+                        </a>
+                      </li>
+                    {% else %}
+                      <li class="page-item disabled">
+                        <span class="page-link">
+                          <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Suiv</span>
+                        </span>
+                      </li>
+                    {% endif %}
+                  </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire d'ajout d'incident -->
+    <div class="card mb-4" id="addFormSection">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <h6 class="mb-0">
+                <i class="fas fa-plus me-2"></i>Ajouter un nouvel incident
+            </h6>
+</div>
+        <div class="card-body">
+      <form method="post" action="{% url 'maintenance:incident_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_incident">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="id_equipement" class="form-label fw-semibold">Équipement <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-cogs"></i></span>
+                <select id="id_equipement" name="equipement" class="form-select" required>
+                  <option value="">-- Sélectionnez un équipement --</option>
+                  {% for equipement in equipements %}
+                    <option value="{{ equipement.id }}">{{ equipement.nom }} ({{ equipement.reference }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="id_date_declaration" class="form-label fw-semibold">Date de déclaration <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                <input type="datetime-local" id="id_date_declaration" name="date_declaration" class="form-control" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="id_type" class="form-label fw-semibold">Type d'incident <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                <select id="id_type" name="type" class="form-select" required>
+                  <option value="">-- Sélectionnez --</option>
+                  {% for choice in incident_type_choices %}
+                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="id_statut" class="form-label fw-semibold">Statut <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                <select id="id_statut" name="statut" class="form-select" required>
+                  <option value="">-- Sélectionnez --</option>
+                  {% for choice in incident_statut_choices %}
+                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="id_gravite" class="form-label fw-semibold">Gravité <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                <select id="id_gravite" name="gravite" class="form-select" required>
+                  <option value="">-- Sélectionnez --</option>
+                  {% for choice in incident_gravite_choices %}
+                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-12">
+              <label for="id_description" class="form-label fw-semibold">Description</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                <textarea id="id_description" name="description" class="form-control" rows="4" placeholder="Décrivez l'incident..."></textarea>
+              </div>
+            </div>
+          </div>
+                <div class="mt-4 text-end">
+                    <button type="button" class="btn btn-secondary me-2" onclick="clearAddForm()">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Enregistrer
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+    <!-- Formulaire de modification d'incident -->
+    <div class="card mb-4" id="editFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <h6 class="mb-0">
+                <i class="fas fa-edit me-2"></i>Modifier l'incident
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'maintenance:incident_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_incident">
+                <input type="hidden" name="incident_id" id="edit_incident_id">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="edit_equipement" class="form-label fw-semibold">Équipement <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-cogs"></i></span>
+                            <select id="edit_equipement" name="equipement" class="form-select" required>
+                                <option value="">-- Sélectionnez un équipement --</option>
+                                {% for equipement in equipements %}
+                                    <option value="{{ equipement.id }}">{{ equipement.nom }} ({{ equipement.reference }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="edit_date_declaration" class="form-label fw-semibold">Date de déclaration <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                            <input type="datetime-local" id="edit_date_declaration" name="date_declaration" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="edit_type" class="form-label fw-semibold">Type d'incident <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                            <select id="edit_type" name="type" class="form-select" required>
+                                <option value="">-- Sélectionnez --</option>
+                                {% for choice in incident_type_choices %}
+                                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="edit_statut" class="form-label fw-semibold">Statut <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                            <select id="edit_statut" name="statut" class="form-select" required>
+                                <option value="">-- Sélectionnez --</option>
+                                {% for choice in incident_statut_choices %}
+                                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="edit_gravite" class="form-label fw-semibold">Gravité <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                            <select id="edit_gravite" name="gravite" class="form-select" required>
+                                <option value="">-- Sélectionnez --</option>
+                                {% for choice in incident_gravite_choices %}
+                                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label for="edit_description" class="form-label fw-semibold">Description</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                            <textarea id="edit_description" name="description" class="form-control" rows="4" placeholder="Décrivez l'incident..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 text-end">
+                    <button type="button" class="btn btn-secondary me-2" onclick="clearEditForm()">
+                        <i class="fas fa-times me-2"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Modifier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Formulaire de détails d'incident -->
+    <div class="card mb-4" id="detailsFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <h6 class="mb-0">
+                <i class="fas fa-eye me-2"></i>Détails de l'incident
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Équipement</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-cogs"></i></span>
+                        <input type="text" id="details_equipement" class="form-control" readonly>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Date de déclaration</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                        <input type="text" id="details_date" class="form-control" readonly>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Type d'incident</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                        <input type="text" id="details_type" class="form-control" readonly>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Statut</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                        <input type="text" id="details_statut" class="form-control" readonly>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Gravité</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                        <input type="text" id="details_gravite" class="form-control" readonly>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Description</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                        <textarea id="details_description" class="form-control" rows="4" readonly></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 text-end">
+                <button type="button" class="btn btn-secondary" onclick="clearDetailsForm()">
+                    <i class="fas fa-times me-2"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="modalIncidentEdit" tabindex="-1" aria-labelledby="modalIncidentEditLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow">
+      <form method="post" action="{% url 'maintenance:incident_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit_incident">
+        <input type="hidden" name="incident_id" id="edit_incident_id">
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title" id="modalIncidentEditLabel">
+            <i class="fas fa-edit me-2"></i>Modifier Incident
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="edit_equipement" class="form-label fw-semibold">Équipement <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-cogs"></i></span>
+                <select id="edit_equipement" name="equipement" class="form-select" required>
+                  <option value="">-- Sélectionnez un équipement --</option>
+                  {% for equipement in equipements %}
+                    <option value="{{ equipement.id }}">{{ equipement.nom }} ({{ equipement.reference }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="edit_date_declaration" class="form-label fw-semibold">Date de déclaration <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                <input type="datetime-local" id="edit_date_declaration" name="date_declaration" class="form-control" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="edit_type" class="form-label fw-semibold">Type d'incident <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                <select id="edit_type" name="type" class="form-select" required>
+                  <option value="">-- Sélectionnez --</option>
+                  {% for choice in incident_type_choices %}
+                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="edit_statut" class="form-label fw-semibold">Statut <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                <select id="edit_statut" name="statut" class="form-select" required>
+                  <option value="">-- Sélectionnez --</option>
+                  {% for choice in incident_statut_choices %}
+                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="edit_gravite" class="form-label fw-semibold">Gravité <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                <select id="edit_gravite" name="gravite" class="form-select" required>
+                  <option value="">-- Sélectionnez --</option>
+                  {% for choice in incident_gravite_choices %}
+                    <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-12">
+              <label for="edit_description" class="form-label fw-semibold">Description</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                <textarea id="edit_description" name="description" class="form-control" rows="4" placeholder="Décrivez l'incident..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-warning px-4">
+                <i class="fas fa-save me-2"></i>Enregistrer
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Supprimer Incident -->
+<div class="modal fade" id="modalIncidentDelete" tabindex="-1" aria-labelledby="modalIncidentDeleteLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <form method="post" action="{% url 'maintenance:incident_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete_incident">
+        <input type="hidden" name="incident_id" id="delete_incident_id">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="modalIncidentDeleteLabel">
+            <i class="fas fa-trash-alt me-2"></i>Supprimer Incident
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center p-4">
+          <div class="mb-3">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h5 class="text-danger">Attention!</h5>
+            <p class="mb-0">Êtes-vous sûr de vouloir supprimer l'incident de <strong id="delete_equipement_nom"></strong> ?</p>
+            <p class="text-muted small mt-2">Cette action est irréversible.</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-danger px-4">
+                <i class="fas fa-trash-alt me-2"></i>Supprimer
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// Variables de state pour gérer la visibilité des formulaires
+let isAddFormVisible = true; // Formulaire d'ajout visible par défaut
+let isEditFormVisible = false;
+let isDetailsFormVisible = false;
+
+// Fonction pour afficher/masquer le formulaire d'ajout
+function toggleAddForm() {
+    const addFormSection = document.getElementById('addFormSection');
+    const editFormSection = document.getElementById('editFormSection');
+    const detailsFormSection = document.getElementById('detailsFormSection');
+    
+    if (isAddFormVisible) {
+        addFormSection.style.display = 'none';
+        isAddFormVisible = false;
+    } else {
+        hideAllForms();
+        addFormSection.style.display = 'block';
+        isAddFormVisible = true;
+        window.scrollTo({
+            top: addFormSection.offsetTop - 80,
+            behavior: 'smooth'
+        });
+    }
+}
+
+// Fonction pour afficher/masquer le formulaire de modification
+function toggleEditForm(button) {
+    const editFormSection = document.getElementById('editFormSection');
+    const addFormSection = document.getElementById('addFormSection');
+    const detailsFormSection = document.getElementById('detailsFormSection');
+    
+    if (isEditFormVisible) {
+        editFormSection.style.display = 'none';
+        isEditFormVisible = false;
+    } else {
+        hideAllForms();
+        editFormSection.style.display = 'block';
+        isEditFormVisible = true;
+        fillEditForm(button);
+        window.scrollTo({
+            top: editFormSection.offsetTop - 80,
+            behavior: 'smooth'
+        });
+    }
+}
+
+// Fonction pour afficher/masquer le formulaire de détails
+function toggleDetailsForm(button) {
+    const detailsFormSection = document.getElementById('detailsFormSection');
+    const addFormSection = document.getElementById('addFormSection');
+    const editFormSection = document.getElementById('editFormSection');
+    
+    if (isDetailsFormVisible) {
+        detailsFormSection.style.display = 'none';
+        isDetailsFormVisible = false;
+    } else {
+        hideAllForms();
+        detailsFormSection.style.display = 'block';
+        isDetailsFormVisible = true;
+        fillDetailsForm(button);
+        window.scrollTo({
+            top: detailsFormSection.offsetTop - 80,
+            behavior: 'smooth'
+        });
+    }
+}
+
+// Fonction pour masquer tous les formulaires
+function hideAllForms() {
+    const addFormSection = document.getElementById('addFormSection');
+    const editFormSection = document.getElementById('editFormSection');
+    const detailsFormSection = document.getElementById('detailsFormSection');
+    
+    if (addFormSection) addFormSection.style.display = 'none';
+    if (editFormSection) editFormSection.style.display = 'none';
+    if (detailsFormSection) detailsFormSection.style.display = 'none';
+    
+    isAddFormVisible = false;
+    isEditFormVisible = false;
+    isDetailsFormVisible = false;
+}
+
+// Fonction pour vider le formulaire d'ajout
+function clearAddForm() {
+    document.getElementById('id_equipement').value = '';
+    document.getElementById('id_date_declaration').value = '';
+    document.getElementById('id_type').value = '';
+    document.getElementById('id_statut').value = '';
+    document.getElementById('id_gravite').value = '';
+    document.getElementById('id_description').value = '';
+    hideAllForms();
+}
+
+// Fonction pour vider le formulaire de modification
+function clearEditForm() {
+    document.getElementById('edit_equipement').value = '';
+    document.getElementById('edit_date_declaration').value = '';
+    document.getElementById('edit_type').value = '';
+    document.getElementById('edit_statut').value = '';
+    document.getElementById('edit_gravite').value = '';
+    document.getElementById('edit_description').value = '';
+    hideAllForms();
+}
+
+// Fonction pour remplir le formulaire de modification
+function fillEditForm(button) {
+    document.getElementById('edit_incident_id').value = button.getAttribute('data-incident-id');
+    document.getElementById('edit_equipement').value = button.getAttribute('data-incident-equipement-id');
+    document.getElementById('edit_date_declaration').value = button.getAttribute('data-incident-date');
+    document.getElementById('edit_type').value = button.getAttribute('data-incident-type');
+    document.getElementById('edit_statut').value = button.getAttribute('data-incident-statut');
+    document.getElementById('edit_gravite').value = button.getAttribute('data-incident-gravite');
+    document.getElementById('edit_description').value = button.getAttribute('data-incident-description');
+}
+
+// Fonction pour vider le formulaire de détails
+function clearDetailsForm() {
+    document.getElementById('details_equipement').value = '';
+    document.getElementById('details_date').value = '';
+    document.getElementById('details_type').value = '';
+    document.getElementById('details_statut').value = '';
+    document.getElementById('details_gravite').value = '';
+    document.getElementById('details_description').value = '';
+    hideAllForms();
+}
+
+// Fonction pour remplir le formulaire de détails
+function fillDetailsForm(button) {
+    document.getElementById('details_equipement').value = button.getAttribute('data-incident-equipement');
+    document.getElementById('details_date').value = button.getAttribute('data-incident-date');
+    document.getElementById('details_type').value = button.getAttribute('data-incident-type');
+    document.getElementById('details_statut').value = button.getAttribute('data-incident-statut');
+    document.getElementById('details_gravite').value = button.getAttribute('data-incident-gravite');
+    document.getElementById('details_description').value = button.getAttribute('data-incident-description');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('Initialisation des incidents...');
+    
+    // Initialiser l'affichage par défaut
+    const addFormSection = document.getElementById('addFormSection');
+    const editFormSection = document.getElementById('editFormSection');
+    const detailsFormSection = document.getElementById('detailsFormSection');
+    
+    // S'assurer que seul le formulaire d'ajout est visible par défaut
+    if (addFormSection) addFormSection.style.display = 'block';
+    if (editFormSection) editFormSection.style.display = 'none';
+    if (detailsFormSection) detailsFormSection.style.display = 'none';
+
+    // Modal Delete
+    $('#modalIncidentDelete').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var incidentId = button.data('incident-id');
+        var equipementNom = button.data('incident-equipement-nom');
+
+        var modal = $(this);
+        modal.find('#delete_incident_id').val(incidentId);
+        modal.find('#delete_equipement_nom').text(equipementNom);
+    });
+});
+</script>
+
+{% endblock %}

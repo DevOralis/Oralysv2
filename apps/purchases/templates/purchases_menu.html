@@ -1,0 +1,63 @@
+{% load static %}
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    <div class="menu-items">
+      <a href="{% url 'purchases_dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'purchases_dashboard' %}active{% endif %}">
+        <i class="fas fa-chart-line"></i>
+        <span class="menu-text">Tableau de bord</span>
+      </a>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-truck-fast"></i>
+          <span class="menu-text">Gestion des fournisseurs&nbsp;</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+            <li><a href="{% url 'supplier_list' %}"><i class="fa-solid fa-store"></i> Fournisseurs</a></li>
+        </ul>
+      </div>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fa-solid fa-file-invoice"></i>
+          <span class="menu-text">Gestion des commandes&nbsp;</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'order_list' %}"><i class="fas fa-list-alt"></i> Commandes & Devis</a></li>
+          <li><a href="{% url 'convention_list' %}"><i class="fas fa-file-contract"></i> Conventions</a></li>
+        </ul>
+      </div>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-box"></i>
+          <span class="menu-text">Gestion des produits</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'purchases_product_list' %}"><i class="fa-solid fa-cubes"></i>Produits</a></li>
+        </ul>
+      </div>
+      <div class='sub-menu'>
+        <a href="#" class="menu-item">
+          <i class="fas fa-cog"></i>
+          <span class="menu-text">Paramètres</span>
+          <i class="fas fa-caret-down right"></i>
+        </a>
+        <ul>
+          <li><a href="{% url 'purchases_configuration' %}"><i class="fas fa-cog"></i> Configuration</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+</div>

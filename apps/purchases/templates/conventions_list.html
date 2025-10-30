@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="fr">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Conventions - ERP Clinique</title>
+    <link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}">
+    <script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+    <style>
+        /* Style compact pour le tableau */
+        .table-sm th,
+        .table-sm td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .table-sm .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+        
+        .actions-cell {
+            white-space: nowrap;
+        }
+        
+        .actions-cell .btn {
+            margin: 0 0.1rem;
+        }
+        
+        @media (max-width: 991.98px) {
+            .table-responsive {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .table-responsive > .table {
+                margin-bottom: 0;
+            }
+            .table-responsive > .table > thead > tr > th,
+            .table-responsive > .table > tbody > tr > td {
+                white-space: nowrap;
+            }
+            .table-responsive > .table > tbody > tr > td.actions-cell {
+                display: flex;
+                justify-content: flex-end;
+                gap: 0.5rem;
+            }
+        }
+        @media (max-width: 767.98px) {
+            .table-responsive {
+                display: block;
+            }
+            .table-responsive > .table > thead {
+                display: none;
+            }
+            .table-responsive > .table > tbody > tr {
+                display: block;
+                margin-bottom: 1rem;
+                border-bottom: 1px solid #dee2e6;
+            }
+            .table-responsive > .table > tbody > tr > td {
+                display: block;
+                text-align: left !important;
+                position: relative;
+                padding-left: 50%;
+            }
+            .table-responsive > .table > tbody > tr > td:before {
+                content: attr(data-label);
+                position: absolute;
+                left: 0;
+                width: 45%;
+                padding-left: 15px;
+                font-weight: bold;
+                text-align: left;
+            }
+            .table-responsive > .table > tbody > tr > td.actions-cell {
+                display: flex;
+                justify-content: flex-start;
+                padding-left: 15px;
+            }
+        }
+        .pagination-hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    {% csrf_token %}
+    <div class="container py-4">
+        <div class="card mb-4">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-file-contract me-2"></i>
+                Conventions
+            </div>
+            <div class="card-body">
+                <div id="alert-container"></div>
+                <form id="filter-form" method="get" class="mb-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                            <div class="input-group">
+                                <span class="input-group-text text-white" style="background-color: #1e90ff; border: 1px solid #1e90ff;">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="search" id="search" name="q" class="form-control" style="border: 1px solid #1e90ff;" placeholder="Recherche..." value="">
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-2">
+                            <select id="status" name="status" class="form-select" title="Filtrer par statut">
+                                <option value="">Tous les statuts</option>
+                                <option value="draft">Brouillon</option>
+                                <option value="confirmed">Confirmé</option>
+                                <option value="cancelled">Annulé</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-3">
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="importExportBtn">
+                                    <i class="fas fa-file-import" id="importExportIcon"></i>
+                                    <span class="d-none d-lg-inline ms-1" id="importExportText">Importer</span>
+                                </button>
+                                {% if request.session.user.permissions.purchases.write %}
+                                <button id="scrollToForm" type="button" class="btn btn-primary w-100 text-nowrap px-2">
+                                    <i class="fas fa-plus"></i>
+                                    <span class="d-none d-lg-inline ms-1">Nouvelle convention</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-4">
+                            <input type="date" id="start_date" name="start_date" class="form-control" placeholder="Date début">
+                        </div>
+                        <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-5">
+                            <input type="date" id="end_date" name="end_date" class="form-control" placeholder="Date fin">
+                        </div>
+                    </div>
+                </form>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-sm" id="searchableTable">
+                        <thead class="table-light borderless">
+                            <tr class="main-row">
+                                <th>
+                                    <input type="checkbox" id="selectAll">
+                                </th>
+                                <th>
+                                    <div class="d-flex align-items-center">
+                                        <span>Réf</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th class="d-none d-lg-table-cell">
+                                    <div class="d-flex align-items-center">
+                                        <span>Partenaire</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th class="d-none d-lg-table-cell">
+                                    <div class="d-flex align-items-center">
+                                        <span>Date début</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th class="d-none d-lg-table-cell">
+                                    <div class="d-flex align-items-center">
+                                        <span>Date fin</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th class="d-none d-lg-table-cell">
+                                    <div class="d-flex align-items-center">
+                                        <span>Type</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th class="d-none d-lg-table-cell">
+                                    <div class="d-flex align-items-center">
+                                        <span>Statut</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="convention-table-body">
+                        </tbody>
+                    </table>
+                </div>
+                <nav class="mt-3 pagination-hidden" id="pagination-nav">
+                    <ul class="pagination justify-content-center flex-wrap">
+                        <li class="page-item">
+                            <button class="page-link" id="prev-page" aria-label="Précédent">
+                                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                <span class="d-none d-sm-block">&laquo; Préc</span>
+                            </button>
+                        </li>
+                        <li class="page-item active">
+                            <span class="page-link" id="page-info">1</span>
+                        </li>
+                        <li class="page-item">
+                            <button class="page-link" id="next-page" aria-label="Suivant">
+                                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                <span class="d-none d-sm-block">Suiv &raquo;</span>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="convention-detail-modal" tabindex="-1" aria-labelledby="conventionDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog" style="max-width: 70vw !important; width: 70vw !important; margin: 1rem auto !important;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Détails de la Convention</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="convention-detail-content">Chargement des détails...</div>
+                </div>
+                <div class="modal-footer">
+                    <button id="print-convention-btn" class="btn btn-primary">Imprimer</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'vendor/js/html2pdf.bundle.min.js' %}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", initialize);
+
+        let allConventions = [];
+        let currentFilteredConventions = [];
+        let currentPage = 1;
+        const itemsPerPage = 5;
+        let currentConventionId = null;
+
+        function initialize() {
+            setupEventListeners();
+            fetchFilteredConventions();
+        }
+
+        function showAlert(type, message) {
+            const alertContainer = document.getElementById("alert-container");
+            if (!alertContainer) return;
+
+            const alert = document.createElement("div");
+            alert.className = `alert alert-${type} alert-dismissible fade show d-flex align-items-center`;
+            alert.role = "alert";
+            alert.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'times-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2 fw-bold"></i>
+                <div><strong>${type === 'success' ? 'Succès' : type === 'danger' ? 'Erreur' : type === 'warning' ? 'Attention' : 'Info'} :</strong> ${message}</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            alertContainer.innerHTML = "";
+            alertContainer.appendChild(alert);
+
+            setTimeout(() => {
+                alert.classList.remove("show");
+                setTimeout(() => alert.remove(), 150);
+            }, 5000);
+        }
+
+        function setupImportExportButton() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const importExportBtn = document.getElementById('importExportBtn');
+            const importExportIcon = document.getElementById('importExportIcon');
+            const importExportText = document.getElementById('importExportText');
+
+            // Fonction pour mettre à jour le bouton selon l'état des checkboxes
+            function updateImportExportButton() {
+                const checkedBoxes = document.querySelectorAll('.row-check:checked');
+                
+                if (checkedBoxes.length > 0) {
+                    // Mode Export
+                    importExportIcon.className = 'fas fa-file-export';
+                    importExportText.textContent = 'Exporter';
+                } else {
+                    // Mode Import
+                    importExportIcon.className = 'fas fa-file-import';
+                    importExportText.textContent = 'Importer';
+                }
+            }
+
+            // Gestionnaire pour "Sélectionner tout"
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    const isChecked = this.checked;
+                    const rowCheckboxes = document.querySelectorAll('.row-check');
+                    rowCheckboxes.forEach(checkbox => {
+                        checkbox.checked = isChecked;
+                    });
+                    updateImportExportButton();
+                });
+            }
+
+            // Gestionnaire de clic sur le bouton Import/Export
+            if (importExportBtn) {
+                importExportBtn.addEventListener('click', function() {
+                    const checkedBoxes = document.querySelectorAll('.row-check:checked');
+                    
+                    if (checkedBoxes.length > 0) {
+                        // Mode Export - récupérer les IDs sélectionnés
+                        const selectedIds = Array.from(checkedBoxes).map(cb => {
+                            const row = cb.closest('tr');
+                            return row ? row.getAttribute('data-convention-id') : null;
+                        }).filter(id => id !== null);
+                        
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Export en cours',
+                            text: `Export de ${selectedIds.length} convention(s) sélectionnée(s)...`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        
+                        console.log('Export des conventions:', selectedIds);
+                        // TODO: Implémenter la logique d'export réelle
+                        
+                    } else {
+                        // Mode Import
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Import',
+                            text: 'Fonctionnalité d\'import à implémenter...',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        
+                        console.log('Mode Import activé');
+                        // TODO: Implémenter la logique d'import réelle
+                    }
+                });
+            }
+
+            // Fonction pour ajouter les gestionnaires aux checkboxes individuelles
+            window.updateCheckboxListeners = function() {
+                const rowCheckboxes = document.querySelectorAll('.row-check');
+                rowCheckboxes.forEach(checkbox => {
+                    // Supprimer l'ancien listener s'il existe
+                    checkbox.removeEventListener('change', handleCheckboxChange);
+                    // Ajouter le nouveau listener
+                    checkbox.addEventListener('change', handleCheckboxChange);
+                });
+            };
+
+            function handleCheckboxChange() {
+                const rowCheckboxes = document.querySelectorAll('.row-check');
+                const selectAllCheckbox = document.getElementById('selectAll');
+                
+                // Vérifier si toutes les checkboxes sont cochées
+                const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
+                const noneChecked = Array.from(rowCheckboxes).every(cb => !cb.checked);
+                
+                // Mettre à jour la checkbox "Sélectionner tout"
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allChecked;
+                    selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+                }
+                
+                updateImportExportButton();
+            }
+        }
+
+        function setupEventListeners() {
+            const scrollToFormButton = document.getElementById("scrollToForm");
+            if (scrollToFormButton) {
+                scrollToFormButton.addEventListener("click", () => {
+                    const newConventionForm = document.getElementById("convention-form") || document.getElementById("new-convention-form");
+                    newConventionForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+            }
+
+            // Gestion des checkboxes et bouton Import/Export
+            setupImportExportButton();
+
+            const form = document.getElementById("filter-form");
+            if (form) {
+                form.addEventListener("submit", fetchFilteredConventions);
+            }
+
+            const searchInput = document.getElementById("search");
+            if (searchInput) {
+                searchInput.addEventListener("input", () => {
+                    clearTimeout(window.searchTimeout);
+                    window.searchTimeout = setTimeout(searchConventions, 300);
+                });
+            }
+
+            ["start_date", "end_date", "status"].forEach(id => {
+                const input = document.getElementById(id);
+                if (input) input.addEventListener("change", fetchFilteredConventions);
+            });
+
+            const prevButton = document.getElementById("prev-page");
+            const nextButton = document.getElementById("next-page");
+            if (prevButton) {
+                prevButton.addEventListener("click", () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        displayConventions();
+                    }
+                });
+            }
+            if (nextButton) {
+                nextButton.addEventListener("click", () => {
+                    const totalPages = Math.ceil(currentFilteredConventions.length / itemsPerPage);
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        displayConventions();
+                    }
+                });
+            }
+
+            document.addEventListener("click", handleButtonClicks);
+        }
+
+        function handleButtonClicks(e) {
+            const target = e.target.closest(".view-convention-btn, .delete-convention-btn, .confirm-convention-btn, .duplicate-convention-btn");
+            if (!target) return;
+
+            const conventionId = target.getAttribute("data-convention-id");
+            if (!conventionId) return;
+
+            if (target.matches(".view-convention-btn")) {
+                viewConventionDetails(conventionId);
+            } else if (target.matches(".delete-convention-btn")) {
+                confirmDelete(conventionId);
+            } else if (target.matches(".confirm-convention-btn")) {
+                confirmConvention(conventionId);
+            } else if (target.matches(".duplicate-convention-btn")) {
+                duplicateConvention(conventionId);
+            }
+        }
+
+        function confirmDelete(conventionId) {
+            Swal.fire({
+                title: 'Supprimer la convention ?',
+                text: 'Voulez-vous vraiment supprimer cette convention ? Cette action est irréversible.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Oui, supprimer',
+                cancelButtonText: 'Annuler',
+                buttonsStyling: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+                    if (!csrfToken) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            text: 'Token CSRF non trouvé.',
+                            confirmButtonText: 'OK'
+                        });
+                        return;
+                    }
+
+                    fetch(`/purchases/conventions/delete/${conventionId}/`, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": csrfToken
+                        }
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Succès',
+                                    text: 'Convention supprimée avec succès !',
+                                    timer: 2000,
+                                    timerProgressBar: true,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Erreur',
+                                    text: data.message || 'Erreur lors de la suppression de la convention.',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur',
+                                text: 'Une erreur réseau est survenue. Veuillez réessayer.',
+                                confirmButtonText: 'OK'
+                            });
+                            console.error("Erreur:", error);
+                        });
+                }
+            });
+        }
+
+        function getStatusBadge(state, state_display) {
+            let badgeClass = '';
+            switch (state) {
+                case 'draft':
+                    badgeClass = 'bg-primary';
+                    break;
+                case 'confirmed':
+                    badgeClass = 'bg-success';
+                    break;
+                case 'cancelled':
+                    badgeClass = 'bg-secondary';
+                    break;
+                default:
+                    badgeClass = 'bg-secondary';
+            }
+            return `<span class="badge ${badgeClass}">${escapeHtml(state_display || state || 'N/A')}</span>`;
+        }
+
+        function searchConventions() {
+            const searchInput = document.getElementById("search");
+            const statusInput = document.getElementById("status");
+            const startDateInput = document.getElementById("start_date");
+            const endDateInput = document.getElementById("end_date");
+
+            const searchTerm = searchInput?.value.toLowerCase().trim() || "";
+            const status = statusInput?.value || "";
+            const startDate = startDateInput?.value ? new Date(startDateInput.value) : null;
+            const endDate = endDateInput?.value ? new Date(endDateInput.value) : null;
+
+            currentFilteredConventions = allConventions.filter(convention => {
+                const matchesSearch = searchTerm
+                    ? (convention.name?.toLowerCase().includes(searchTerm) || convention.partner_name?.toLowerCase().includes(searchTerm))
+                    : true;
+                const matchesStatus = status
+                    ? convention.state === status
+                    : true;
+                const startDateConvention = convention.date_start ? new Date(convention.date_start) : null;
+                const endDateConvention = convention.date_end ? new Date(convention.date_end) : null;
+                const matchesStartDate = startDate ? startDateConvention && startDateConvention >= startDate : true;
+                const matchesEndDate = endDate ? endDateConvention && endDateConvention <= endDate : true;
+
+                return matchesSearch && matchesStatus && matchesStartDate && matchesEndDate;
+            });
+
+            currentPage = 1;
+            displayConventions();
+        }
+
+        function displayConventions() {
+            const tableBody = document.getElementById("convention-table-body");
+            if (!tableBody) return;
+
+            tableBody.innerHTML = "";
+
+            if (!currentFilteredConventions?.length) {
+                tableBody.innerHTML = `<tr><td colspan="8" class="text-center">Aucune convention trouvée.</td></tr>`;
+                updatePagination();
+                return;
+            }
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const paginatedConventions = currentFilteredConventions.slice(startIndex, startIndex + itemsPerPage);
+
+            paginatedConventions.forEach((convention, index) => {
+                const row = document.createElement("tr");
+                row.className = "main-row";
+                row.setAttribute("data-convention-id", convention.id);
+                row.innerHTML = `
+                    <td data-label="Sélection">
+                        <input type="checkbox" class="row-check">
+                    </td>
+                    <td data-label="Réf">${escapeHtml(convention.name || "N/A")}</td>
+                    <td data-label="Partenaire" class="d-none d-lg-table-cell">${escapeHtml(convention.partner_name || "N/A")}</td>
+                    <td data-label="Date début" class="d-none d-lg-table-cell">${escapeHtml(convention.date_start || "N/A")}</td>
+                    <td data-label="Date fin" class="d-none d-lg-table-cell">${escapeHtml(convention.date_end || "N/A")}</td>
+                    <td data-label="Type" class="d-none d-lg-table-cell">${escapeHtml(convention.type || "N/A")}</td>
+                    <td data-label="Statut" class="d-none d-lg-table-cell">${getStatusBadge(convention.state, convention.state_display)}</td>
+                    <td data-label="Actions" class="actions-cell">
+                        <button class="btn btn-sm btn-primary d-lg-none" data-bs-toggle="collapse" data-bs-target="#details-${index}">
+                            Voir détails
+                        </button>
+                        <div class="d-none d-lg-flex gap-1 justify-content-end">
+                            <button class="btn btn-sm btn-light border text-info view-convention-btn" data-convention-id="${convention.id}" data-bs-toggle="modal" data-bs-target="#convention-detail-modal" title="Voir">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                            <a href="/purchases/conventions/edit/${convention.id}/" class="btn btn-sm btn-light border text-dark" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-light border text-danger delete-convention-btn" data-convention-id="${convention.id}" title="Supprimer">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-light border text-success confirm-convention-btn" data-convention-id="${convention.id}" ${convention.state !== "draft" ? "disabled" : ""} title="${convention.state !== "draft" ? "Confirmé" : "Confirmer"}">
+                                <i class="${convention.state !== "draft" ? "fas fa-check-double" : "fas fa-check"}"></i>
+                            </button>
+                            ${convention.state !== "confirmed" ? `
+                            <button class="btn btn-sm btn-light border text-warning duplicate-convention-btn" data-convention-id="${convention.id}" title="Dupliquer">
+                                <i class="fas fa-copy"></i>
+                            </button>` : ""}
+                            {% endif %}
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+
+                const collapseRow = document.createElement("tr");
+                collapseRow.className = "collapse bg-light";
+                collapseRow.id = `details-${index}`;
+                collapseRow.innerHTML = `
+                    <td colspan="8" class="p-3">
+                        <div class="row">
+                            <div class="col-12">
+                                <p class="mb-2"><strong>Partenaire:</strong> ${escapeHtml(convention.partner_name || "N/A")}</p>
+                                <p class="mb-2"><strong>Date début:</strong> ${escapeHtml(convention.date_start || "N/A")}</p>
+                                <p class="mb-2"><strong>Date fin:</strong> ${escapeHtml(convention.date_end || "N/A")}</p>
+                                <p class="mb-2"><strong>Type:</strong> ${escapeHtml(convention.type || "N/A")}</p>
+                                <p class="mb-2"><strong>Statut:</strong> ${getStatusBadge(convention.state, convention.state_display)}</p>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button class="btn btn-sm btn-light border text-info view-convention-btn" data-convention-id="${convention.id}" data-bs-toggle="modal" data-bs-target="#convention-detail-modal" title="Voir">
+                                        <i class="fas fa-eye me-1"></i> Voir
+                                    </button>
+                                    {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                    <a href="/purchases/conventions/edit/${convention.id}/" class="btn btn-sm btn-light border text-dark" title="Modifier">
+                                        <i class="fas fa-edit me-1"></i> Modifier
+                                    </a>
+                                    <button class="btn btn-sm btn-light border text-danger delete-convention-btn" data-convention-id="${convention.id}" title="Supprimer">
+                                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                                    </button>
+                                    <button class="btn btn-sm btn-light border text-success confirm-convention-btn" data-convention-id="${convention.id}" ${convention.state !== "draft" ? "disabled" : ""} title="${convention.state !== "draft" ? "Confirmé" : "Confirmer"}">
+                                        <i class="${convention.state !== "draft" ? "fas fa-check-double me-1" : "fas fa-check me-1"}"></i> ${convention.state !== "draft" ? "Confirmé" : "Confirmer"}
+                                    </button>
+                                    ${convention.state !== "confirmed" ? `
+                                    <button class="btn btn-sm btn-light border text-warning duplicate-convention-btn" data-convention-id="${convention.id}" title="Dupliquer">
+                                        <i class="fas fa-copy me-1"></i> Dupliquer
+                                    </button>` : ""}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(collapseRow);
+            });
+
+            updatePagination();
+            
+            // Mettre à jour les gestionnaires de checkboxes après le rendu
+            if (window.updateCheckboxListeners) {
+                window.updateCheckboxListeners();
+            }
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(currentFilteredConventions.length / itemsPerPage);
+            const paginationNav = document.getElementById("pagination-nav");
+
+            // Afficher ou masquer la pagination en fonction du nombre de conventions
+            if (currentFilteredConventions.length > 5) {
+                paginationNav.classList.remove("pagination-hidden");
+            } else {
+                paginationNav.classList.add("pagination-hidden");
+            }
+
+            updatePaginationInfo(` ${currentPage}`, currentPage === 1, currentPage === totalPages || totalPages === 0);
+        }
+
+        function updatePaginationInfo(pageText, prevDisabled, nextDisabled) {
+            const pageInfo = document.getElementById("page-info");
+            const prevButton = document.getElementById("prev-page");
+            const nextButton = document.getElementById("next-page");
+
+            if (pageInfo) pageInfo.textContent = pageText;
+            if (prevButton) prevButton.disabled = prevDisabled;
+            if (nextButton) nextButton.disabled = nextDisabled;
+        }
+
+        function escapeHtml(text) {
+            const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+            return text.toString().replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function fetchFilteredConventions(e) {
+            if (e) e.preventDefault();
+
+            const inputs = {
+                start_date: document.getElementById("start_date")?.value || "",
+                end_date: document.getElementById("end_date")?.value || "",
+                status: document.getElementById("status")?.value || "",
+                search: document.getElementById("search")?.value || ""
+            };
+            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+
+            if (!csrfToken) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Token CSRF non trouvé.',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            fetch("{% url 'convention_list_filtered' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrfToken,
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: new URLSearchParams(inputs)
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    allConventions = data.conventions || [];
+                    searchConventions();
+                })
+                .catch(error => {
+                    console.error("Erreur lors du chargement :", error);
+                    const tableBody = document.getElementById("convention-table-body");
+                    if (tableBody) {
+                        tableBody.innerHTML = `<tr><td colspan="8" class="text-danger">Erreur lors du chargement des données.</td></tr>`;
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: 'Erreur lors du chargement des données.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+        }
+
+        function viewConventionDetails(conventionId) {
+            currentConventionId = conventionId;
+            const modalContent = document.getElementById("convention-detail-content");
+            if (!modalContent) return;
+
+            modalContent.innerHTML = "<p>Chargement des détails...</p>";
+
+            fetch(`/purchases/conventions/detail-json/${conventionId}/`, {
+                method: "GET",
+                headers: {
+                    "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")?.value || "",
+                    "Content-Type": "application/json"
+                }
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    const convention = data.convention || {};
+                    const partner = convention.partner || {};
+                    const lines = data.lines || [];
+
+                    let html = `
+                        <h1>Convention: ${escapeHtml(convention.name || "N/A")}</h1>
+                        <div class="convention-info">
+                            <p><strong>Partenaire:</strong> ${escapeHtml(partner.name || "N/A")}</p>
+                            <p><strong>Adresse:</strong> ${escapeHtml(partner.address || "N/A")}, ${escapeHtml(partner.city || "N/A")}</p>
+                            <p><strong>Date début:</strong> ${escapeHtml(convention.date_start || "N/A")}</p>
+                            <p><strong>Date fin:</strong> ${escapeHtml(convention.date_end || "N/A")}</p>
+                            <p><strong>Type:</strong> ${escapeHtml(convention.type || "N/A")}</p>
+                            <p><strong>Statut:</strong> ${getStatusBadge(convention.state, convention.state)}</p>
+                            <p><strong>Notes:</strong> ${escapeHtml(convention.notes || "Aucune")}</p>
+                            <p><strong>Conditions générales:</strong> ${escapeHtml(convention.general_conditions || "Aucune")}</p>
+                        </div>
+                        <h6>Lignes de convention</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Produit</th>
+                                        <th>Quantité</th>
+                                        <th>Prix unitaire</th>
+                                        <th>Taxe</th>
+                                        <th>Sous-total HT</th>
+                                        <th>Taxe (MAD)</th>
+                                        <th>Total TTC</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    html += lines.length === 0
+                        ? `<tr><td colspan="7" class="text-center">Aucune ligne de convention.</td></tr>`
+                        : lines.map(line => `
+                            <tr>
+                                <td>${escapeHtml(line.name || "N/A")}</td>
+                                <td>${escapeHtml(line.qty || "0")}</td>
+                                <td>${escapeHtml(line.unit_price || "0")}</td>
+                                <td>${escapeHtml(line.tax || "Aucune")}</td>
+                                <td>${escapeHtml(line.subtotal || "0")}</td>
+                                <td>${escapeHtml(line.tax_amount || "0")}</td>
+                                <td>${escapeHtml(line.total_ttc || "0")}</td>
+                            </tr>
+                        `).join("");
+
+                    html += `
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>Total HT:</strong></td>
+                                        <td>${escapeHtml(convention.amount_untaxed || "0")}</td>
+                                        <td>${escapeHtml(convention.amount_tax || "0")}</td>
+                                        <td>${escapeHtml(convention.amount_total || "0")}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    `;
+
+                    modalContent.innerHTML = html;
+
+                    const printButton = document.getElementById("print-convention-btn");
+                    if (printButton) {
+                        printButton.setAttribute("data-convention-id", conventionId);
+                        printButton.onclick = () => {
+                            window.location.href = `/purchases/conventions/${conventionId}/pdf/`;
+                        };
+                    }
+                })
+                .catch(error => {
+                    modalContent.innerHTML = `<p class="text-danger">Erreur lors du chargement des détails.</p>`;
+                    console.error("Erreur:", error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: 'Erreur lors du chargement des détails de la convention.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+        }
+
+        function confirmConvention(conventionId) {
+            Swal.fire({
+                title: 'Confirmer la convention ?',
+                text: 'Voulez-vous confirmer cette convention ?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Confirmer',
+                cancelButtonText: 'Annuler',
+                buttonsStyling: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+                    if (!csrfToken) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            text: 'Token CSRF non trouvé.',
+                            confirmButtonText: 'OK'
+                        });
+                        return;
+                    }
+
+                    fetch(`/purchases/conventions/confirm/${conventionId}/`, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": csrfToken,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({})
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Succès',
+                                    text: 'Convention confirmée avec succès !',
+                                    timer: 2000,
+                                    timerProgressBar: true,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Erreur',
+                                    text: data.error || 'Impossible de confirmer la convention.',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur',
+                                text: 'Une erreur est survenue lors de la confirmation.',
+                                confirmButtonText: 'OK'
+                            });
+                            console.error("Erreur:", error);
+                        });
+                }
+            });
+        }
+
+        function duplicateConvention(conventionId) {
+            Swal.fire({
+                title: 'Choisir le partenaire',
+                html: `
+                    <select id="new-partner-id" class="swal2-select" style="width: 80%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px;">
+                        <option value="">Sélectionnez un partenaire</option>
+                        {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                        {% endfor %}
+                    </select>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Dupliquer',
+                cancelButtonText: 'Annuler',
+                buttonsStyling: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                preConfirm: () => {
+                    const supplierId = document.getElementById('new-partner-id').value;
+                    if (!supplierId) {
+                        Swal.showValidationMessage('Veuillez sélectionner un partenaire.');
+                        return false;
+                    }
+                    return { supplierId };
+                }
+            }).then(result => {
+                if (result.isConfirmed) {
+                    const { supplierId } = result.value;
+                    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+                    if (!csrfToken) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            text: 'Token CSRF non trouvé.',
+                            confirmButtonText: 'OK'
+                        });
+                        return;
+                    }
+
+                    fetch(`/purchases/conventions/duplicate/${conventionId}/`, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": csrfToken,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ supplier_id: supplierId })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Succès',
+                                    text: 'Convention dupliquée avec succès !',
+                                    timer: 2000,
+                                    timerProgressBar: true,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Erreur',
+                                    text: data.error || 'Erreur lors de la duplication de la convention.',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur',
+                                text: 'Une erreur est survenue lors de la duplication.',
+                                confirmButtonText: 'OK'
+                            });
+                            console.error("Erreur:", error);
+                        });
+                }
+            });
+        }
+    </script>
+    <script>
+        window.CONVENTION_LIST_FILTERED_URL = "{% url 'convention_list_filtered' %}";
+    </script>
+</body>
+</html>

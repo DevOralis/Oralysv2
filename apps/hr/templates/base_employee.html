@@ -1,0 +1,30 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Oralys{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor\css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor\fontawesome-free-6.4.0-web\css\all.min.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% include 'hr_menu.html' %}
+    <div class="main">
+        {% include 'includes/header.html' with page_title=page_title user=connected_employee %}
+        
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+        
+        {% include 'includes/footer.html' %}
+    </div>
+    <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

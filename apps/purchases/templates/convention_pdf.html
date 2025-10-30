@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Convention - Oralys</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11pt;
+            max-width: 850px;
+            margin: 20px auto;
+            background: #f9f9f9;
+            color: #222;
+            line-height: 1.4;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header .logo {
+            font-size: 36px;
+            font-weight: 900;
+            color: #27ae60;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+        }
+
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            box-shadow: 0 3px 7px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            padding: 20px;
+            width: 48%;
+        }
+
+        .card h3 {
+            border-bottom: 2px solid #27ae60;
+            padding-bottom: 6px;
+            margin-bottom: 15px;
+            font-size: 16pt;
+            color: #27ae60;
+        }
+
+        .info-row {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #555;
+            width: 140px;
+            display: inline-block;
+        }
+
+        .info-value {
+            flex-grow: 1;
+        }
+
+        .convention-dates {
+            font-size: 10pt;
+            color: #888;
+            margin-bottom: 30px;
+            text-align: center;
+            font-style: italic;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 7px rgba(0, 0, 0, 0.05);
+        }
+
+        thead {
+            background: #27ae60;
+            color: white;
+        }
+
+        th,
+        td {
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        td:first-child {
+            text-align: left;
+        }
+
+        tbody tr:hover {
+            background: #eafaf1;
+        }
+
+        tfoot td {
+            font-weight: 700;
+            font-size: 11pt;
+            border-top: 2px solid #27ae60;
+            text-align: right;
+            padding-top: 15px;
+        }
+
+        tfoot tr.total-row td {
+            background: #dff3e4;
+            color: #27ae60;
+        }
+
+        .notes-section {
+            margin-top: 30px;
+            background: #f0fdf7;
+            border-left: 5px solid #27ae60;
+            padding: 15px 20px;
+            border-radius: 6px;
+            font-style: italic;
+            color: #2f5547;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">ORALYS</div>
+        <h1>Convention Commerciale</h1>
+    </header>
+
+    <div class="summary">
+        <div class="card">
+            <h3>Informations Oralys</h3>
+            <div class="info-row"><span class="info-label">Nom :</span><span class="info-value">Oralys</span></div>
+            <div class="info-row"><span class="info-label">Adresse :</span><span class="info-value">123 Rue Exemple, 75000 Paris</span></div>
+            <div class="info-row"><span class="info-label">Ville :</span><span class="info-value">Paris</span></div>
+            <div class="info-row"><span class="info-label">Email :</span><span class="info-value">contact@oralys.fr</span></div>
+        </div>
+        <div class="card">
+            <h3>Informations Partenaire</h3>
+            <div class="info-row"><span class="info-label">Nom :</span><span class="info-value">{{ convention.partner.name }}</span></div>
+            <div class="info-row"><span class="info-label">Adresse :</span><span class="info-value">{{ convention.partner.address }}</span></div>
+            <div class="info-row"><span class="info-label">Ville :</span><span class="info-value">{{ convention.partner.city }}</span></div>
+            <div class="info-row"><span class="info-label">Email :</span><span class="info-value">{{ convention.partner.email|default:"N/A" }}</span></div>
+        </div>
+    </div>
+
+    <div class="convention-dates">
+        <div><strong>Référence :</strong> {{ convention.name }}</div>
+        <div><strong>Type :</strong> {{ convention.type }}</div>
+        <div><strong>Période :</strong> du {{ convention.date_start }} au {{ convention.date_end }}</div>
+        <div><strong>Statut :</strong> {{ convention.state }}</div>
+    </div>
+
+    <section>
+        <h2>Conditions Générales</h2>
+        <p style="white-space: pre-wrap;">{{ convention.general_conditions }}</p>
+    </section>
+    {% if convention.notes %}
+    <section class="notes-section">
+        <h3>Notes et Observations</h3>
+        <p>{{ convention.notes }}</p>
+    </section>
+    {% endif %}
+
+    <section>
+        <h2>Détails de la Convention</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Désignation</th>
+                    <th style="width: 10%;">Qté</th>
+                    <th style="width: 15%;">Prix Unitaire HT</th>
+                    <th style="width: 15%;">TVA</th>
+                    <th style="width: 15%;">Sous-total HT</th>
+                    <th style="width: 15%;">Total TTC</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for line in lines %}
+                <tr>
+                    <td>{{ line.name }}</td>
+                    <td>{{ line.qty }}</td>
+                    <td>{{ line.unit_price }}</td>
+                    <td>{{ line.tax }}</td>
+                    <td>{{ line.subtotal }}</td>
+                    <td>{{ line.total_ttc }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5">Total HT</td>
+                    <td>{{ convention.amount_untaxed }}{{ convention.currency }}</td>
+                </tr>
+                <tr>
+                    <td colspan="5">Total TVA</td>
+                    <td>{{ convention.amount_tax }}{{ convention.currency }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="5">Total TTC</td>
+                    <td>{{ convention.amount_total }}{{ convention.currency }}</td>
+                </tr>
+            </tfoot>
+
+        </table>
+    </section>
+    <style>
+        .col-designation {
+            width: 30%;
+        }
+
+        .col-qty {
+            width: 10%;
+        }
+
+        .col-unit-price,
+        .col-tax,
+        .col-subtotal,
+        .col-total {
+            width: 15%;
+        }
+    </style>
+
+</body>
+
+</html>

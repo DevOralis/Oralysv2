@@ -1,0 +1,260 @@
+/* ========================================
+   INVENTORY PAGE RESPONSIVE STYLES
+   ======================================== */
+
+/* Table responsive pour mobile */
+@media (max-width: 767.98px) { /* Appliquer les styles de 'carte' uniquement sur les très petits écrans */
+    /* Masquer les colonnes desktop sur mobile pour la table principale uniquement */
+    #product-table > thead > tr > .d-none.d-lg-table-cell {
+        display: none !important;
+    }
+    
+    /* Chevron plus visible sur mobile */
+    .chevron-toggle {
+        font-size: 1.2rem;
+        color: #007bff;
+        cursor: pointer;
+        padding: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .chevron-toggle:hover {
+        color: #0056b3;
+        transform: scale(1.1);
+    }
+    
+    /* Masquer les tableaux d'emplacement sur mobile */
+    .location-row {
+        display: none !important;
+    }
+    
+    /* Style pour les cellules mobile de la table principale */
+    #product-table > tbody > tr > td {
+        position: relative;
+        padding-left: 50% !important;
+        border: none;
+        border-bottom: 1px solid #dee2e6;
+        display: block; /* Affichage en bloc pour le responsive */
+        text-align: right;
+    }
+    
+    #product-table > tbody > tr > td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+        color: #495057;
+    }
+    
+    /* Ajustements spécifiques pour certaines colonnes de la table principale */
+    #product-table > tbody > tr > td[data-label="Détails"] {
+        text-align: center;
+        padding-left: 0 !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    #product-table > tbody > tr > td[data-label="Détails"]:before {
+        display: none;
+    }
+}
+
+/* ========================================
+   MODAL STYLES FOR MOBILE LOCATIONS
+   ======================================== */
+
+#locationModal .modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+#locationModal .modal-header {
+    border-radius: 12px 12px 0 0;
+    border-bottom: none;
+    padding: 1rem 1.5rem;
+}
+
+#locationModal .modal-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+#locationModal .modal-body .table {
+    margin-bottom: 0;
+}
+
+@media (max-width: 767.98px) {
+    #locationModal .modal-body .table thead {
+        display: none; /* Masquer l'en-tête sur mobile */
+    }
+
+    #locationModal .modal-body .table, 
+    #locationModal .modal-body .table tbody, 
+    #locationModal .modal-body .table tr, 
+    #locationModal .modal-body .table td {
+        display: block;
+        width: 100%;
+    }
+
+    #locationModal .modal-body .table tr {
+        margin-bottom: 1rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    #locationModal .modal-body .table tr:last-child {
+        border-bottom: none;
+    }
+
+    #locationModal .modal-body .table td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+        border: none;
+    }
+
+    #locationModal .modal-body .table td:before {
+        content: attr(data-label) ': ';
+        position: absolute;
+        left: 10px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+        color: #495057;
+    }
+
+    #locationModal .modal-body .table td.text-end {
+        text-align: right !important;
+    }
+}
+
+#locationModal .modal-body .table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #495057;
+    padding: 0.75rem;
+}
+
+#locationModal .badge {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.7rem;
+}
+
+#locationModal .modal-footer {
+    border-top: 1px solid #e9ecef;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Animation pour l'ouverture du modal */
+#locationModal.fade .modal-dialog {
+    transform: translate(0, -50px);
+    transition: transform 0.3s ease-out;
+}
+
+#locationModal.show .modal-dialog {
+    transform: translate(0, 0);
+}
+
+/* ========================================
+   DESKTOP LOCATION TABLE STYLES
+   ======================================== */
+
+@media (min-width: 992px) {
+    /* Animation pour l'expansion des tableaux desktop */
+    .location-row {
+        transition: all 0.3s ease;
+    }
+    
+    .location-table {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin: 10px;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: all 0.3s ease;
+    }
+    
+    .location-table.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .location-table thead th {
+        background-color: #e9ecef;
+        border: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .location-table tbody td {
+        border: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .location-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    /* Style du chevron desktop */
+    .chevron-toggle {
+        font-size: 1.1rem;
+        color: #6c757d;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .chevron-toggle:hover {
+        color: #007bff;
+        transform: scale(1.1);
+    }
+}
+
+/* ========================================
+   GENERAL IMPROVEMENTS
+   ======================================== */
+
+/* Amélioration du style du tableau principal */
+.table th {
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Style pour les badges de quantité */
+.total-qty {
+    font-weight: 600;
+    color: #28a745;
+}
+
+/* Loading state */
+.loading {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 2rem;
+}
+
+/* Empty state */
+.text-muted {
+    color: #6c757d !important;
+}
+
+/* Animation pour les transitions */
+* {
+    transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}

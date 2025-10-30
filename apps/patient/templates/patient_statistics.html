@@ -1,0 +1,470 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Statistiques Patients - Oralys{% endblock %}
+
+{% block menu %}
+  {% include 'patient_menu.html' %}
+{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'vendor/css/bootstrap.min.css' %}" rel="stylesheet">
+<link href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <!-- KPI Cards -->
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-users fa-xl text-primary"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-primary mb-0">{{ total_patients }}</h3>
+                        <p class="text-muted mb-0">Total Patients</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-stethoscope fa-xl text-success"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-success mb-0">{{ total_consultations }}</h3>
+                        <p class="text-muted mb-0">Total Consultations</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-calendar-alt fa-xl text-info"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-info mb-0">{{ total_appointments }}</h3>
+                        <p class="text-muted mb-0">Rendez-vous</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="kpi-card-light bg-light h-100">
+                <div class="kpi-content d-flex align-items-center">
+                    <div class="kpi-icon me-3">
+                        <i class="fas fa-shield-alt fa-xl text-warning"></i>
+                    </div>
+                    <div class="kpi-text">
+                        <h3 class="text-warning mb-0">{{ patients_with_insurance }}</h3>
+                        <p class="text-muted mb-0">Patients Assurés</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphiques principaux -->
+    <div class="row">
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Évolution des Consultations</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="consultationsChart" height="320"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Répartition par Genre</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="genderChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableaux et listes -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Patients Récents</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Prénom</th>
+                                    <th>Genre</th>
+                                    <th>Ville</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in recent_patients %}
+                                <tr>
+                                    <td>{{ patient.last_name }}</td>
+                                    <td>{{ patient.first_name }}</td>
+                                    <td>
+                                        {% if patient.gender == 'H' %}
+                                            <span class="badge bg-primary">H</span>
+                                        {% elif patient.gender == 'F' %}
+                                            <span class="badge bg-pink">F</span>
+                                        {% elif patient.gender == 'O' %}
+                                            <span class="badge bg-secondary">Autre</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Non défini</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ patient.city|default:"Non défini" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Aucun patient récent</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Rendez-vous à Venir</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Médecin</th>
+                                    <th>Date</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for appointment in upcoming_appointments %}
+                                <tr>
+                                    <td>
+                                        {% if appointment.patient %}
+                                            {{ appointment.patient.last_name }} {{ appointment.patient.first_name }}
+                                        {% else %}
+                                            {{ appointment.nom }} {{ appointment.prenom }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ appointment.medecin.full_name|default:"Non assigné" }}</td>
+                                    <td>{{ appointment.date_heure|date:"d/m/Y H:i" }}</td>
+                                    <td><span class="badge bg-warning">{{ appointment.statut }}</span></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Aucun rendez-vous à venir</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques détaillées -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Statut Des Rendez-Vous</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="appointmentsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Patients Avec/Sans Assurance</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="insuranceChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top Villes</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="citiesChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Consultations Par Spécialité</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="specialtyChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.kpi-card-light {
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e3e6f0;
+  transition: all 0.3s ease;
+}
+
+.kpi-card-light:hover {
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  transform: translateY(-2px);
+}
+
+.kpi-content {
+  padding: 0;
+}
+
+.kpi-icon {
+  flex-shrink: 0;
+}
+
+.kpi-text h3 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.kpi-text p {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.bg-pink {
+  background-color: #e83e8c !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Données pour les graphiques (générées côté serveur)
+const consultationsMonthData = {{ consultations_month_json|safe }};
+const patientsGenderData = {{ patients_gender_json|safe }};
+const appointmentsStatusData = {{ appointments_status_json|safe }};
+const patientsCityData = {{ patients_city_json|safe }};
+const consultationsSpecialtyData = {{ consultations_specialty_json|safe }};
+const patientsInsuranceData = {{ patients_insurance_json|safe }};
+
+// Graphique évolution consultations
+const consultationsCtx = document.getElementById('consultationsChart').getContext('2d');
+const consultationsChart = new Chart(consultationsCtx, {
+    type: 'line',
+    data: {
+        labels: consultationsMonthData.map(item => item.month_name),
+        datasets: [{
+            label: 'Consultations',
+            data: consultationsMonthData.map(item => item.count),
+            borderColor: '#4e73df',
+            backgroundColor: 'rgba(78, 115, 223, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#4e73df',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
+            }
+        }
+    }
+});
+
+// Graphique genre
+const genderCtx = document.getElementById('genderChart').getContext('2d');
+const genderChart = new Chart(genderCtx, {
+    type: 'pie',
+    data: {
+        labels: patientsGenderData.map(item => item.gender),
+        datasets: [{
+            data: patientsGenderData.map(item => item.count),
+            backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Graphique statut rendez-vous
+const appointmentsCtx = document.getElementById('appointmentsChart').getContext('2d');
+const appointmentsChart = new Chart(appointmentsCtx, {
+    type: 'doughnut',
+    data: {
+        labels: appointmentsStatusData.map(item => item.status),
+        datasets: [{
+            data: appointmentsStatusData.map(item => item.count),
+            backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Graphique assurance
+const insuranceCtx = document.getElementById('insuranceChart').getContext('2d');
+const insuranceChart = new Chart(insuranceCtx, {
+    type: 'doughnut',
+    data: {
+        labels: patientsInsuranceData.map(item => item.category),
+        datasets: [{
+            data: patientsInsuranceData.map(item => item.count),
+            backgroundColor: ['#1cc88a', '#e74a3b'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Graphique villes
+const citiesCtx = document.getElementById('citiesChart').getContext('2d');
+const citiesChart = new Chart(citiesCtx, {
+    type: 'bar',
+    data: {
+        labels: patientsCityData.map(item => item.city),
+        datasets: [{
+            label: 'Nombre de patients',
+            data: patientsCityData.map(item => item.count),
+            backgroundColor: '#36b9cc',
+            borderColor: '#36b9cc',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Graphique spécialités
+const specialtyCtx = document.getElementById('specialtyChart').getContext('2d');
+const specialtyChart = new Chart(specialtyCtx, {
+    type: 'bar',
+    data: {
+        labels: consultationsSpecialtyData.map(item => item.specialty),
+        datasets: [{
+            label: 'Consultations',
+            data: consultationsSpecialtyData.map(item => item.count),
+            backgroundColor: '#4e73df',
+            borderColor: '#4e73df',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

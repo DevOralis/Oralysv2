@@ -1,0 +1,1905 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Candidatures{% endblock %}
+{% block menu %}
+{% include "menu_recruitment.html" %}
+{% endblock %}
+
+{% block content %}
+<style>
+/* Styles pour les composants spécifiques aux applications */
+  .badge-minimal {
+      background: transparent;
+      border: 2px solid;
+      border-radius: 20px;
+      padding: 8px 16px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 5px;
+      font-weight: 500;
+      font-size: 13px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+  }
+  
+  .badge-minimal::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      transition: left 0.3s ease;
+      z-index: -1;
+  }
+  
+  .badge-minimal:hover::before {
+      left: 0;
+  }
+  
+  .badge-minimal.cv-badge {
+      border-color: #214484;
+      color: #516ea1;
+  }
+  .badge-minimal.cv-badge::before {
+      background: #ff6b6b;
+  }
+  .badge-minimal.cv-badge:hover {
+      color: rgb(16, 64, 131);
+  }
+  
+  .badge-minimal.letter-badge {
+      border-color: #2d8d86;
+      color: #349b94;
+  }
+  .badge-minimal.letter-badge::before {
+      background: rgb(18, 62, 42);
+  }
+  .badge-minimal.letter-badge:hover {
+      color: rgb(29, 74, 60);
+  }
+  
+  .badge-minimal.cert-badge {
+      border-color: #5791b7b9;
+      color: #103b58b9;
+  }
+  .badge-minimal.cert-badge::before {
+      background: #a8e6cf;
+  }
+  .badge-minimal.cert-badge:hover {
+      color: #0f3147e2;
+  }
+
+/* Styles pour les tableaux responsives */
+.table-container {
+margin: 0 -15px;
+}
+
+@media screen and (max-width: 768px) {
+.table-container {
+margin: 0;
+}
+
+.table td {
+vertical-align: middle;
+}
+
+.collapse {
+border-top: 1px solid #dee2e6;
+}
+
+.table > :not(caption) > * > * {
+padding: 0.75rem;
+}
+}
+
+/* Styles pour les boutons d'action */
+.btn-light.border {
+border-color: #dee2e6 !important;
+}
+
+.btn-light.border:hover {
+background-color: #f8f9fa;
+}
+
+/* Styles pour les badges de statut */
+.badge.bg-success {
+background-color: #198754 !important;
+}
+
+.badge.bg-danger {
+background-color: #dc3545 !important;
+}
+
+.badge.bg-primary {
+background-color: #0d6efd !important;
+}
+
+.badge.bg-info {
+background-color: #0dcaf0 !important;
+}
+
+.badge.bg-warning {
+background-color: #ffc107 !important;
+color: #000 !important;
+}
+
+.badge.bg-secondary {
+background-color: #6c757d !important;
+}
+
+.badge.bg-dark {
+background-color: #212529 !important;
+}
+
+/* Styles pour les modals avec couleurs */
+.modal-header.bg-primary {
+background-color: #0d6efd !important;
+}
+
+.modal-header.bg-warning {
+background-color: #ffc107 !important;
+}
+
+.modal-header.bg-danger {
+background-color: #dc3545 !important;
+}
+
+.modal-header.bg-info {
+background-color: #0dcaf0 !important;
+}
+
+.modal-header.bg-secondary {
+background-color: #6c757d !important;
+}
+
+/* Styles pour les boutons de fermeture des modals */
+.btn-close-white {
+filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Styles pour les formulaires dans les modals */
+.modal .form-label {
+font-weight: 500;
+margin-bottom: 0.5rem;
+}
+
+.modal .input-group-text {
+background-color: #f8f9fa;
+border-color: #dee2e6;
+}
+
+.modal .form-control:focus {
+border-color: #0d6efd;
+box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Styles pour les alertes dans les modals */
+.modal .alert {
+margin-bottom: 1rem;
+}
+
+/* Styles pour les boutons de pagination */
+.pagination .page-link {
+color: #0d6efd;
+border-color: #dee2e6;
+}
+
+.pagination .page-link:hover {
+color: #0a58ca;
+background-color: #e9ecef;
+border-color: #dee2e6;
+}
+
+.pagination .page-item.active .page-link {
+background-color: #0d6efd;
+border-color: #0d6efd;
+}
+
+/* Styles pour les spinners de chargement */
+.fa-spinner {
+animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+
+/* Styles pour les détails mobiles */
+@media (max-width: 768px) {
+.collapse.bg-light {
+background-color: #f8f9fa !important;
+}
+
+.collapse .btn {
+margin-bottom: 0.25rem;
+}
+
+.collapse .row {
+margin-bottom: 0.5rem;
+}
+}
+
+/* Styles pour les checkboxes de sélection */
+.form-check-input:checked {
+background-color: #0d6efd;
+border-color: #0d6efd;
+}
+
+.form-check-input:focus {
+border-color: #0d6efd;
+box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Styles pour les tooltips */
+.tooltip {
+font-size: 0.875rem;
+}
+
+/* Styles pour les transitions */
+.fade {
+transition: opacity 0.15s linear;
+}
+
+.collapse {
+transition: height 0.35s ease;
+}
+
+/* Styles pour les icônes dans les boutons */
+.btn i {
+margin-right: 0.25rem;
+}
+
+/* Styles pour les liens dans les détails */
+.collapse a {
+color: #0d6efd;
+text-decoration: none;
+}
+
+.collapse a:hover {
+color: #0a58ca;
+text-decoration: underline;
+  }
+</style>
+                
+<div class="content">
+
+  <!-- Alerts Section - Utilisation des composants standards -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Main Content Card -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-file-alt me-2"></i>
+      Liste des Candidatures
+    </div>
+    <div class="card-body">
+      <!-- Table Header Component -->
+      <form method="get" id="search-form">
+        <div class="row g-2 mb-3">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" 
+                     name="q" 
+                     id="search-application" 
+                     class="form-control border-primary" 
+                     placeholder="Rechercher par candidat..." 
+                     value="{{ query|default:'' }}">
+            </div>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="show-archive-application-btn" onclick="toggleArchivedApplications()" title="Candidatures archivées">
+                <i class="fas fa-archive"></i>
+                <span class="d-none d-lg-inline ms-1">Archivées</span>
+              </button>
+              <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddApplicationForm()">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouvelle</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Tableau d'affichage de la liste des candidatures -->
+      <div class="table-responsive">
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Offre</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell">Candidat</th>
+              <th class="d-none d-md-table-cell">Date de candidature</th>
+              <th class="d-none d-md-table-cell">Source</th>
+              <th class="d-none d-md-table-cell">Disponibilité</th>
+              <th class="d-none d-md-table-cell">CV</th>
+              <th class="d-none d-md-table-cell">Lettre</th>
+              <th class="d-none d-md-table-cell">Certificats</th>
+              <th class="d-none d-md-table-cell">Statut</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="applications-table">
+            {% for application in page_obj %}
+            <tr class="main-row" data-application-id="{{ application.id }}">
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td>{{ application.offer.title }}</td>
+              <td class="d-none d-md-table-cell">{{ application.candidate.first_name }} {{ application.candidate.last_name }}</td>
+              <td class="d-none d-md-table-cell">{{ application.submission_date|date:"d/m/Y H:i" }}</td>
+              <td class="d-none d-md-table-cell">{{ application.source|default:"-" }}</td>
+              <td class="d-none d-md-table-cell">
+                {% if application.always_available %}
+                  Toujours disponible
+                {% elif application.availability_start and application.availability_end %}
+                  {{ application.availability_start|date:"d/m/Y" }} - {{ application.availability_end|date:"d/m/Y" }}
+                {% elif application.availability_start %}
+                  À partir du {{ application.availability_start|date:"d/m/Y" }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell">
+                {% if application.cv %}
+                  <a href="{{ application.cv.url }}" target="_blank" class="badge-minimal cv-badge">
+                    <i class="fas fa-file"></i> CV
+                  </a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell">
+                {% if application.cover_letter %}
+                  <a href="{{ application.cover_letter.url }}" target="_blank" class="badge-minimal letter-badge">
+                    <i class="fas fa-edit"></i> Lettre
+                  </a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell">
+                {% if application.certificates %}
+                  <a href="{{ application.certificates.url }}" target="_blank" class="badge-minimal cert-badge">
+                    <i class="fas fa-star"></i> Certificats
+                  </a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell">
+                <span class="badge {% if application.status == 'accepted' %}bg-success{% elif application.status == 'rejected' %}bg-danger{% elif application.status == 'in_review' %}bg-warning{% else %}bg-secondary{% endif %}">
+                  {% if application.status == 'received' %}Reçue
+                  {% elif application.status == 'in_review' %}En cours
+                  {% elif application.status == 'accepted' %}Acceptée
+                  {% elif application.status == 'rejected' %}Refusée
+                  {% endif %}
+                </span>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ application.id }}">
+                  Voir détails
+                </button>
+                <div class="d-none d-md-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-dark" 
+                          onclick="showEditApplicationForm(this)"
+                          data-application-id="{{ application.id }}"
+                          data-application-offer-id="{{ application.offer.id }}"
+                          data-application-candidate-id="{{ application.candidate.id }}"
+                          data-application-submission-date="{{ application.submission_date|date:'Y-m-d' }}T{{ application.submission_date|date:'H:i' }}"
+                          data-application-source="{{ application.source|default:'' }}"
+                          data-application-always-available="{{ application.always_available|yesno:'true,false' }}"
+                          data-application-availability-start="{{ application.availability_start|date:'Y-m-d'|default:'' }}"
+                          data-application-availability-end="{{ application.availability_end|date:'Y-m-d'|default:'' }}"
+                          data-application-status="{{ application.status }}"
+                          data-application-cv="{% if application.cv %}{{ application.cv.url }}{% endif %}"
+                          data-application-cover-letter="{% if application.cover_letter %}{{ application.cover_letter.url }}{% endif %}"
+                          data-application-certificates="{% if application.certificates %}{{ application.certificates.url }}{% endif %}"
+                          title="Modifier cette candidature">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger"
+                          data-bs-toggle="modal" 
+                          data-bs-target="#modalDeleteApplication"
+                          data-application-id="{{ application.id }}"
+                          data-application-candidate-name="{{ application.candidate.first_name }} {{ application.candidate.last_name }}"
+                          data-application-offer-title="{{ application.offer.title }}"
+                          title="Supprimer cette candidature">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="collapse bg-light" id="details-{{ application.id }}">
+              <td colspan="11" class="p-3">
+                <div class="row">
+                  <div class="col-6">
+                    <p class="mb-2"><strong>Candidat:</strong> {{ application.candidate.first_name }} {{ application.candidate.last_name }}</p>
+                    <p class="mb-2"><strong>Date de candidature:</strong> {{ application.submission_date|date:"d/m/Y H:i" }}</p>
+                    <p class="mb-2"><strong>Source:</strong> {{ application.source|default:"-" }}</p>
+                    <p class="mb-2"><strong>Disponibilité:</strong> 
+                      {% if application.always_available %}
+                        Toujours disponible
+                      {% elif application.availability_start and application.availability_end %}
+                        {{ application.availability_start|date:"d/m/Y" }} - {{ application.availability_end|date:"d/m/Y" }}
+                      {% elif application.availability_start %}
+                        À partir du {{ application.availability_start|date:"d/m/Y" }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </p>
+                  </div>
+                  <div class="col-6">
+                    <p class="mb-2"><strong>CV:</strong> {% if application.cv %}<a href="{{ application.cv.url }}" target="_blank">Voir CV</a>{% else %}-{% endif %}</p>
+                    <p class="mb-2"><strong>Lettre:</strong> {% if application.cover_letter %}<a href="{{ application.cover_letter.url }}" target="_blank">Voir lettre</a>{% else %}-{% endif %}</p>
+                    <p class="mb-2"><strong>Certificats:</strong> {% if application.certificates %}<a href="{{ application.certificates.url }}" target="_blank">Voir certificats</a>{% else %}-{% endif %}</p>
+                    <p class="mb-2"><strong>Statut:</strong> 
+                      <span class="badge {% if application.status == 'accepted' %}bg-success{% elif application.status == 'rejected' %}bg-danger{% elif application.status == 'in_review' %}bg-warning{% else %}bg-secondary{% endif %}">
+                        {% if application.status == 'received' %}Reçue
+                        {% elif application.status == 'in_review' %}En cours
+                        {% elif application.status == 'accepted' %}Acceptée
+                        {% elif application.status == 'rejected' %}Refusée
+                        {% endif %}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="col-12 mt-3">
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-dark" 
+                              onclick="showEditApplicationForm(this)"
+                              data-application-id="{{ application.id }}"
+                              data-application-offer-id="{{ application.offer.id }}"
+                              data-application-candidate-id="{{ application.candidate.id }}"
+                              data-application-submission-date="{{ application.submission_date|date:'Y-m-d' }}T{{ application.submission_date|date:'H:i' }}"
+                              data-application-source="{{ application.source|default:'' }}"
+                              data-application-always-available="{{ application.always_available|yesno:'true,false' }}"
+                              data-application-availability-start="{{ application.availability_start|date:'Y-m-d'|default:'' }}"
+                              data-application-availability-end="{{ application.availability_end|date:'Y-m-d'|default:'' }}"
+                              data-application-status="{{ application.status }}"
+                              data-application-cv="{% if application.cv %}{{ application.cv.url }}{% endif %}"
+                              data-application-cover-letter="{% if application.cover_letter %}{{ application.cover_letter.url }}{% endif %}"
+                              data-application-certificates="{% if application.certificates %}{{ application.certificates.url }}{% endif %}"
+                              title="Modifier cette candidature">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                      </button>
+                      <button class="btn btn-sm btn-danger" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#modalDeleteApplication"
+                              data-application-id="{{ application.id }}"
+                              data-application-candidate-name="{{ application.candidate.first_name }} {{ application.candidate.last_name }}"
+                              data-application-offer-title="{{ application.offer.title }}"
+                              title="Supprimer cette candidature">
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="11" class="text-center text-muted">Aucune candidature disponible</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Component -->
+      {% if page_obj.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+          {% endif %}
+          
+            {% for num in page_obj.paginator.page_range %}
+              {% if page_obj.number == num %}
+              <li class="page-item active">
+                <a class="page-link" href="#">{{ num }}</a>
+              </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}">{{ num }}</a>
+              </li>
+              {% endif %}
+            {% endfor %}
+          
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout de candidature -->
+  <div class="card mb-4" id="add-application-form" style="display: block;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2"></i>
+      Nouvelle Candidature
+    </div>
+    <div class="card-body">
+      <form id="applicationFormBottom" method="post" action="{% url 'recruitment_applications' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="id_offer_bottom">Offre *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-briefcase"></i>
+              </span>
+            <select class="form-select" id="id_offer_bottom" name="offer" required>
+              <option value="">Sélectionner une offre</option>
+              {% for offer in offers %}
+              <option value="{{ offer.id|stringformat:'s' }}">{{ offer.title }}</option>
+              {% endfor %}
+            </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_candidate_bottom">Candidat *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-user"></i>
+              </span>
+            <select class="form-select" id="id_candidate_bottom" name="candidate" required>
+              <option value="">Sélectionner un candidat</option>
+              {% for candidate in candidates %}
+              <option value="{{ candidate.id|stringformat:'s' }}">{{ candidate.first_name }} {{ candidate.last_name }}</option>
+              {% endfor %}
+            </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_submission_date_bottom">Date de candidature *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-calendar"></i>
+              </span>
+            <input type="datetime-local" class="form-control" id="id_submission_date_bottom" name="submission_date" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_source_bottom">Source</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-globe"></i>
+              </span>
+            <select class="form-select" id="id_source_bottom" name="source">
+              <option value="">Sélectionner une source</option>
+              <option value="instagram">Instagram</option>
+              <option value="facebook">Facebook</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="indeed">Indeed</option>
+              <option value="site_web">Site web</option>
+              <option value="journal">Journal</option>
+              <option value="other">Autre</option>
+            </select>
+            </div>
+            <input type="text" class="form-control mt-2" id="id_source_other_bottom" name="source_other" placeholder="Précisez la source" style="display: none;">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Disponibilité</label>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="id_always_available_bottom" name="always_available">
+              <label class="form-check-label" for="id_always_available_bottom">
+                Toujours disponible
+              </label>
+            </div>
+            <div id="availability_dates_bottom" class="mt-2" style="display: none;">
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="form-label" for="id_availability_start_bottom">Début</label>
+                  <div class="input-group">
+                    <span class="input-group-text">
+                      <i class="fas fa-calendar-alt"></i>
+                    </span>
+                  <input type="date" class="form-control" id="id_availability_start_bottom" name="availability_start">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="id_availability_end_bottom">Fin</label>
+                  <div class="input-group">
+                    <span class="input-group-text">
+                      <i class="fas fa-calendar-alt"></i>
+                    </span>
+                  <input type="date" class="form-control" id="id_availability_end_bottom" name="availability_end">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_cv_bottom">CV</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-file-pdf"></i>
+              </span>
+            <input type="file" class="form-control" id="id_cv_bottom" name="cv" accept="application/pdf,.doc,.docx">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_cover_letter_bottom">Lettre de motivation</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-file-alt"></i>
+              </span>
+            <input type="file" class="form-control" id="id_cover_letter_bottom" name="cover_letter" accept="application/pdf,.doc,.docx">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_certificates_bottom">Certificats</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-certificate"></i>
+              </span>
+            <input type="file" class="form-control" id="id_certificates_bottom" name="certificates" accept="application/pdf,.doc,.docx">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_status_bottom">Statut *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-tasks"></i>
+              </span>
+            <select class="form-select" id="id_status_bottom" name="status" required>
+              <option value="">Sélectionner un statut</option>
+              <option value="received">Reçue</option>
+              <option value="in_review">En cours</option>
+              <option value="accepted">Acceptée</option>
+              <option value="rejected">Refusée</option>
+            </select>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>Enregistrer
+          </button>
+          <button type="button" class="btn btn-secondary ms-2" onclick="hideAddApplicationForm()">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de candidature -->
+  <div class="card mb-4" id="edit-application-form" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier la Candidature
+    </div>
+    <div class="card-body">
+      <form id="editApplicationFormBottom" method="post" action="{% url 'recruitment_applications' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="application_id" id="edit_application_id_bottom">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="edit_offer_bottom">Offre *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-briefcase"></i>
+              </span>
+            <select class="form-select" id="edit_offer_bottom" name="offer" required>
+              <option value="">Sélectionner une offre</option>
+              {% for offer in offers %}
+              <option value="{{ offer.id|stringformat:'s' }}">{{ offer.title }}</option>
+              {% endfor %}
+            </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_candidate_bottom">Candidat *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-user"></i>
+              </span>
+            <select class="form-select" id="edit_candidate_bottom" name="candidate" required>
+              <option value="">Sélectionner un candidat</option>
+              {% for candidate in candidates %}
+              <option value="{{ candidate.id|stringformat:'s' }}">{{ candidate.first_name }} {{ candidate.last_name }}</option>
+              {% endfor %}
+            </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_submission_date_bottom">Date de candidature *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-calendar"></i>
+              </span>
+            <input type="datetime-local" class="form-control" id="edit_submission_date_bottom" name="submission_date" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_source_bottom">Source</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-globe"></i>
+              </span>
+            <select class="form-select" id="edit_source_bottom" name="source">
+              <option value="">Sélectionner une source</option>
+              <option value="instagram">Instagram</option>
+              <option value="facebook">Facebook</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="indeed">Indeed</option>
+              <option value="site_web">Site web</option>
+              <option value="journal">Journal</option>
+              <option value="other">Autre</option>
+            </select>
+            </div>
+            <input type="text" class="form-control mt-2" id="edit_source_other_bottom" name="source_other" placeholder="Précisez la source" style="display: none;">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Disponibilité</label>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="edit_always_available_bottom" name="always_available">
+              <label class="form-check-label" for="edit_always_available_bottom">
+                Toujours disponible
+              </label>
+            </div>
+            <div id="edit_availability_dates_bottom" class="mt-2" style="display: none;">
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="form-label" for="edit_availability_start_bottom">Début</label>
+                  <div class="input-group">
+                    <span class="input-group-text">
+                      <i class="fas fa-calendar-alt"></i>
+                    </span>
+                  <input type="date" class="form-control" id="edit_availability_start_bottom" name="availability_start">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="edit_availability_end_bottom">Fin</label>
+                  <div class="input-group">
+                    <span class="input-group-text">
+                      <i class="fas fa-calendar-alt"></i>
+                    </span>
+                  <input type="date" class="form-control" id="edit_availability_end_bottom" name="availability_end">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_cv_bottom">CV</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-file-pdf"></i>
+              </span>
+            <input type="file" class="form-control" id="edit_cv_bottom" name="cv" accept="application/pdf,.doc,.docx">
+            </div>
+            <div id="edit_cv_existing_bottom" class="mt-2" style="display: none;">
+              <small class="text-muted">Fichier existant: <a href="#" id="edit_cv_link_bottom" target="_blank"></a></small>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_cover_letter_bottom">Lettre de motivation</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-file-alt"></i>
+              </span>
+            <input type="file" class="form-control" id="edit_cover_letter_bottom" name="cover_letter" accept="application/pdf,.doc,.docx">
+            </div>
+            <div id="edit_cover_letter_existing_bottom" class="mt-2" style="display: none;">
+              <small class="text-muted">Fichier existant: <a href="#" id="edit_cover_letter_link_bottom" target="_blank"></a></small>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_certificates_bottom">Certificats</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-certificate"></i>
+              </span>
+            <input type="file" class="form-control" id="edit_certificates_bottom" name="certificates" accept="application/pdf,.doc,.docx">
+            </div>
+            <div id="edit_certificates_existing_bottom" class="mt-2" style="display: none;">
+              <small class="text-muted">Fichier existant: <a href="#" id="edit_certificates_link_bottom" target="_blank"></a></small>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_status_bottom">Statut *</label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-tasks"></i>
+              </span>
+            <select class="form-select" id="edit_status_bottom" name="status" required>
+              <option value="">Sélectionner un statut</option>
+              <option value="received">Reçue</option>
+              <option value="in_review">En cours</option>
+              <option value="accepted">Acceptée</option>
+              <option value="rejected">Refusée</option>
+            </select>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 text-end">
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i>Modifier
+          </button>
+          <button type="button" class="btn btn-secondary ms-2" onclick="hideEditApplicationForm()">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tableau des candidatures archivées -->
+  <div class="card mb-4" id="archived-applications-section" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-archive me-2"></i>
+      Candidatures archivées
+    </div>
+    <div class="card-body">
+      <!-- Barre de recherche pour les candidatures archivées -->
+      <div class="mb-3">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" 
+                    class="form-control border-primary" 
+                    name="archived_application_q" 
+                    id="archived-application-search" 
+                    placeholder="Rechercher par candidat ou offre..." 
+                    value="{{ archived_application_query|default:'' }}">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="toggleArchivedApplications()">
+              <i class="fas fa-times"></i>
+              <span class="d-none d-lg-inline ms-1">Fermer</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead class="table-light borderless">
+            <tr>
+              <th>Offre</th>
+              <th>Candidat</th>
+              <th>Date de candidature</th>
+              <th>Source</th>
+              <th>Disponibilité</th>
+              <th>CV</th>
+              <th>Lettre</th>
+              <th>Certificats</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody id="archived-applications-table">
+            {% for application in archived_applications %}
+            <tr>
+              <td>{{ application.offer.title }}</td>
+              <td>{{ application.candidate.first_name }} {{ application.candidate.last_name }}</td>
+              <td>{{ application.submission_date|date:"d/m/Y H:i" }}</td>
+              <td>{{ application.source|default:"-" }}</td>
+              <td>
+                {% if application.always_available %}
+                  Toujours disponible
+                {% elif application.availability_start and application.availability_end %}
+                  {{ application.availability_start|date:"d/m/Y" }} - {{ application.availability_end|date:"d/m/Y" }}
+                {% elif application.availability_start %}
+                  À partir du {{ application.availability_start|date:"d/m/Y" }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>{% if application.cv %}<a href="{{ application.cv.url }}" target="_blank">CV</a>{% else %}-{% endif %}</td>
+              <td>{% if application.cover_letter %}<a href="{{ application.cover_letter.url }}" target="_blank">Lettre</a>{% else %}-{% endif %}</td>
+              <td>{% if application.certificates %}<a href="{{ application.certificates.url }}" target="_blank">Certificats</a>{% else %}-{% endif %}</td>
+              <td>
+                <span class="badge {% if application.status == 'accepted' %}bg-success{% elif application.status == 'rejected' %}bg-danger{% elif application.status == 'in_review' %}bg-warning{% else %}bg-secondary{% endif %}">
+                  {% if application.status == 'received' %}Reçue
+                  {% elif application.status == 'in_review' %}En cours
+                  {% elif application.status == 'accepted' %}Acceptée
+                  {% elif application.status == 'rejected' %}Refusée
+                  {% endif %}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" class="text-center text-muted">Aucune candidature archivée.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'ajout de candidature -->
+  <div class="modal fade" id="modalApplication" tabindex="-1" aria-labelledby="modalApplicationLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="modalApplicationLabel">
+            <i class="fas fa-plus me-2"></i>
+            Nouvelle Candidature
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="applicationForm" method="post" action="{% url 'recruitment_applications' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="id_offer">Offre *</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-briefcase"></i>
+                  </span>
+                <select class="form-select" id="id_offer" name="offer" required>
+                  <option value="">Sélectionner une offre</option>
+                  {% for offer in offers %}
+                  <option value="{{ offer.id|stringformat:'s' }}">{{ offer.title }}</option>
+                  {% endfor %}
+                </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_candidate">Candidat *</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-user"></i>
+                  </span>
+                <select class="form-select" id="id_candidate" name="candidate" required>
+                  <option value="">Sélectionner un candidat</option>
+                  {% for candidate in candidates %}
+                  <option value="{{ candidate.id|stringformat:'s' }}">{{ candidate.first_name }} {{ candidate.last_name }}</option>
+                  {% endfor %}
+                </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_submission_date">Date de candidature *</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-calendar"></i>
+                  </span>
+                <input type="datetime-local" class="form-control" id="id_submission_date" name="submission_date" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_source">Source</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-globe"></i>
+                  </span>
+                <select class="form-select" id="id_source" name="source">
+                  <option value="">Sélectionner une source</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="indeed">Indeed</option>
+                  <option value="site_web">Site web</option>
+                  <option value="journal">Journal</option>
+                  <option value="other">Autre</option>
+                </select>
+                </div>
+                <input type="text" class="form-control mt-2" id="id_source_other" name="source_other" placeholder="Précisez la source" style="display: none;">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Disponibilité</label>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="id_always_available" name="always_available">
+                  <label class="form-check-label" for="id_always_available">
+                    Toujours disponible
+                  </label>
+                </div>
+                <div id="availability_dates" class="mt-2" style="display: none;">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <label class="form-label" for="id_availability_start">Début</label>
+                      <div class="input-group">
+                        <span class="input-group-text">
+                          <i class="fas fa-calendar-alt"></i>
+                        </span>
+                      <input type="date" class="form-control" id="id_availability_start" name="availability_start">
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label" for="id_availability_end">Fin</label>
+                      <div class="input-group">
+                        <span class="input-group-text">
+                          <i class="fas fa-calendar-alt"></i>
+                        </span>
+                      <input type="date" class="form-control" id="id_availability_end" name="availability_end">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_cv">CV</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-file-pdf"></i>
+                  </span>
+                <input type="file" class="form-control" id="id_cv" name="cv" accept="application/pdf,.doc,.docx">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_cover_letter">Lettre de motivation</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-file-alt"></i>
+                  </span>
+                <input type="file" class="form-control" id="id_cover_letter" name="cover_letter" accept="application/pdf,.doc,.docx">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_certificates">Certificats</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-certificate"></i>
+                  </span>
+                <input type="file" class="form-control" id="id_certificates" name="certificates" accept="application/pdf,.doc,.docx">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_status">Statut *</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-tasks"></i>
+                  </span>
+                <select class="form-select" id="id_status" name="status" required>
+                  <option value="">Sélectionner un statut</option>
+                  <option value="received">Reçue</option>
+                  <option value="in_review">En cours</option>
+                  <option value="accepted">Acceptée</option>
+                  <option value="rejected">Refusée</option>
+                </select>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+          <button type="submit" form="applicationForm" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'édition de candidature -->
+  <div class="modal fade" id="modalEditApplication" tabindex="-1" aria-labelledby="modalEditApplicationLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title" id="modalEditApplicationLabel">
+            <i class="fas fa-edit me-2"></i>
+            Modifier la Candidature
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editApplicationForm" method="post" action="{% url 'recruitment_applications' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="application_id" id="edit_application_id">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="edit_offer">Offre *</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-briefcase"></i>
+                  </span>
+                <select class="form-select" id="edit_offer" name="offer" required>
+                  <option value="">Sélectionner une offre</option>
+                  {% for offer in offers %}
+                  <option value="{{ offer.id|stringformat:'s' }}">{{ offer.title }}</option>
+                  {% endfor %}
+                </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_candidate">Candidat *</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-user"></i>
+                  </span>
+                <select class="form-select" id="edit_candidate" name="candidate" required>
+                  <option value="">Sélectionner un candidat</option>
+                  {% for candidate in candidates %}
+                  <option value="{{ candidate.id|stringformat:'s' }}">{{ candidate.first_name }} {{ candidate.last_name }}</option>
+                  {% endfor %}
+                </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_submission_date">Date de candidature *</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-calendar"></i>
+                  </span>
+                <input type="datetime-local" class="form-control" id="edit_submission_date" name="submission_date" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_source">Source</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-globe"></i>
+                  </span>
+                <select class="form-select" id="edit_source" name="source">
+                  <option value="">Sélectionner une source</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="indeed">Indeed</option>
+                  <option value="site_web">Site web</option>
+                  <option value="journal">Journal</option>
+                  <option value="other">Autre</option>
+                </select>
+                </div>
+                <input type="text" class="form-control mt-2" id="edit_source_other" name="source_other" placeholder="Précisez la source" style="display: none;">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Disponibilité</label>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="edit_always_available" name="always_available">
+                  <label class="form-check-label" for="edit_always_available">
+                    Toujours disponible
+                  </label>
+                </div>
+                <div id="edit_availability_dates" class="mt-2" style="display: none;">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <label class="form-label" for="edit_availability_start">Début</label>
+                      <div class="input-group">
+                        <span class="input-group-text">
+                          <i class="fas fa-calendar-alt"></i>
+                        </span>
+                      <input type="date" class="form-control" id="edit_availability_start" name="availability_start">
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label" for="edit_availability_end">Fin</label>
+                      <div class="input-group">
+                        <span class="input-group-text">
+                          <i class="fas fa-calendar-alt"></i>
+                        </span>
+                      <input type="date" class="form-control" id="edit_availability_end" name="availability_end">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_cv">CV</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-file-pdf"></i>
+                  </span>
+                <input type="file" class="form-control" id="edit_cv" name="cv" accept="application/pdf,.doc,.docx">
+                </div>
+                <div id="edit_cv_existing" class="mt-2" style="display: none;">
+                  <small class="text-muted">Fichier existant: <a href="#" id="edit_cv_link" target="_blank"></a></small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_cover_letter">Lettre de motivation</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-file-alt"></i>
+                  </span>
+                <input type="file" class="form-control" id="edit_cover_letter" name="cover_letter" accept="application/pdf,.doc,.docx">
+                </div>
+                <div id="edit_cover_letter_existing" class="mt-2" style="display: none;">
+                  <small class="text-muted">Fichier existant: <a href="#" id="edit_cover_letter_link" target="_blank"></a></small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_certificates">Certificats</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-certificate"></i>
+                  </span>
+                <input type="file" class="form-control" id="edit_certificates" name="certificates" accept="application/pdf,.doc,.docx">
+                </div>
+                <div id="edit_certificates_existing" class="mt-2" style="display: none;">
+                  <small class="text-muted">Fichier existant: <a href="#" id="edit_certificates_link" target="_blank"></a></small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_status">Statut *</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="fas fa-tasks"></i>
+                  </span>
+                <select class="form-select" id="edit_status" name="status" required>
+                  <option value="">Sélectionner un statut</option>
+                  <option value="received">Reçue</option>
+                  <option value="in_review">En cours</option>
+                  <option value="accepted">Acceptée</option>
+                  <option value="rejected">Refusée</option>
+                </select>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+          <button type="submit" form="editApplicationForm" class="btn btn-warning">
+            <i class="fas fa-save me-1"></i>Modifier
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de suppression de candidature -->
+  <div class="modal fade" id="modalDeleteApplication" tabindex="-1" aria-labelledby="modalDeleteApplicationLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="modalDeleteApplicationLabel">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Confirmer la suppression
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+            <div>
+              <strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer la candidature de <strong id="delete_application_candidate"></strong> pour l'offre <strong id="delete_application_offer"></strong> ?
+              <br><small class="text-muted">Cette action est irréversible.</small>
+            </div>
+          </div>
+          <form id="deleteApplicationForm" method="post" action="{% url 'recruitment_applications' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="application_id" id="delete_application_id">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+          </button>
+          <button type="submit" form="deleteApplicationForm" class="btn btn-danger">
+            <i class="fas fa-trash-alt me-1"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Script JS : gestion des formulaires en bas -->
+  <script>
+  // Fonctions pour gérer l'affichage des formulaires
+  function showAddApplicationForm() {
+    // Masquer les autres sections si elles sont ouvertes
+    document.getElementById('edit-application-form').style.display = 'none';
+    document.getElementById('archived-applications-section').style.display = 'none';
+    // Afficher le formulaire d'ajout
+    document.getElementById('add-application-form').style.display = 'block';
+    // Faire défiler vers le formulaire
+    window.scrollTo({ top: document.getElementById('add-application-form').offsetTop - 80, behavior: 'smooth' });
+  }
+
+  function hideAddApplicationForm() {
+    document.getElementById('add-application-form').style.display = 'none';
+    // Réinitialiser le formulaire
+    document.getElementById('applicationFormBottom').reset();
+  }
+
+  function showEditApplicationForm(button) {
+    // Masquer les autres sections si elles sont ouvertes
+    document.getElementById('add-application-form').style.display = 'none';
+    document.getElementById('archived-applications-section').style.display = 'none';
+    // Afficher le formulaire d'édition
+    document.getElementById('edit-application-form').style.display = 'block';
+    
+    // Récupérer les données depuis les data attributes
+    const applicationId = button.getAttribute('data-application-id');
+    const offerId = button.getAttribute('data-application-offer-id');
+    const candidateId = button.getAttribute('data-application-candidate-id');
+    const submissionDate = button.getAttribute('data-application-submission-date');
+    const source = button.getAttribute('data-application-source');
+    const alwaysAvailable = button.getAttribute('data-application-always-available');
+    const availabilityStart = button.getAttribute('data-application-availability-start');
+    const availabilityEnd = button.getAttribute('data-application-availability-end');
+    const status = button.getAttribute('data-application-status');
+    const cvUrl = button.getAttribute('data-application-cv');
+    const coverLetterUrl = button.getAttribute('data-application-cover-letter');
+    const certificatesUrl = button.getAttribute('data-application-certificates');
+    
+    // Remplir le formulaire d'édition avec les données
+    document.getElementById('edit_application_id_bottom').value = applicationId;
+    
+    // Pré-remplir le champ Offre
+    const offerSelect = document.getElementById('edit_offer_bottom');
+    if (offerSelect && offerId) {
+      for (let i = 0; i < offerSelect.options.length; i++) {
+        if (offerSelect.options[i].value === offerId) {
+          offerSelect.options[i].selected = true;
+          break;
+        }
+      }
+    }
+    
+    // Pré-remplir le champ Candidat
+    const candidateSelect = document.getElementById('edit_candidate_bottom');
+    if (candidateSelect && candidateId) {
+      for (let i = 0; i < candidateSelect.options.length; i++) {
+        if (candidateSelect.options[i].value === candidateId) {
+          candidateSelect.options[i].selected = true;
+          break;
+        }
+      }
+    }
+    
+    document.getElementById('edit_submission_date_bottom').value = submissionDate;
+    
+    // Gestion de la source
+    const sourceSelect = document.getElementById('edit_source_bottom');
+    const sourceOtherInput = document.getElementById('edit_source_other_bottom');
+    
+    const predefinedSources = ['instagram', 'facebook', 'linkedin', 'indeed', 'site_web', 'journal'];
+    if (predefinedSources.includes(source.toLowerCase())) {
+      sourceSelect.value = source.toLowerCase();
+      sourceOtherInput.style.display = 'none';
+    } else if (source) {
+      sourceSelect.value = 'other';
+      sourceOtherInput.style.display = 'block';
+      sourceOtherInput.value = source;
+    } else {
+      sourceSelect.value = '';
+      sourceOtherInput.style.display = 'none';
+    }
+    
+    // Gestion de la disponibilité
+    const alwaysAvailableCheckbox = document.getElementById('edit_always_available_bottom');
+    const availabilityDates = document.getElementById('edit_availability_dates_bottom');
+    
+    alwaysAvailableCheckbox.checked = alwaysAvailable === 'true';
+    document.getElementById('edit_availability_start_bottom').value = availabilityStart;
+    document.getElementById('edit_availability_end_bottom').value = availabilityEnd;
+    
+    if (alwaysAvailable === 'true') {
+      availabilityDates.style.display = 'none';
+    } else {
+      availabilityDates.style.display = 'block';
+    }
+    
+    document.getElementById('edit_status_bottom').value = status;
+    
+    // Gérer l'affichage des fichiers existants
+    if (cvUrl) {
+      document.getElementById('edit_cv_existing_bottom').style.display = 'block';
+      document.getElementById('edit_cv_link_bottom').href = cvUrl;
+      document.getElementById('edit_cv_link_bottom').textContent = 'Voir le CV';
+    } else {
+      document.getElementById('edit_cv_existing_bottom').style.display = 'none';
+    }
+    
+    if (coverLetterUrl) {
+      document.getElementById('edit_cover_letter_existing_bottom').style.display = 'block';
+      document.getElementById('edit_cover_letter_link_bottom').href = coverLetterUrl;
+      document.getElementById('edit_cover_letter_link_bottom').textContent = 'Voir la lettre de motivation';
+    } else {
+      document.getElementById('edit_cover_letter_existing_bottom').style.display = 'none';
+    }
+    
+    if (certificatesUrl) {
+      document.getElementById('edit_certificates_existing_bottom').style.display = 'block';
+      document.getElementById('edit_certificates_link_bottom').href = certificatesUrl;
+      document.getElementById('edit_certificates_link_bottom').textContent = 'Voir les certificats';
+    } else {
+      document.getElementById('edit_certificates_existing_bottom').style.display = 'none';
+    }
+    
+    // Faire défiler vers le formulaire
+    window.scrollTo({ top: document.getElementById('edit-application-form').offsetTop - 80, behavior: 'smooth' });
+  }
+
+  function hideEditApplicationForm() {
+    document.getElementById('edit-application-form').style.display = 'none';
+    // Réinitialiser le formulaire
+    document.getElementById('editApplicationFormBottom').reset();
+  }
+
+  // Script JS : gestion des modals d'édition et de suppression de candidature
+  document.addEventListener('DOMContentLoaded', function() {
+    // Gestion de la sélection multiple
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-check');
+    
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', function() {
+        rowCheckboxes.forEach(checkbox => {
+          checkbox.checked = this.checked;
+        });
+      });
+    }
+
+    // Mise à jour de "Sélectionner tout" quand les cases individuelles changent
+    rowCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
+        const anyChecked = Array.from(rowCheckboxes).some(cb => cb.checked);
+        
+        if (selectAllCheckbox) {
+          selectAllCheckbox.checked = allChecked;
+          selectAllCheckbox.indeterminate = anyChecked && !allChecked;
+        }
+      });
+    });
+
+    // Modal d'édition
+    const modalEditApplication = document.getElementById('modalEditApplication');
+    if (modalEditApplication) {
+      modalEditApplication.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        
+        // Remplir le formulaire avec les données existantes
+        document.getElementById('edit_application_id').value = button.getAttribute('data-application-id');
+        
+        // Pré-remplir le champ Offre
+        const offerId = button.getAttribute('data-application-offer-id');
+        const offerSelect = document.getElementById('edit_offer');
+        if (offerSelect && offerId) {
+          // Sélectionner l'option correspondante
+          for (let i = 0; i < offerSelect.options.length; i++) {
+            if (offerSelect.options[i].value === offerId) {
+              offerSelect.options[i].selected = true;
+              break;
+            }
+          }
+        }
+        
+        // Pré-remplir le champ Candidat
+        const candidateId = button.getAttribute('data-application-candidate-id');
+        const candidateSelect = document.getElementById('edit_candidate');
+        if (candidateSelect && candidateId) {
+          // Sélectionner l'option correspondante
+          for (let i = 0; i < candidateSelect.options.length; i++) {
+            if (candidateSelect.options[i].value === candidateId) {
+              candidateSelect.options[i].selected = true;
+              break;
+            }
+          }
+        }
+        
+        document.getElementById('edit_submission_date').value = button.getAttribute('data-application-submission-date');
+        
+        // Gestion de la source
+        const source = button.getAttribute('data-application-source') || '';
+        const sourceSelect = document.getElementById('edit_source');
+        const sourceOtherInput = document.getElementById('edit_source_other');
+        
+        // Déterminer si c'est une source prédéfinie ou "autre"
+        const predefinedSources = ['instagram', 'facebook', 'linkedin', 'indeed', 'site_web', 'journal'];
+        if (predefinedSources.includes(source.toLowerCase())) {
+          sourceSelect.value = source.toLowerCase();
+          sourceOtherInput.style.display = 'none';
+        } else if (source) {
+          sourceSelect.value = 'other';
+          sourceOtherInput.style.display = 'block';
+          sourceOtherInput.value = source;
+        } else {
+          sourceSelect.value = '';
+          sourceOtherInput.style.display = 'none';
+        }
+        
+        // Gestion de la disponibilité
+        const alwaysAvailable = button.getAttribute('data-application-always-available') === 'true';
+        const availabilityStart = button.getAttribute('data-application-availability-start') || '';
+        const availabilityEnd = button.getAttribute('data-application-availability-end') || '';
+        
+        document.getElementById('edit_always_available').checked = alwaysAvailable;
+        document.getElementById('edit_availability_start').value = availabilityStart;
+        document.getElementById('edit_availability_end').value = availabilityEnd;
+        
+        // Afficher/masquer les champs de dates selon le checkbox
+        if (alwaysAvailable) {
+          document.getElementById('edit_availability_dates').style.display = 'none';
+        } else {
+          document.getElementById('edit_availability_dates').style.display = 'block';
+        }
+        
+        document.getElementById('edit_status').value = button.getAttribute('data-application-status');
+        
+        // Gérer l'affichage des fichiers existants
+        const cvUrl = button.getAttribute('data-application-cv');
+        const coverLetterUrl = button.getAttribute('data-application-cover-letter');
+        const certificatesUrl = button.getAttribute('data-application-certificates');
+        
+        // CV
+        if (cvUrl) {
+          document.getElementById('edit_cv_existing').style.display = 'block';
+          document.getElementById('edit_cv_link').href = cvUrl;
+          document.getElementById('edit_cv_link').textContent = 'Voir le CV';
+        } else {
+          document.getElementById('edit_cv_existing').style.display = 'none';
+        }
+        
+        // Lettre de motivation
+        if (coverLetterUrl) {
+          document.getElementById('edit_cover_letter_existing').style.display = 'block';
+          document.getElementById('edit_cover_letter_link').href = coverLetterUrl;
+          document.getElementById('edit_cover_letter_link').textContent = 'Voir la lettre de motivation';
+        } else {
+          document.getElementById('edit_cover_letter_existing').style.display = 'none';
+        }
+        
+        // Certificats
+        if (certificatesUrl) {
+          document.getElementById('edit_certificates_existing').style.display = 'block';
+          document.getElementById('edit_certificates_link').href = certificatesUrl;
+          document.getElementById('edit_certificates_link').textContent = 'Voir les certificats';
+        } else {
+          document.getElementById('edit_certificates_existing').style.display = 'none';
+        }
+      });
+    }
+    
+    // Modal de suppression
+    const modalDeleteApplication = document.getElementById('modalDeleteApplication');
+    if (modalDeleteApplication) {
+      modalDeleteApplication.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        
+        document.getElementById('delete_application_id').value = button.getAttribute('data-application-id');
+        document.getElementById('delete_application_candidate').textContent = button.getAttribute('data-application-candidate-name');
+        document.getElementById('delete_application_offer').textContent = button.getAttribute('data-application-offer-title');
+      });
+    }
+  });
+
+  // (checkbox "toujours disponible", select de source, etc.)
+  document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du checkbox "toujours disponible" pour le formulaire d'ajout
+    const alwaysAvailableCheckbox = document.getElementById('id_always_available');
+    const availabilityDates = document.getElementById('availability_dates');
+    
+    if (alwaysAvailableCheckbox && availabilityDates) {
+      alwaysAvailableCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+          availabilityDates.style.display = 'none';
+          // Vider les champs de dates
+          document.getElementById('id_availability_start').value = '';
+          document.getElementById('id_availability_end').value = '';
+        } else {
+          availabilityDates.style.display = 'block';
+        }
+      });
+    }
+
+    // Gestion du checkbox "toujours disponible" pour le formulaire d'ajout en bas
+    const alwaysAvailableCheckboxBottom = document.getElementById('id_always_available_bottom');
+    const availabilityDatesBottom = document.getElementById('availability_dates_bottom');
+    
+    if (alwaysAvailableCheckboxBottom && availabilityDatesBottom) {
+      alwaysAvailableCheckboxBottom.addEventListener('change', function() {
+        if (this.checked) {
+          availabilityDatesBottom.style.display = 'none';
+          // Vider les champs de dates
+          document.getElementById('id_availability_start_bottom').value = '';
+          document.getElementById('id_availability_end_bottom').value = '';
+        } else {
+          availabilityDatesBottom.style.display = 'block';
+        }
+      });
+    }
+    
+    // Gestion du checkbox "toujours disponible" pour le formulaire d'édition
+    const editAlwaysAvailableCheckbox = document.getElementById('edit_always_available');
+    const editAvailabilityDates = document.getElementById('edit_availability_dates');
+    
+    if (editAlwaysAvailableCheckbox && editAvailabilityDates) {
+      editAlwaysAvailableCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+          editAvailabilityDates.style.display = 'none';
+          // Vider les champs de dates
+          document.getElementById('edit_availability_start').value = '';
+          document.getElementById('edit_availability_end').value = '';
+        } else {
+          editAvailabilityDates.style.display = 'block';
+        }
+      });
+    }
+
+    // Gestion du checkbox "toujours disponible" pour le formulaire d'édition en bas
+    const editAlwaysAvailableCheckboxBottom = document.getElementById('edit_always_available_bottom');
+    const editAvailabilityDatesBottom = document.getElementById('edit_availability_dates_bottom');
+    
+    if (editAlwaysAvailableCheckboxBottom && editAvailabilityDatesBottom) {
+      editAlwaysAvailableCheckboxBottom.addEventListener('change', function() {
+        if (this.checked) {
+          editAvailabilityDatesBottom.style.display = 'none';
+          // Vider les champs de dates
+          document.getElementById('edit_availability_start_bottom').value = '';
+          document.getElementById('edit_availability_end_bottom').value = '';
+        } else {
+          editAvailabilityDatesBottom.style.display = 'block';
+        }
+      });
+    }
+    
+    // Gestion du select de source pour le formulaire d'ajout
+    const sourceSelect = document.getElementById('id_source');
+    const sourceOtherInput = document.getElementById('id_source_other');
+    
+    if (sourceSelect && sourceOtherInput) {
+      sourceSelect.addEventListener('change', function() {
+        if (this.value === 'other') {
+          sourceOtherInput.style.display = 'block';
+          sourceOtherInput.required = true;
+        } else {
+          sourceOtherInput.style.display = 'none';
+          sourceOtherInput.required = false;
+          sourceOtherInput.value = '';
+        }
+      });
+    }
+
+    // Gestion du select de source pour le formulaire d'ajout en bas
+    const sourceSelectBottom = document.getElementById('id_source_bottom');
+    const sourceOtherInputBottom = document.getElementById('id_source_other_bottom');
+    
+    if (sourceSelectBottom && sourceOtherInputBottom) {
+      sourceSelectBottom.addEventListener('change', function() {
+        if (this.value === 'other') {
+          sourceOtherInputBottom.style.display = 'block';
+          sourceOtherInputBottom.required = true;
+        } else {
+          sourceOtherInputBottom.style.display = 'none';
+          sourceOtherInputBottom.required = false;
+          sourceOtherInputBottom.value = '';
+        }
+      });
+    }
+    
+    // Gestion du select de source pour le formulaire d'édition
+    const editSourceSelect = document.getElementById('edit_source');
+    const editSourceOtherInput = document.getElementById('edit_source_other');
+    
+    if (editSourceSelect && editSourceOtherInput) {
+      editSourceSelect.addEventListener('change', function() {
+        if (this.value === 'other') {
+          editSourceOtherInput.style.display = 'block';
+          editSourceOtherInput.required = true;
+        } else {
+          editSourceOtherInput.style.display = 'none';
+          editSourceOtherInput.required = false;
+          editSourceOtherInput.value = '';
+        }
+      });
+    }
+
+    // Gestion du select de source pour le formulaire d'édition en bas
+    const editSourceSelectBottom = document.getElementById('edit_source_bottom');
+    const editSourceOtherInputBottom = document.getElementById('edit_source_other_bottom');
+    
+    if (editSourceSelectBottom && editSourceOtherInputBottom) {
+      editSourceSelectBottom.addEventListener('change', function() {
+        if (this.value === 'other') {
+          editSourceOtherInputBottom.style.display = 'block';
+          editSourceOtherInputBottom.required = true;
+        } else {
+          editSourceOtherInputBottom.style.display = 'none';
+          editSourceOtherInputBottom.required = false;
+          editSourceOtherInputBottom.value = '';
+        }
+      });
+    }
+  });
+  </script>
+
+  <script>
+  // Recherche instantanée AJAX pour la table des candidatures
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search-application');
+    const applicationsTable = document.getElementById('applications-table');
+    let searchTimeout = null;
+    let lastQuery = searchInput ? searchInput.value : '';
+    let controller = null;
+
+    if (searchInput && applicationsTable) {
+      function performSearch(query) {
+        if (controller) controller.abort();
+        controller = new AbortController();
+        applicationsTable.innerHTML = '<tr><td colspan="11" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</td></tr>';
+        const searchUrl = '/rc/applications/?q=' + encodeURIComponent(query);
+        fetch(searchUrl, {
+          headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cache-Control': 'no-cache'
+          },
+          signal: controller.signal
+        })
+        .then(response => {
+          if (!response.ok) throw new Error('Erreur réseau: ' + response.status);
+          return response.json();
+        })
+        .then(data => {
+          if (data.tbody !== undefined) {
+            applicationsTable.innerHTML = data.tbody;
+          }
+          const pagWrapper = document.getElementById('pagination-wrapper');
+          if (pagWrapper && data.pagination !== undefined) {
+            pagWrapper.innerHTML = data.pagination;
+          }
+        })
+        .catch(error => {
+          if (error.name !== 'AbortError') {
+            applicationsTable.innerHTML = '<tr><td colspan="11" class="text-center text-danger">Erreur lors de la recherche: ' + error.message + '</td></tr>';
+          }
+        });
+      }
+
+      searchInput.addEventListener('input', function() {
+        const query = searchInput.value.trim();
+        if (searchTimeout) clearTimeout(searchTimeout);
+        if (query === lastQuery) return;
+        lastQuery = query;
+        searchTimeout = setTimeout(() => { performSearch(query); }, 300);
+      });
+
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (searchTimeout) clearTimeout(searchTimeout);
+          performSearch(searchInput.value.trim());
+        }
+      });
+    }
+  });
+  </script>
+
+  <!-- Script JS : recherche pour les candidatures archivées -->
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const archivedApplicationSearchInput = document.getElementById('archived-application-search');
+    const archivedApplicationsTable = document.getElementById('archived-applications-table');
+    let archivedSearchTimeout = null;
+    let lastArchivedQuery = archivedApplicationSearchInput ? archivedApplicationSearchInput.value : '';
+    let archivedController = null;
+
+    if (archivedApplicationsTable) {
+      function performArchivedApplicationSearch(query) {
+        if (archivedController) {
+          archivedController.abort();
+        }
+        archivedController = new AbortController();
+        archivedApplicationsTable.innerHTML = '<tr><td colspan="9" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</td></tr>';
+        
+        // Utiliser l'URL courante
+        const searchUrl = window.location.pathname + '?archived_application_q=' + encodeURIComponent(query);
+        
+        fetch(searchUrl, {
+          headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cache-Control': 'no-cache'
+          },
+          signal: archivedController.signal
+        })
+        .then(response => {
+          if (!response.ok) throw new Error('Erreur réseau: ' + response.status);
+          return response.text();
+        })
+        .then(html => {
+          // On reçoit directement le contenu du tbody
+          archivedApplicationsTable.innerHTML = html;
+        })
+        .catch(error => {
+          if (error.name !== 'AbortError') {
+            archivedApplicationsTable.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erreur lors de la recherche: ' + error.message + '</td></tr>';
+          }
+        });
+      }
+
+      if (archivedApplicationSearchInput) {
+        archivedApplicationSearchInput.addEventListener('input', function() {
+          const query = this.value.trim();
+          if (archivedSearchTimeout) {
+            clearTimeout(archivedSearchTimeout);
+          }
+          if (query === lastArchivedQuery) return;
+          lastArchivedQuery = query;
+          archivedSearchTimeout = setTimeout(() => {
+            performArchivedApplicationSearch(query);
+          }, 300);
+        });
+
+        archivedApplicationSearchInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (archivedSearchTimeout) {
+              clearTimeout(archivedSearchTimeout);
+            }
+            performArchivedApplicationSearch(this.value.trim());
+          }
+        });
+      }
+    }
+  });
+
+// Fonction pour afficher/masquer le tableau des candidatures archivées
+function toggleArchivedApplications() {
+  const archivedSection = document.getElementById('archived-applications-section');
+  const addFormSection = document.getElementById('add-application-form');
+  const editFormSection = document.getElementById('edit-application-form');
+  const button = document.getElementById('show-archive-application-btn');
+  
+  if (archivedSection.style.display === 'none') {
+    // Masquer toutes les autres sections
+    addFormSection.style.display = 'none';
+    editFormSection.style.display = 'none';
+    // Afficher le tableau des archives
+    archivedSection.style.display = 'block';
+    button.innerHTML = '<i class="fas fa-times"></i><span class="d-none d-lg-inline ms-1">Fermer</span>';
+    button.title = 'Fermer les archives';
+    // Scroll vers le tableau d'archives
+    window.scrollTo({ top: archivedSection.offsetTop - 80, behavior: 'smooth' });
+  } else {
+    // Masquer le tableau des archives
+    archivedSection.style.display = 'none';
+    // Réafficher le formulaire d'ajout par défaut
+    addFormSection.style.display = 'block';
+    button.innerHTML = '<i class="fas fa-archive"></i><span class="d-none d-lg-inline ms-1">Archivées</span>';
+    button.title = 'Candidatures archivées';
+  }
+}
+
+  </script>
+  
+</div>
+
+{% endblock %}

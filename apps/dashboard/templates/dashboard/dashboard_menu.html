@@ -1,0 +1,105 @@
+<div class="sidebar-container">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="navbar-brand">
+        <button class="logo-toggle" id="logoToggle">
+          <i class="fas fa-stethoscope"></i>
+        </button>
+        <a href="{% url 'welcome' %}" class="fs-6 fw-bold" style="color: white; text-decoration: none;">Oralys Clinique</a>
+      </div>
+      <button class="toggle-sidebar" id="toggleSidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    
+    <div class="menu-items">
+      <!-- Dashboard -->
+      
+      
+      <!-- Home -->
+      <a href="{% url 'welcome' %}" class="menu-item">
+        <i class="fas fa-home"></i>
+        <span class="menu-text">Home</span>
+      </a>
+      
+      <!-- HR (Ressources Humaines) -->
+      <a href="{% url 'dashboard:hr_stats' %}" class="menu-item {% if request.path == '/dashboard/' or request.path == '/dashboard/hr/' %}active{% endif %}">
+        <i class="fas fa-users-cog"></i>
+        <span class="menu-text">Ressources Humaines</span>
+      </a>
+      
+      <!-- Formation -->
+      <a href="{% url 'dashboard:formation_stats' %}" class="menu-item">
+        <i class="fas fa-graduation-cap"></i>
+        <span class="menu-text">Formation</span>
+      </a>
+      
+      <!-- Purchases (Achats) -->
+      <a href="{% url 'dashboard:purchases_stats' %}" class="menu-item">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="menu-text">Achats</span>
+      </a>
+      
+      <!-- Inventory (Inventaire) -->
+      <a href="{% url 'dashboard:inventory_stats' %}" class="menu-item">
+        <i class="fas fa-boxes"></i>
+        <span class="menu-text">Inventaire</span>
+      </a>
+      
+      <!-- Pharmacy (Pharmacie) -->
+      <a href="{% url 'dashboard:pharmacy_stats' %}" class="menu-item">
+        <i class="fas fa-pills"></i>
+        <span class="menu-text">Pharmacie</span>
+      </a>
+      
+      <!-- Patient -->
+      <a href="{% url 'dashboard:patient_stats' %}" class="menu-item">
+        <i class="fas fa-user-injured"></i>
+        <span class="menu-text">Patient</span>
+      </a>
+      
+      <!-- Therapeutic Activities -->
+      <a href="{% url 'dashboard:therapeutic_activities_stats' %}" class="menu-item">
+        <i class="fas fa-heartbeat"></i>
+        <span class="menu-text">Activités Thérapeutiques</span>
+      </a>
+      
+      <!-- Recruitment (Recrutement) -->
+      <a href="{% url 'dashboard:recruitment_stats' %}" class="menu-item">
+        <i class="fas fa-user-plus"></i>
+        <span class="menu-text">Recrutement</span>
+      </a>
+      
+      <!-- Restauration -->
+      <a href="{% url 'dashboard:restauration_stats' %}" class="menu-item">
+        <i class="fas fa-utensils"></i>
+        <span class="menu-text">Restauration</span>
+      </a>
+      
+      <!-- Hosting (Hébergement) -->
+      <a href="{% url 'dashboard:hosting_stats' %}" class="menu-item">
+        <i class="fas fa-bed"></i>
+        <span class="menu-text">Hébergement</span>
+      </a>
+      
+      <!-- Parcauto -->
+      <a href="{% url 'dashboard:parcauto_stats' %}" class="menu-item">
+        <i class="fas fa-car"></i>
+        <span class="menu-text">Parcauto</span>
+      </a>
+      
+      <!-- Maintenance -->
+      <a href="{% url 'dashboard:maintenance_stats' %}" class="menu-item">
+        <i class="fas fa-tools"></i>
+        <span class="menu-text">Maintenance</span>
+      </a>
+      
+      <!-- Demandes -->
+      <a href="{% url 'dashboard:demandes_stats' %}" class="menu-item">
+        <i class="fas fa-clipboard-list"></i>
+        <span class="menu-text">Demandes</span>
+      </a>
+    </div>
+  </nav>
+</div>
+

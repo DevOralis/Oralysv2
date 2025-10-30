@@ -1,0 +1,899 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Compléter la consultation{% endblock %}
+{% block menu %}
+  {% include 'patient_menu.html' %}
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static  'vendor/js/sweetalert2@11.js' %}"></script>
+<script src="{% static 'js/complete_consultation.js' %}"></script>
+<script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>{% endblock %}
+{% block content %}
+<div class="content">
+    <div class="card">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <h5 class="card-title text-white mb-0">Compléter La Consultation</h5>
+        </div>
+        <div class="card-body p-4">
+            <h5 class="mb-3">Consultation Pour {{ appointment.patient.last_name }} {{ appointment.patient.first_name }}</h5>
+            <p><strong>Date/Heure :</strong> {{ appointment.date_heure|date:'d/m/Y H:i' }}</p>
+            <p><strong>Médecin :</strong> {{ appointment.medecin.full_name }}</p>
+            <p><strong>Motif :</strong> {{ appointment.motif }}</p>
+            <div class="mt-3">
+                <label class="form-label"><strong>Demande De Patient</strong></label>
+                <div class="mt-2">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="demande_patient" id="consultation_normale" value="consultation_normale" checked>
+                        <label class="form-check-label" for="consultation_normale">
+                            Consultation Normale
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="demande_patient" id="hospitalisation" value="hospitalisation">
+                        <label class="form-check-label" for="hospitalisation">
+                            Hospitalisation
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <form method="POST" class="mt-4">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Commentaires</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-comments"></i></span>
+                            <textarea class="form-control" name="commentaires" rows="2" required></textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Traitement</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-stethoscope"></i></span>
+                            <textarea class="form-control" name="traitement" rows="2" placeholder="Instructions de traitement générales..."></textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <label class="form-label">Médicaments Prescrits</label>
+                        <div class="card border-primary">
+                            <div class="card-body p-3">
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="medicaments-table">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Médicament <span class="text-danger">*</span></th>
+                                                <th>Dose <span class="text-danger">*</span></th>
+                                                <th>Fréquence <span class="text-danger">*</span></th>
+                                                <th>Durée <span class="text-danger">*</span></th>
+                                                <th>Moment De Prise</th>
+                                                <th>Quantité Totale</th>
+                                                <th>Boîtes Nécessaires</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="medicaments-container" data-medicaments='{{ medicaments_json|safe }}'>
+                                            <!-- Première ligne de médicament -->
+                                            <tr class="medicament-row">
+                                                <td>
+                                                            <select class="form-select medicament-select" name="medicaments[]" data-row="0" required>
+                                                                <option value="">Sélectionner Un Médicament...</option>
+                                                                {% for medicament in medicaments %}
+                                                        <option value="{{ medicament.product_id }}" 
+                                                                data-price="{{ medicament.unit_price }}"
+                                                                data-nombrepiece="{{ medicament.nombrepiece|default:0 }}"
+                                                                data-uom-label="{{ medicament.uom.label|default:'' }}"
+                                                                data-uom-symbole="{{ medicament.uom.symbole|default:'' }}">
+                                                            {{ medicament.short_label }} - {{ medicament.unit_price|floatformat:2 }} DH
+                                                        </option>
+                                                                {% endfor %}
+                                                            </select>
+                                                </td>
+                                                <td>
+                                                            <input type="text" class="form-control" name="doses[]" placeholder="Ex: 500mg, 1 comprimé, 5ml" required>
+                                                </td>
+                                                <td>
+                                                            <select class="form-select" name="frequences[]" required>
+                                                                <option value="">Sélectionner...</option>
+                                                                <option value="1x">1 fois par jour</option>
+                                                                <option value="2x">2 fois par jour</option>
+                                                                <option value="3x">3 fois par jour</option>
+                                                                <option value="4x">4 fois par jour</option>
+                                                                <option value="6x">6 fois par jour</option>
+                                                                <option value="8x">8 fois par jour</option>
+                                                                <option value="12x">Toutes les 12 heures</option>
+                                                                <option value="24x">Toutes les 24 heures</option>
+                                                                <option value="48x">Toutes les 48 heures</option>
+                                                                <option value="semaine">1 fois par semaine</option>
+                                                                <option value="2semaines">1 fois toutes les 2 semaines</option>
+                                                                <option value="mois">1 fois par mois</option>
+                                                                <option value="as_needed">Selon les besoins</option>
+                                                            </select>
+                                                </td>
+                                                <td>
+                                                            <input type="text" class="form-control" name="durees[]" placeholder="Ex: 7 jours, 2 semaines, 1 mois" required>
+                                                </td>
+                                                <td>
+                                                    <select class="form-select moment-prise-select" name="moments[]">
+                                                                <option value="">Non spécifié</option>
+                                                        <option value="matin_soir">Matin et soir</option>
+                                                        <option value="matin_midi_soir">Matin, midi et soir</option>
+                                                        <option value="toutes_6h">Toutes les 6 heures</option>
+                                                        <option value="toutes_8h">Toutes les 8 heures</option>
+                                                        <option value="toutes_12h">Toutes les 12 heures</option>
+                                                                <option value="avant_repas">Avant les repas</option>
+                                                                <option value="apres_repas">Après les repas</option>
+                                                                <option value="pendant_repas">Pendant les repas</option>
+                                                                <option value="coucher">Au coucher</option>
+                                                                <option value="reveil">Au réveil</option>
+                                                        <option value="matin">Le matin uniquement</option>
+                                                        <option value="midi">À midi uniquement</option>
+                                                        <option value="soir">Le soir uniquement</option>
+                                                        <option value="quotidien">Une fois par jour</option>
+                                                        <option value="hebdomadaire">Une fois par semaine</option>
+                                                        <option value="bimensuel">Une fois toutes les 2 semaines</option>
+                                                        <option value="mensuel">Une fois par mois</option>
+                                                                <option value="douleur">En cas de douleur</option>
+                                                                <option value="urgence">En cas d'urgence</option>
+                                                        <option value="crise">En cas de crise</option>
+                                                        <option value="infection">En cas d'infection</option>
+                                                        <option value="fievre">En cas de fièvre</option>
+                                                        <option value="nausee">En cas de nausée</option>
+                                                        <option value="insomnie">En cas d'insomnie</option>
+                                                        <option value="anxiete">En cas d'anxiété</option>
+                                                        <option value="stress">En cas de stress</option>
+                                                        <option value="allergie">En cas de réaction allergique</option>
+                                                        <option value="contraception">Contraception quotidienne</option>
+                                                        <option value="vitamine">Complément vitaminique</option>
+                                                        <option value="preventif">Préventif</option>
+                                                        <option value="curatif">Curatif</option>
+                                                            </select>
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control quantity-input" name="quantites[]" placeholder="Calculé automatiquement" min="1" readonly style="width: 120px;">
+                                                    <small class="text-muted d-block">
+                                                        <i class="fas fa-calculator"></i> Auto
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <div class="boites-necessaires" style="width: 120px;">
+                                                        <span class="badge bg-info" id="boites-count-0">-</span>
+                                                        <small class="text-muted d-block">
+                                                            <i class="fas fa-box"></i> Calculé
+                                                        </small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-success btn-sm" onclick="addMedicamentRow()" title="Ajouter un autre médicament">
+                                                        <i class="fas fa-plus"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle"></i> 
+                                        Total Des Médicaments Sélectionnés: <span id="total-medicaments">0,00 DH</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Température (°C)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-thermometer-half"></i></span>
+                            <input type="number" step="0.1" class="form-control" name="temperature" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Pression Artérielle</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-heart-pulse"></i></span>
+                            <input type="text" class="form-control" name="pression" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Rythme Cardiaque (bpm)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-heartbeat"></i></span>
+                            <input type="number" class="form-control" name="rythme_cardiaque" required>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <label class="form-label">Actes Réalisés</label>
+                        <div class="card border-primary">
+                            <div class="card-body p-3">
+                                <div id="actes-container" data-actes='{{ actes_json|safe }}'>
+                                    <!-- Premier acte -->
+                                    <div class="row mb-2 acte-row">
+                                        <div class="col-md-10">
+                                            <select class="form-select acte-select" name="actes[]" data-row="0">
+                                                <option value="">Sélectionner Un Acte...</option>
+                                                {% for acte in actes %}
+                                                <option value="{{ acte.id }}" data-price="{{ acte.price }}">{{ acte.libelle }} - {{ acte.price|floatformat:2 }} DH</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-success btn-sm" onclick="addActeRow()" title="Ajouter un autre acte">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle"></i> 
+                                        Total Des Actes Sélectionnés: <span id="total-actes">0,00 DH</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <label class="form-label">Hospitalisation</label>
+                        <div class="mt-2">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="hospitalisation" id="hospitalisation_oui" value="1">
+                                <label class="form-check-label" for="hospitalisation_oui">Oui</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="hospitalisation" id="hospitalisation_non" value="0" checked>
+                                <label class="form-check-label" for="hospitalisation_non">Non</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Section pour le type d'admission (visible si Hospitalisation = Oui) -->
+                        <div id="type_admission_section" class="mt-3" style="display: none;">
+                            <label class="form-label"><strong>Type D'Admission</strong></label>
+                            <div class="mt-2">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="type_admission" id="admission_immediate" value="immediate">
+                                    <label class="form-check-label" for="admission_immediate">
+                                        Admission Immédiate (urgence)
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="type_admission" id="admission_programmee" value="programmee">
+                                    <label class="form-check-label" for="admission_programmee">
+                                        Admission Programmée (planifié)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Champ date pour l'admission programmée (visible si Admission programmée est sélectionnée) -->
+                        <div id="date_admission_programmee_section" class="mt-3" style="display: none;">
+                            <label for="date_admission_programmee" class="form-label"><strong>Date D'Admission Programmée</strong></label>
+                            <input type="date" class="form-control" id="date_admission_programmee" name="date_admission_programmee">
+                        </div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <label class="form-label">Consigne Alimentaire</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-utensils"></i></span>
+                            <textarea class="form-control" name="consigne_alimentaire" rows="2" placeholder="Instructions alimentaires spécifiques..."></textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <label class="form-label">Consigne D'Hébergement</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-bed"></i></span>
+                            <textarea class="form-control" name="consigne_hebergement" rows="2" placeholder="Instructions pour l'hébergement du patient..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mt-3">
+                    {% if request.session.user.permissions.patient.update %}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        <span class="d-none d-sm-inline ms-2">Valider La Consultation</span>
+                    </button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+        </div>
+
+<script>
+// Variables globales pour gérer les actes
+let acteRowCount = 0;
+let selectedActes = new Set(); // Pour éviter les doublons
+let allActes = []; // Liste de tous les actes disponibles
+
+// Fonction pour ajouter une nouvelle ligne d'acte
+function addActeRow() {
+    acteRowCount++;
+    const container = document.getElementById('actes-container');
+    
+    // Créer la nouvelle ligne
+    const newRow = document.createElement('div');
+    newRow.className = 'row mb-2 acte-row';
+    newRow.innerHTML = `
+        <div class="col-md-10">
+            <select class="form-select acte-select" name="actes[]" data-row="${acteRowCount}">
+                <option value="">Sélectionner Un Acte...</option>
+                ${getAvailableActesOptions()}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeActeRow(this)" title="Supprimer cet acte">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(newRow);
+    
+    // Ajouter l'événement de changement
+    const select = newRow.querySelector('.acte-select');
+    select.addEventListener('change', updateActeSelection);
+}
+
+// Fonction pour supprimer une ligne d'acte
+function removeActeRow(button) {
+    const row = button.closest('.acte-row');
+    const select = row.querySelector('.acte-select');
+    const selectedValue = select.value;
+    
+    if (selectedValue) {
+        selectedActes.delete(selectedValue);
+    }
+    
+    row.remove();
+    updateAllActeSelects();
+    updateTotal();
+}
+
+// Fonction pour obtenir les options d'actes disponibles (excluant ceux déjà sélectionnés)
+function getAvailableActesOptions(excludeValue = null) {
+    return allActes
+        .filter(acte => {
+            const acteId = acte.id.toString();
+            // Exclure les actes déjà sélectionnés, sauf celui spécifié
+            return !selectedActes.has(acteId) || acteId === excludeValue;
+        })
+        .map(acte => `<option value="${acte.id}" data-price="${acte.price}">${acte.libelle} - ${acte.price.toFixed(2)} DH</option>`)
+        .join('');
+}
+
+// Fonction pour mettre à jour la sélection d'actes
+function updateActeSelection(event) {
+    const select = event.target;
+    const selectedValue = select.value;
+    
+    // Supprimer l'ancienne sélection de cette ligne
+    const oldValue = select.dataset.oldValue;
+    if (oldValue) {
+        selectedActes.delete(oldValue);
+    }
+    
+    // Ajouter la nouvelle sélection
+    if (selectedValue) {
+        selectedActes.add(selectedValue);
+        select.dataset.oldValue = selectedValue;
+    } else {
+        delete select.dataset.oldValue;
+    }
+    
+    // Mettre à jour toutes les listes déroulantes pour exclure les actes déjà sélectionnés
+    updateAllActeSelects();
+    updateTotal();
+}
+
+// Fonction pour mettre à jour toutes les listes déroulantes d'actes
+function updateAllActeSelects() {
+    const allSelects = document.querySelectorAll('.acte-select');
+    
+    allSelects.forEach(select => {
+        const currentValue = select.value;
+        
+        // Reconstruire les options en incluant l'acte actuellement sélectionné
+        select.innerHTML = '<option value="">Sélectionner Un Acte...</option>' + getAvailableActesOptions(currentValue);
+        
+        // Restaurer la sélection actuelle
+        if (currentValue) {
+            select.value = currentValue;
+        }
+    });
+}
+
+// Fonction pour calculer et afficher le total
+function updateTotal() {
+    const allSelects = document.querySelectorAll('.acte-select');
+    let total = 0;
+    
+    allSelects.forEach(select => {
+        if (select.value) {
+            const selectedOption = select.querySelector(`option[value="${select.value}"]`);
+            if (selectedOption) {
+                const price = parseFloat(selectedOption.dataset.price);
+                total += price;
+            }
+        }
+    });
+    
+    document.getElementById('total-actes').textContent = total.toFixed(2) + ' DH';
+}
+
+// Initialiser les événements au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Récupérer les données des actes depuis l'attribut data
+    const container = document.getElementById('actes-container');
+    const actesData = container.getAttribute('data-actes');
+    
+    if (actesData) {
+        try {
+            allActes = JSON.parse(actesData);
+        } catch (e) {
+            console.error('Erreur lors du parsing des données des actes:', e);
+            allActes = [];
+        }
+    }
+    
+    // Ajouter l'événement au premier select
+    const firstSelect = document.querySelector('.acte-select');
+    if (firstSelect) {
+        firstSelect.addEventListener('change', updateActeSelection);
+    }
+    
+    // Initialiser les médicaments
+    initializeMedicaments();
+    
+    // Initialiser les événements pour l'hospitalisation
+    initializeHospitalizationEvents();
+});
+
+// Fonction pour initialiser les événements de l'hospitalisation
+function initializeHospitalizationEvents() {
+    const hospitalisationOui = document.getElementById('hospitalisation_oui');
+    const hospitalisationNon = document.getElementById('hospitalisation_non');
+    const typeAdmissionSection = document.getElementById('type_admission_section');
+    const admissionImmediate = document.getElementById('admission_immediate');
+    const admissionProgrammee = document.getElementById('admission_programmee');
+    const dateAdmissionProgrammeeSection = document.getElementById('date_admission_programmee_section');
+    const dateAdmissionProgrammeeInput = document.getElementById('date_admission_programmee');
+
+    function toggleTypeAdmissionSection() {
+        if (hospitalisationOui.checked) {
+            typeAdmissionSection.style.display = 'block';
+            // S'assurer qu'une des options type_admission est cochée si 'Oui' est sélectionné
+            if (!admissionImmediate.checked && !admissionProgrammee.checked) {
+                admissionImmediate.checked = true; // Par défaut : immédiate
+            }
+            toggleDateAdmissionProgrammeeSection(); // Vérifier la visibilité du champ date
+        } else {
+            typeAdmissionSection.style.display = 'none';
+            dateAdmissionProgrammeeSection.style.display = 'none';
+            // Décocher les radios type_admission quand 'Non' est sélectionné
+            admissionImmediate.checked = false;
+            admissionProgrammee.checked = false;
+            dateAdmissionProgrammeeInput.value = ''; // Vider la date
+        }
+    }
+
+    function toggleDateAdmissionProgrammeeSection() {
+        if (admissionProgrammee.checked) {
+            dateAdmissionProgrammeeSection.style.display = 'block';
+        } else {
+            dateAdmissionProgrammeeSection.style.display = 'none';
+            dateAdmissionProgrammeeInput.value = ''; // Vider la date si pas programmée
+        }
+    }
+
+    // Ajouter les écouteurs d'événements
+    if (hospitalisationOui) {
+        hospitalisationOui.addEventListener('change', toggleTypeAdmissionSection);
+    }
+    if (hospitalisationNon) {
+        hospitalisationNon.addEventListener('change', toggleTypeAdmissionSection);
+    }
+    if (admissionImmediate) {
+        admissionImmediate.addEventListener('change', toggleDateAdmissionProgrammeeSection);
+    }
+    if (admissionProgrammee) {
+        admissionProgrammee.addEventListener('change', toggleDateAdmissionProgrammeeSection);
+    }
+
+    // Appel initial pour définir l'état correct au chargement de la page
+    toggleTypeAdmissionSection();
+}
+
+// Variables globales pour gérer les médicaments
+let medicamentRowCount = 0;
+let selectedMedicaments = new Set();
+let allMedicaments = [];
+
+// Fonction pour initialiser les médicaments
+function initializeMedicaments() {
+    const container = document.getElementById('medicaments-container');
+    const medicamentsData = container.getAttribute('data-medicaments');
+    
+    if (medicamentsData) {
+        try {
+            allMedicaments = JSON.parse(medicamentsData);
+        } catch (e) {
+            console.error('Erreur lors du parsing des données des médicaments:', e);
+            allMedicaments = [];
+        }
+    }
+    
+    // Ajouter l'événement au premier select de médicaments
+    const firstMedicamentSelect = document.querySelector('.medicament-select');
+    if (firstMedicamentSelect) {
+        firstMedicamentSelect.addEventListener('change', updateMedicamentSelection);
+    }
+    
+    // Ajouter les événements de calcul automatique pour la première ligne
+    const firstRow = document.querySelector('.medicament-row');
+    if (firstRow) {
+        addQuantityCalculationEvents(firstRow);
+    }
+}
+
+// Fonction pour ajouter une nouvelle ligne de médicament
+function addMedicamentRow() {
+    medicamentRowCount++;
+    const container = document.getElementById('medicaments-container');
+    
+    const newRow = document.createElement('tr');
+    newRow.className = 'medicament-row';
+    newRow.innerHTML = `
+        <td>
+                            <select class="form-select medicament-select" name="medicaments[]" data-row="${medicamentRowCount}" required>
+                                <option value="">Sélectionner Un Médicament...</option>
+                                ${getAvailableMedicamentsOptions()}
+                            </select>
+        </td>
+        <td>
+                            <input type="text" class="form-control" name="doses[]" placeholder="Ex: 500mg, 1 comprimé, 5ml" required>
+        </td>
+        <td>
+                            <select class="form-select" name="frequences[]" required>
+                                <option value="">Sélectionner...</option>
+                                <option value="1x">1 fois par jour</option>
+                                <option value="2x">2 fois par jour</option>
+                                <option value="3x">3 fois par jour</option>
+                                <option value="4x">4 fois par jour</option>
+                                <option value="6x">6 fois par jour</option>
+                                <option value="8x">8 fois par jour</option>
+                                <option value="12x">Toutes les 12 heures</option>
+                                <option value="24x">Toutes les 24 heures</option>
+                                <option value="48x">Toutes les 48 heures</option>
+                                <option value="semaine">1 fois par semaine</option>
+                                <option value="2semaines">1 fois toutes les 2 semaines</option>
+                                <option value="mois">1 fois par mois</option>
+                                <option value="as_needed">Selon les besoins</option>
+                            </select>
+        </td>
+        <td>
+                            <input type="text" class="form-control" name="durees[]" placeholder="Ex: 7 jours, 2 semaines, 1 mois" required>
+        </td>
+        <td>
+            <select class="form-select moment-prise-select" name="moments[]">
+                                <option value="">Non spécifié</option>
+                <option value="matin_soir">Matin et soir</option>
+                <option value="matin_midi_soir">Matin, midi et soir</option>
+                <option value="toutes_6h">Toutes les 6 heures</option>
+                <option value="toutes_8h">Toutes les 8 heures</option>
+                <option value="toutes_12h">Toutes les 12 heures</option>
+                                <option value="avant_repas">Avant les repas</option>
+                                <option value="apres_repas">Après les repas</option>
+                                <option value="pendant_repas">Pendant les repas</option>
+                                <option value="coucher">Au coucher</option>
+                                <option value="reveil">Au réveil</option>
+                <option value="matin">Le matin uniquement</option>
+                <option value="midi">À midi uniquement</option>
+                <option value="soir">Le soir uniquement</option>
+                <option value="quotidien">Une fois par jour</option>
+                <option value="hebdomadaire">Une fois par semaine</option>
+                <option value="bimensuel">Une fois toutes les 2 semaines</option>
+                <option value="mensuel">Une fois par mois</option>
+                                <option value="douleur">En cas de douleur</option>
+                                <option value="urgence">En cas d'urgence</option>
+                <option value="crise">En cas de crise</option>
+                <option value="infection">En cas d'infection</option>
+                <option value="fievre">En cas de fièvre</option>
+                <option value="nausee">En cas de nausée</option>
+                <option value="insomnie">En cas d'insomnie</option>
+                <option value="anxiete">En cas d'anxiété</option>
+                <option value="stress">En cas de stress</option>
+                <option value="allergie">En cas de réaction allergique</option>
+                <option value="contraception">Contraception quotidienne</option>
+                <option value="vitamine">Complément vitaminique</option>
+                <option value="preventif">Préventif</option>
+                <option value="curatif">Curatif</option>
+                            </select>
+        </td>
+        <td>
+            <input type="number" class="form-control quantity-input" name="quantites[]" placeholder="Calculé automatiquement" min="1" readonly style="width: 120px;">
+            <small class="text-muted d-block">
+                <i class="fas fa-calculator"></i> Auto
+            </small>
+        </td>
+        <td>
+            <div class="boites-necessaires" style="width: 120px;">
+                <span class="badge bg-info" id="boites-count-${medicamentRowCount}">-</span>
+                <small class="text-muted d-block">
+                    <i class="fas fa-box"></i> Calculé
+                </small>
+            </div>
+        </td>
+        <td>
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeMedicamentRow(this)" title="Supprimer cette ligne">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    
+    container.appendChild(newRow);
+    
+    const select = newRow.querySelector('.medicament-select');
+    select.addEventListener('change', updateMedicamentSelection);
+    
+    // Ajouter les événements de calcul automatique pour la nouvelle ligne
+    addQuantityCalculationEvents(newRow);
+}
+
+// Fonction pour supprimer une ligne de médicament
+function removeMedicamentRow(button) {
+    const row = button.closest('.medicament-row');
+    const select = row.querySelector('.medicament-select');
+    const selectedValue = select.value;
+    
+    if (selectedValue) {
+        selectedMedicaments.delete(selectedValue);
+    }
+    
+    row.remove();
+    updateAllMedicamentSelects();
+    updateMedicamentTotal();
+}
+
+// Fonction pour obtenir les options de médicaments disponibles
+function getAvailableMedicamentsOptions(excludeValue = null) {
+    return allMedicaments
+        .filter(medicament => {
+            const medicamentId = medicament.product_id.toString();
+            return !selectedMedicaments.has(medicamentId) || medicamentId === excludeValue;
+        })
+        .map(medicament => `<option value="${medicament.product_id}" 
+                                data-price="${medicament.unit_price}" 
+                                data-nombrepiece="${medicament.nombrepiece || 0}"
+                                data-uom-label="${medicament.uom_label || ''}"
+                                data-uom-symbole="${medicament.uom_symbole || ''}">${medicament.short_label} - ${medicament.unit_price.toFixed(2)} DH</option>`)
+        .join('');
+}
+
+// Fonction pour mettre à jour la sélection de médicaments
+function updateMedicamentSelection(event) {
+    const select = event.target;
+    const selectedValue = select.value;
+    const row = select.closest('.medicament-row');
+    
+    const oldValue = select.dataset.oldValue;
+    if (oldValue) {
+        selectedMedicaments.delete(oldValue);
+    }
+    
+    if (selectedValue) {
+        selectedMedicaments.add(selectedValue);
+        select.dataset.oldValue = selectedValue;
+    } else {
+        delete select.dataset.oldValue;
+    }
+    
+    updateAllMedicamentSelects();
+    updateMedicamentTotal();
+    
+    // Recalculer les boîtes nécessaires si une quantité existe déjà
+    const quantityInput = row.querySelector('.quantity-input');
+    if (quantityInput && quantityInput.value) {
+        calculateBoitesNecessaires(row, parseFloat(quantityInput.value));
+    } else {
+        calculateBoitesNecessaires(row, 0);
+    }
+}
+
+// Fonction pour mettre à jour toutes les listes déroulantes de médicaments
+function updateAllMedicamentSelects() {
+    const allSelects = document.querySelectorAll('.medicament-select');
+    
+    allSelects.forEach(select => {
+        const currentValue = select.value;
+        
+        select.innerHTML = '<option value="">Sélectionner Un Médicament...</option>' + getAvailableMedicamentsOptions(currentValue);
+        
+        if (currentValue) {
+            select.value = currentValue;
+        }
+    });
+}
+
+// Fonction pour calculer et afficher le total des médicaments
+function updateMedicamentTotal() {
+    const allRows = document.querySelectorAll('.medicament-row');
+    let total = 0;
+    
+    allRows.forEach(row => {
+        const select = row.querySelector('.medicament-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        
+        if (select && select.value && quantityInput && quantityInput.value) {
+            const selectedOption = select.querySelector(`option[value="${select.value}"]`);
+            if (selectedOption) {
+                const price = parseFloat(selectedOption.dataset.price);
+                const quantity = parseFloat(quantityInput.value);
+                const subtotal = price * quantity;
+                total += subtotal;
+            }
+        }
+    });
+    
+    document.getElementById('total-medicaments').textContent = total.toFixed(2) + ' DH';
+}
+
+// Fonction pour calculer automatiquement la quantité totale à délivrer
+function calculateQuantity(row) {
+    const frequenceSelect = row.querySelector('select[name="frequences[]"]');
+    const dureeInput = row.querySelector('input[name="durees[]"]');
+    const quantityInput = row.querySelector('.quantity-input');
+    
+    if (!frequenceSelect || !dureeInput || !quantityInput) return;
+    
+    const frequence = frequenceSelect.value;
+    const dureeText = dureeInput.value.toLowerCase().trim();
+    
+    // Extraire la fréquence numérique
+    let frequenceNum = 0;
+    switch(frequence) {
+        case '1x': frequenceNum = 1; break;
+        case '2x': frequenceNum = 2; break;
+        case '3x': frequenceNum = 3; break;
+        case '4x': frequenceNum = 4; break;
+        case '6x': frequenceNum = 6; break;
+        case '8x': frequenceNum = 8; break;
+        case '12x': frequenceNum = 2; break; // 2 fois par jour (24h/12h)
+        case '24x': frequenceNum = 1; break; // 1 fois par jour
+        case '48x': frequenceNum = 0.5; break; // 0.5 fois par jour
+        case 'semaine': frequenceNum = 1/7; break; // 1 fois par semaine
+        case '2semaines': frequenceNum = 1/14; break; // 1 fois toutes les 2 semaines
+        case 'mois': frequenceNum = 1/30; break; // 1 fois par mois
+        case 'as_needed': frequenceNum = 0; break; // Selon les besoins
+        default: frequenceNum = 0;
+    }
+    
+    // Extraire la durée en jours
+    let dureeJours = 0;
+    if (dureeText.includes('jour')) {
+        const match = dureeText.match(/(\d+)\s*jour/);
+        if (match) dureeJours = parseInt(match[1]);
+    } else if (dureeText.includes('semaine')) {
+        const match = dureeText.match(/(\d+)\s*semaine/);
+        if (match) dureeJours = parseInt(match[1]) * 7;
+    } else if (dureeText.includes('mois')) {
+        const match = dureeText.match(/(\d+)\s*mois/);
+        if (match) dureeJours = parseInt(match[1]) * 30;
+    } else if (dureeText.includes('an') || dureeText.includes('année')) {
+        const match = dureeText.match(/(\d+)\s*(an|année)/);
+        if (match) dureeJours = parseInt(match[1]) * 365;
+    } else {
+        // Essayer d'extraire un nombre simple
+        const match = dureeText.match(/(\d+)/);
+        if (match) dureeJours = parseInt(match[1]);
+    }
+    
+    // Calculer la quantité totale
+    if (frequenceNum > 0 && dureeJours > 0) {
+        const quantite = Math.ceil(frequenceNum * dureeJours);
+        quantityInput.value = quantite;
+        quantityInput.style.backgroundColor = '#e8f5e8'; // Vert clair pour indiquer le calcul
+        // Mettre à jour le total des médicaments
+        updateMedicamentTotal();
+        // Calculer le nombre de boîtes nécessaires
+        calculateBoitesNecessaires(row, quantite);
+    } else if (frequence === 'as_needed') {
+        quantityInput.value = '';
+        quantityInput.placeholder = 'À déterminer selon les besoins';
+        quantityInput.style.backgroundColor = '#fff3cd'; // Jaune clair pour les cas spéciaux
+        // Mettre à jour le total des médicaments
+        updateMedicamentTotal();
+        // Réinitialiser les boîtes nécessaires
+        calculateBoitesNecessaires(row, 0);
+    } else {
+        quantityInput.value = '';
+        quantityInput.style.backgroundColor = '';
+        // Mettre à jour le total des médicaments
+        updateMedicamentTotal();
+        // Réinitialiser les boîtes nécessaires
+        calculateBoitesNecessaires(row, 0);
+    }
+}
+
+// Fonction pour calculer le nombre de boîtes nécessaires
+function calculateBoitesNecessaires(row, quantiteTotale) {
+    const select = row.querySelector('.medicament-select');
+    const boitesBadge = row.querySelector('.badge');
+    
+    if (!select || !select.value || !boitesBadge) {
+        boitesBadge.textContent = '-';
+        boitesBadge.className = 'badge bg-secondary';
+        return;
+    }
+    
+    // Récupérer les informations du médicament depuis les attributs data
+    const selectedOption = select.querySelector(`option[value="${select.value}"]`);
+    if (!selectedOption) {
+        boitesBadge.textContent = '-';
+        boitesBadge.className = 'badge bg-secondary';
+        return;
+    }
+    
+    // Utiliser les vraies données du module pharmacy
+    const piecesParBoite = parseInt(selectedOption.dataset.nombrepiece) || 0;
+    const uomLabel = selectedOption.dataset.uomLabel || '';
+    const uomSymbole = selectedOption.dataset.uomSymbole || '';
+    
+    // Debug : afficher les vraies données
+    console.log('Données du module pharmacy:');
+    console.log('- Pièces par boîte:', piecesParBoite);
+    console.log('- UOM Label:', uomLabel);
+    console.log('- UOM Symbole:', uomSymbole);
+    console.log('- Quantité totale:', quantiteTotale);
+    
+    // Déterminer si c'est vendu par boîtes ou à l'unité
+    const isVenduParBoites = uomLabel.toLowerCase().includes('boîte') || 
+                            uomLabel.toLowerCase().includes('boite');
+    
+    if (piecesParBoite > 0 && quantiteTotale > 0) {
+        if (isVenduParBoites && piecesParBoite > 1) {
+            // Calcul pour les boîtes (ex: 20 comprimés par boîte)
+            const boitesNecessaires = Math.ceil(quantiteTotale / piecesParBoite);
+            boitesBadge.textContent = `${boitesNecessaires} boîte${boitesNecessaires > 1 ? 's' : ''}`;
+            
+            // Couleur selon le nombre de boîtes
+            if (boitesNecessaires === 1) {
+                boitesBadge.className = 'badge bg-success';
+            } else if (boitesNecessaires <= 3) {
+                boitesBadge.className = 'badge bg-warning';
+            } else {
+                boitesBadge.className = 'badge bg-danger';
+            }
+            
+            // Afficher des détails supplémentaires
+            const restant = (boitesNecessaires * piecesParBoite) - quantiteTotale;
+            if (restant > 0) {
+                console.log(`Info: ${restant} unité(s) supplémentaire(s) dans la dernière boîte`);
+            }
+        } else {
+            // Vendu à l'unité (sachets, ampoules individuelles, etc.)
+            boitesBadge.textContent = `${quantiteTotale} unité${quantiteTotale > 1 ? 's' : ''}`;
+            boitesBadge.className = 'badge bg-info';
+        }
+    } else {
+        boitesBadge.textContent = 'N/A';
+        boitesBadge.className = 'badge bg-secondary';
+    }
+}
+
+// Fonction pour ajouter les événements de calcul automatique
+function addQuantityCalculationEvents(row) {
+    const frequenceSelect = row.querySelector('select[name="frequences[]"]');
+    const dureeInput = row.querySelector('input[name="durees[]"]');
+    
+    if (frequenceSelect) {
+        frequenceSelect.addEventListener('change', () => calculateQuantity(row));
+    }
+    
+    if (dureeInput) {
+        dureeInput.addEventListener('input', () => calculateQuantity(row));
+        dureeInput.addEventListener('blur', () => calculateQuantity(row));
+    }
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,23 @@
+# Environment
+venv/
+
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Local settings
+.env
+.env.*
+
+# Static and media
+staticfiles/
+media/
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+.DS_Store

@@ -1,0 +1,41 @@
+{% for plat in plats %}
+<tr>
+  <td>{{ plat.nom }}</td>
+  <td>
+    {% if plat.recette and plat.recette.lignes_recette.all %}
+      <ul>
+      {% for ligne in plat.recette.lignes_recette.all %}
+        <li>{{ ligne.quantite_par_portion }} {{ ligne.ingredient.unite }} de {{ ligne.ingredient.nom }}</li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      Aucune recette définie.
+    {% endif %}
+  </td>
+  <td>
+    <div class="d-flex gap-1 justify-content-start">
+      <button class="btn btn-sm btn-light border text-dark" 
+              data-bs-toggle="modal" 
+              data-bs-target="#modalEditPlat" 
+              data-plat-id="{{ plat.id }}" 
+              data-plat-nom="{{ plat.nom }}"
+              data-plat-recette='{{ plat.lignes_recette_json|safe }}'
+              title="Modifier ce plat">
+        <i class="fas fa-edit"></i>
+      </button>
+      <button class="btn btn-sm btn-light border text-danger" 
+              data-bs-toggle="modal" 
+              data-bs-target="#modalDeletePlat"
+              data-plat-id="{{ plat.id }}" 
+              data-plat-nom="{{ plat.nom }}"
+              title="Supprimer ce plat">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="3" class="text-center">Aucun plat disponible</td>
+</tr>
+{% endfor %}

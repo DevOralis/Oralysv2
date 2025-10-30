@@ -1,0 +1,769 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block menu %}
+  {% include 'therapeutic_activities_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="border-bottom pb-2 mb-0">
+      <i class="fas fa-heartbeat text-primary me-2"></i>
+      {{ page_title }}
+    </h3>
+    <div class="text-end">
+      <small class="text-muted">Dernière mise à jour: <span id="lastUpdate"></span></small>
+    </div>
+  </div>
+
+  <!-- KPIs Sophistiqués -->
+  <div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-body text-white position-relative overflow-hidden">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h2 class="fw-bold mb-1">{{ total_activities|default:"0" }}</h2>
+              <p class="mb-2 opacity-75">Activités Actives</p>
+              <small class="d-flex align-items-center">
+                <i class="fas fa-arrow-up me-1"></i>
+                <span>+12% ce mois</span>
+              </small>
+            </div>
+            <div class="text-end">
+              <i class="fas fa-running fa-2x opacity-50"></i>
+            </div>
+          </div>
+          <div class="position-absolute" style="bottom: -20px; right: -20px; opacity: 0.1;">
+            <i class="fas fa-running" style="font-size: 4rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <div class="card-body text-white position-relative overflow-hidden">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h2 class="fw-bold mb-1">{{ total_sessions|default:"0" }}</h2>
+              <p class="mb-2 opacity-75">Sessions Totales</p>
+              <small class="d-flex align-items-center">
+                <i class="fas fa-arrow-up me-1"></i>
+                <span>+8% cette semaine</span>
+              </small>
+            </div>
+            <div class="text-end">
+              <i class="fas fa-calendar-check fa-2x opacity-50"></i>
+            </div>
+          </div>
+          <div class="position-absolute" style="bottom: -20px; right: -20px; opacity: 0.1;">
+            <i class="fas fa-calendar-check" style="font-size: 4rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+        <div class="card-body text-white position-relative overflow-hidden">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h2 class="fw-bold mb-1">{{ total_participations|default:"0" }}</h2>
+              <p class="mb-2 opacity-75">Participations</p>
+              <small class="d-flex align-items-center">
+                <i class="fas fa-arrow-up me-1"></i>
+                <span>+15% ce mois</span>
+              </small>
+            </div>
+            <div class="text-end">
+              <i class="fas fa-users fa-2x opacity-50"></i>
+            </div>
+          </div>
+          <div class="position-absolute" style="bottom: -20px; right: -20px; opacity: 0.1;">
+            <i class="fas fa-users" style="font-size: 4rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+      <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+        <div class="card-body text-white position-relative overflow-hidden">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h2 class="fw-bold mb-1">{{ today_sessions.count|default:"0" }}</h2>
+              <p class="mb-2 opacity-75">Sessions Aujourd'hui</p>
+              <small class="d-flex align-items-center">
+                <i class="fas fa-clock me-1"></i>
+                <span>En cours</span>
+              </small>
+            </div>
+            <div class="text-end">
+              <i class="fas fa-clock fa-2x opacity-50"></i>
+            </div>
+          </div>
+          <div class="position-absolute" style="bottom: -20px; right: -20px; opacity: 0.1;">
+            <i class="fas fa-clock" style="font-size: 4rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Graphiques et Statistiques -->
+  <div class="row mb-4">
+    <div class="col-lg-8 mb-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="fas fa-chart-line text-primary me-2"></i>
+            Évolution des Sessions
+          </h5>
+          <div class="btn-group btn-group-sm" role="group">
+            <input type="radio" class="btn-check" name="chartPeriod" id="week" checked>
+            <label class="btn btn-outline-primary" for="week">7j</label>
+            <input type="radio" class="btn-check" name="chartPeriod" id="month">
+            <label class="btn btn-outline-primary" for="month">30j</label>
+            <input type="radio" class="btn-check" name="chartPeriod" id="year">
+            <label class="btn btn-outline-primary" for="year">1an</label>
+          </div>
+        </div>
+        <div class="card-body">
+          <canvas id="sessionsChart" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-4 mb-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="fas fa-chart-pie text-success me-2"></i>
+            Répartition par Type
+          </h5>
+        </div>
+        <div class="card-body">
+          <canvas id="activitiesChart" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barres de Progression et Jauges -->
+  <div class="row mb-4">
+    <div class="col-lg-6 mb-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="fas fa-target text-warning me-2"></i>
+            Objectifs du Mois
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="fw-medium">Sessions Planifiées</span>
+              <span class="text-muted">75/100</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar bg-primary" style="width: 75%;" role="progressbar"></div>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="fw-medium">Taux de Participation</span>
+              <span class="text-muted">88%</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar bg-success" style="width: 88%;" role="progressbar"></div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="fw-medium">Satisfaction Patients</span>
+              <span class="text-muted">92%</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar bg-info" style="width: 92%;" role="progressbar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-6 mb-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="fas fa-chart-bar text-info me-2"></i>
+            Performance Coaches
+          </h5>
+        </div>
+        <div class="card-body">
+          <canvas id="coachesChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline des Événements Récents -->
+  <div class="row mb-4">
+    <div class="col-lg-6 mb-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="fas fa-clock text-primary me-2"></i>
+            Timeline des Événements
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-marker bg-primary"></div>
+              <div class="timeline-content">
+                <h6 class="mb-1">Nouvelle Session Créée</h6>
+                <p class="mb-1 text-muted small">Session d'ergothérapie ajoutée pour demain</p>
+                <small class="text-muted">Il y a 2 heures</small>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker bg-success"></div>
+              <div class="timeline-content">
+                <h6 class="mb-1">Participation Confirmée</h6>
+                <p class="mb-1 text-muted small">5 nouveaux participants inscrits</p>
+                <small class="text-muted">Il y a 4 heures</small>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker bg-warning"></div>
+              <div class="timeline-content">
+                <h6 class="mb-1">Session Reportée</h6>
+                <p class="mb-1 text-muted small">Coaching individuel reporté à la semaine prochaine</p>
+                <small class="text-muted">Hier</small>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker bg-info"></div>
+              <div class="timeline-content">
+                <h6 class="mb-1">Rapport Généré</h6>
+                <p class="mb-1 text-muted small">Rapport mensuel des activités disponible</p>
+                <small class="text-muted">Il y a 2 jours</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-6 mb-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="fas fa-calendar-day text-success me-2"></i>
+            Sessions d'Aujourd'hui
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if today_sessions %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Activité</th>
+                  <th>Heure</th>
+                  <th>Salle</th>
+                  <th class="text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for session in today_sessions %}
+                <tr>
+                  <td>
+                    <div class="fw-medium">{{ session.activity.title }}</div>
+                    <small class="text-muted">{{ session.activity.coach.full_name|default:"Non assigné" }}</small>
+                  </td>
+                  <td>{{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}</td>
+                  <td>{{ session.location.name }}</td>
+                  <td class="text-center">
+                    <span class="badge bg-success">{{ session.participants_count }}/{{ session.max_participants }}</span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="fas fa-calendar-times fa-2x mb-2"></i>
+            <p>Aucune session programmée pour aujourd'hui</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Processus Métier Thérapeutique -->
+  <div class="card mb-4">
+    <div class="card-header bg-transparent border-0">
+      <h5 class="mb-0">
+        <i class="fas fa-project-diagram text-primary me-2"></i>
+        Processus Thérapeutique
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-center align-items-center gap-3 gap-md-4 py-3">
+        <!-- Étape 1 : Évaluation -->
+        <div class="text-center p-3 rounded shadow-sm bg-light">
+          <div class="position-relative mb-2">
+            <i class="fas fa-clipboard-list fa-2x text-primary"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">1</span>
+          </div>
+          <div><strong>Évaluation</strong></div>
+          <small class="text-muted">Bilan initial</small>
+        </div>
+        <i class="fas fa-arrow-right fa-lg text-muted d-none d-md-block"></i>
+        <i class="fas fa-arrow-down fa-lg text-muted d-block d-md-none"></i>
+
+        <!-- Étape 2 : Planification -->
+        <div class="text-center p-3 rounded shadow-sm bg-light">
+          <div class="position-relative mb-2">
+            <i class="fas fa-calendar-alt fa-2x text-success"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success">2</span>
+          </div>
+          <div><strong>Planification</strong></div>
+          <small class="text-muted">Programme personnalisé</small>
+        </div>
+        <i class="fas fa-arrow-right fa-lg text-muted d-none d-md-block"></i>
+        <i class="fas fa-arrow-down fa-lg text-muted d-block d-md-none"></i>
+
+        <!-- Étape 3 : Sessions -->
+        <div class="text-center p-3 rounded shadow-sm bg-light">
+          <div class="position-relative mb-2">
+            <i class="fas fa-running fa-2x text-warning"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning">3</span>
+          </div>
+          <div><strong>Sessions</strong></div>
+          <small class="text-muted">Activités thérapeutiques</small>
+        </div>
+        <i class="fas fa-arrow-right fa-lg text-muted d-none d-md-block"></i>
+        <i class="fas fa-arrow-down fa-lg text-muted d-block d-md-none"></i>
+
+        <!-- Étape 4 : Suivi -->
+        <div class="text-center p-3 rounded shadow-sm bg-light">
+          <div class="position-relative mb-2">
+            <i class="fas fa-chart-line fa-2x text-info"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info">4</span>
+          </div>
+          <div><strong>Suivi</strong></div>
+          <small class="text-muted">Évolution et ajustements</small>
+        </div>
+        <i class="fas fa-arrow-right fa-lg text-muted d-none d-md-block"></i>
+        <i class="fas fa-arrow-down fa-lg text-muted d-block d-md-none"></i>
+
+        <!-- Étape 5 : Évaluation finale -->
+        <div class="text-center p-3 rounded shadow-sm bg-light">
+          <div class="position-relative mb-2">
+            <i class="fas fa-file-medical-alt fa-2x text-danger"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">5</span>
+          </div>
+          <div><strong>Bilan</strong></div>
+          <small class="text-muted">Résultats et recommandations</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques Avancées -->
+  <div class="row mb-4">
+    <div class="col-lg-4 mb-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="fas fa-chart-bar text-primary me-2"></i>
+            Top Activités
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if activity_types_stats %}
+          {% for type_stat in activity_types_stats %}
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                <i class="fas fa-running text-white"></i>
+              </div>
+              <div>
+                <div class="fw-medium">{{ type_stat.name }}</div>
+                <small class="text-muted">{{ type_stat.sessions_count }} sessions</small>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="progress" style="width: 80px; height: 6px;">
+                <div class="progress-bar bg-primary" style="width: {{ type_stat.sessions_count }}%;"></div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="fas fa-chart-bar fa-2x mb-2"></i>
+            <p>Aucune donnée disponible</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-4 mb-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="fas fa-user-tie text-success me-2"></i>
+            Top Coaches
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if top_coaches %}
+          {% for coach in top_coaches %}
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-success rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                <i class="fas fa-user text-white"></i>
+              </div>
+              <div>
+                <div class="fw-medium">{{ coach.coach__full_name }}</div>
+                <small class="text-muted">{{ coach.sessions_count }} sessions</small>
+              </div>
+            </div>
+            <span class="badge bg-success">{{ coach.sessions_count }}</span>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="fas fa-user-tie fa-2x mb-2"></i>
+            <p>Aucun coach disponible</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-4 mb-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0">
+          <h5 class="mb-0">
+            <i class="fas fa-calendar-alt text-info me-2"></i>
+            Prochaines Sessions
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if upcoming_sessions %}
+          {% for session in upcoming_sessions|slice:":5" %}
+          <div class="d-flex align-items-center mb-3">
+            <div class="bg-info rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+              <i class="fas fa-calendar text-white"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-medium">{{ session.activity.title }}</div>
+              <small class="text-muted">{{ session.date|date:"d/m" }} à {{ session.start_time|time:"H:i" }}</small>
+            </div>
+            <div class="text-end">
+              <small class="text-muted">{{ session.location.name }}</small>
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="fas fa-calendar-times fa-2x mb-2"></i>
+            <p>Aucune session programmée</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions Rapides -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0">
+      <h5 class="mb-0">
+        <i class="fas fa-bolt text-warning me-2"></i>
+        Actions Rapides
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-lg-3 col-md-6">
+          <a href="{% url 'therapeutic_activities:activity_create' %}" class="btn btn-light border w-100 h-100 d-flex flex-column align-items-center justify-content-center p-4 text-decoration-none action-card">
+            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+              <i class="fas fa-plus-circle fa-2x text-white"></i>
+            </div>
+            <span class="fw-medium text-dark">Nouvelle Activité</span>
+            <small class="text-muted">Créer une nouvelle activité thérapeutique</small>
+          </a>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <a href="{% url 'therapeutic_activities:session_create' %}" class="btn btn-light border w-100 h-100 d-flex flex-column align-items-center justify-content-center p-4 text-decoration-none action-card">
+            <div class="bg-success rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+              <i class="fas fa-calendar-plus fa-2x text-white"></i>
+            </div>
+            <span class="fw-medium text-dark">Nouvelle Session</span>
+            <small class="text-muted">Programmer une session</small>
+          </a>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <a href="{% url 'therapeutic_activities:participation_create' %}" class="btn btn-light border w-100 h-100 d-flex flex-column align-items-center justify-content-center p-4 text-decoration-none action-card">
+            <div class="bg-info rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+              <i class="fas fa-user-plus fa-2x text-white"></i>
+            </div>
+            <span class="fw-medium text-dark">Nouvelle Participation</span>
+            <small class="text-muted">Inscrire un patient</small>
+          </a>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <a href="{% url 'therapeutic_activities:configuration' %}" class="btn btn-light border w-100 h-100 d-flex flex-column align-items-center justify-content-center p-4 text-decoration-none action-card">
+            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+              <i class="fas fa-cog fa-2x text-white"></i>
+            </div>
+            <span class="fw-medium text-dark">Configuration</span>
+            <small class="text-muted">Paramètres système</small>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+.timeline {
+  position: relative;
+  padding: 0;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e9ecef;
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 50px;
+  margin-bottom: 30px;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px;
+}
+
+.timeline-content {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.timeline-content::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 15px;
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid #f8f9fa;
+}
+
+.action-card {
+  transition: all 0.3s ease;
+  min-height: 160px;
+}
+
+.action-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+  border-color: #007bff !important;
+}
+
+.card {
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.6s ease forwards;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mise à jour de l'heure
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleString('fr-FR');
+    
+    // Animation des cartes
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        setTimeout(() => {
+            card.classList.add('animate-fade-in');
+        }, index * 100);
+    });
+
+    // Graphique d'évolution des sessions
+    const sessionsCtx = document.getElementById('sessionsChart').getContext('2d');
+    const sessionsChart = new Chart(sessionsCtx, {
+        type: 'line',
+        data: {
+            labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+            datasets: [{
+                label: 'Sessions',
+                data: [12, 19, 15, 25, 22, 18, 24],
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Graphique en secteurs des activités
+    const activitiesCtx = document.getElementById('activitiesChart').getContext('2d');
+    const activitiesChart = new Chart(activitiesCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Ergothérapie', 'Coaching', 'Rééducation', 'Autres'],
+            datasets: [{
+                data: [35, 25, 20, 20],
+                backgroundColor: [
+                    '#667eea',
+                    '#f093fb',
+                    '#4facfe',
+                    '#fa709a'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                }
+            }
+        }
+    });
+
+    // Graphique des coaches
+    const coachesCtx = document.getElementById('coachesChart').getContext('2d');
+    const coachesChart = new Chart(coachesCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Dr. Martin', 'Dr. Dubois', 'Dr. Laurent', 'Dr. Bernard'],
+            datasets: [{
+                label: 'Sessions',
+                data: [25, 20, 18, 15],
+                backgroundColor: [
+                    'rgba(102, 126, 234, 0.8)',
+                    'rgba(240, 147, 251, 0.8)',
+                    'rgba(79, 172, 254, 0.8)',
+                    'rgba(250, 112, 154, 0.8)'
+                ],
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Gestion des boutons de période
+    document.querySelectorAll('input[name="chartPeriod"]').forEach(input => {
+        input.addEventListener('change', function() {
+            // Ici on pourrait changer les données du graphique selon la période
+            console.log('Période changée:', this.id);
+        });
+    });
+});
+</script>
+{% endblock %}

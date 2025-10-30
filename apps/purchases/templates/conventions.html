@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Conventions - Oralys{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'purchases/css/supplier.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}">
+  <script src="{% static 'vendor/js/chart.js' %}"></script>
+  <script src="{% static 'purchases/js/scroll-to-form.js' %}"></script>
+  <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+{% endblock %}
+
+{% block menu %}
+  {% include 'purchases_menu.html' %}
+{% endblock %}
+
+{% block content %}
+  {% include 'conventions_list.html' %}
+  {% include 'new_convention.html' %}
+{% endblock %}

@@ -1,0 +1,32 @@
+body { font-family: DejaVu Sans, sans-serif; font-size: 12px; }
+.header, .sub-header { text-align: center; }
+.company-block, .employee-block { display: inline-block; vertical-align: top; width: 48%; }
+.company-block { text-align: left; }
+.employee-block { text-align: right; }
+.section { margin-bottom: 15px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+th, td {
+    border-left: 1px solid #888;
+    border-right: 1px solid #888;
+    border-top: none;
+    border-bottom: none;
+    padding: 8px 6px;
+    text-align: right;
+}
+th {
+    background: #f0f0f0;
+    text-align: center;
+    border-top: 1px solid #888;
+    border-bottom: 1px solid #888;
+}
+tr.total-row td {
+    border-top: 1px solid #888;
+}
+tr:last-child td {
+    border-bottom: 1px solid #888;
+}
+.rubrique { text-align: left; }
+.total-row { font-weight: bold; background: #e0e0e0; }
+.net-block { font-size: 16px; font-weight: bold; text-align: right; margin-top: 20px; }
+.small { font-size: 10px; color: #666; }
+.prime-indent { padding-left: 24px; }

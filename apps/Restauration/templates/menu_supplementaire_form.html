@@ -1,0 +1,109 @@
+{% block content %}
+<div class="content">
+    {% if messages %}
+        {% for message in messages %}
+          {% if message.tags == 'success' %}
+            <div class="alert alert-success d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-check-circle me-2 fw-bold"></i>
+              <div><strong>Succès :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'error' %}
+            <div class="alert alert-danger d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-times-circle me-2 fw-bold"></i>
+              <div><strong>Erreur :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'warning' %}
+            <div class="alert alert-warning d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+              <div><strong>Attention :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'info' %}
+            <div class="alert alert-info d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-info-circle me-2 fw-bold"></i>
+              <div><strong>Information :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% else %}
+            <div class="alert alert-{{ message.tags }} d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-bell me-2 fw-bold"></i>
+              <div><strong>Info :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
+        {% endfor %}
+    {% endif %}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header text-white" style="background-color: #1e90ff;">
+                    <h4 class="mb-0" style="font-size: inherit; font-weight: 500;">
+                        {% if menu %}
+                            <i class="fas fa-edit me-2"></i> Modifier le Menu Supplémentaire
+                        {% else %}
+                            <i class="fas fa-plus me-2"></i> Nouveau Menu Supplémentaire
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.client.id_for_label }}" class="form-label">Nom du patient</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    {{ form.client }}
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.num_chambre.id_for_label }}" class="form-label">Numéro de chambre</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-bed"></i></span>
+                                    {{ form.num_chambre }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.date.id_for_label }}" class="form-label">Date</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                    {{ form.date }}
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.repas.id_for_label }}" class="form-label">Repas</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-utensils"></i></span>
+                                    {{ form.repas }}
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.quantite.id_for_label }}" class="form-label">Quantité</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                                    {{ form.quantite }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'menu_supplementaire_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                                <i class="fas fa-save"></i> 
+                                {% if menu %}Modifier{% else %}Ajouter{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script d'autocomplétion supprimé car remplacé par un champ select2 -->
+{% endblock %}

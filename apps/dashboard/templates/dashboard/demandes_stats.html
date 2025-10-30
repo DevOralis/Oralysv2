@@ -1,0 +1,826 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Statistiques Demandes - ERP Oralys{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.kpi-card-light {
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card-light:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.kpi-content {
+    height: 100%;
+}
+
+.kpi-icon {
+    flex-shrink: 0;
+}
+
+.kpi-text h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.kpi-text p {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.alert {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: none;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.list-group-item {
+    border: none;
+    padding: 12px 16px;
+    transition: background-color 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.list-group-item i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Styles pour les onglets */
+.nav-tabs .nav-link {
+    border: 1px solid transparent;
+    border-radius: 0.375rem 0.375rem 0 0;
+    transition: all 0.2s ease;
+}
+
+.nav-tabs .nav-link.active {
+    border-color: #dee2e6 #dee2e6 #fff;
+    background-color: #fff;
+    font-weight: 600;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: #dee2e6 #dee2e6 #dee2e6;
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}
+
+{% block menu %}
+{% include "dashboard/dashboard_menu.html" %}
+{% endblock %}
+
+{% block content %}
+    {% if messages %}
+        {% for message in messages %}
+          {% if message.tags == 'success' %}
+            <div class="alert alert-success d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-check-circle me-2 fw-bold"></i>
+              <div><strong>Succès :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'error' %}
+            <div class="alert alert-danger d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-times-circle me-2 fw-bold"></i>
+              <div><strong>Erreur :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'warning' %}
+            <div class="alert alert-warning d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+              <div><strong>Attention :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'info' %}
+            <div class="alert alert-info d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-info-circle me-2 fw-bold"></i>
+              <div><strong>Information :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% else %}
+            <div class="alert alert-{{ message.tags }} d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-bell me-2 fw-bold"></i>
+              <div><strong>Info :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
+        {% endfor %}
+    {% endif %}
+
+<div class="content">
+   
+    <!-- Menu de navigation des sections -->
+    <ul class="nav nav-tabs flex-column flex-sm-row mb-4" id="demandesTabs">
+        <li class="nav-item flex-sm-fill text-sm-center">
+            <a class="nav-link active" href="#demandes-internes" data-bs-toggle="tab">
+                <i class="fas fa-building me-2"></i>Demandes Internes
+            </a>
+        </li>
+        <li class="nav-item flex-sm-fill text-sm-center">
+            <a class="nav-link" href="#demandes-patients" data-bs-toggle="tab">
+                <i class="fas fa-user-injured me-2"></i>Demandes Patients
+            </a>
+        </li>
+    </ul>
+
+    <!-- Contenu des onglets -->
+    <div class="tab-content">
+        <!-- Onglet Demandes Internes -->
+        <div class="tab-pane fade show active" id="demandes-internes">
+            <!-- KPIs principaux -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-building fa-xl text-primary"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-primary mb-0">{{ total_demandes_internes }}</h3>
+                                <p class="text-muted mb-0">Total Demandes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-clock fa-xl text-warning"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-warning mb-0">{{ demandes_internes_en_cours }}</h3>
+                                <p class="text-muted mb-0">Demandes En Cours</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-check-circle fa-xl text-success"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-success mb-0">{{ demandes_internes_terminees }}</h3>
+                                <p class="text-muted mb-0">Terminées</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-exclamation-triangle fa-xl text-danger"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-danger mb-0">{{ demandes_internes_urgentes }}</h3>
+                                <p class="text-muted mb-0">Urgentes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphiques et statistiques -->
+            <div class="row">
+                <!-- Graphique circulaire - En cours vs Terminées -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Demandes Internes - En Cours vs Terminées</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="demandesInternesStatusChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique en barres - Par département -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Demandes par Département</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="demandesParDepartementChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique en barres - Par priorité -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Répartition par Priorité</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="demandesParPrioriteChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique linéaire - Évolution temporelle -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Évolution des Demandes Internes (6 derniers mois)</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="evolutionDemandesInternesChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques détaillées -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Top Départements</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                {% for dept in top_departements %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ dept.name }}</span>
+                                    <span class="badge bg-primary rounded-pill">{{ dept.count }}</span>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">Aucun département avec des demandes</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-clock me-2"></i>Performance Traitement</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="border-end">
+                                        <h4 class="text-info mb-1">{{ temps_moyen_traitement|floatformat:1 }}</h4>
+                                        <small class="text-muted">Temps Moyen (heures)</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-success mb-1">{{ taux_resolution_delai|floatformat:1 }}%</h4>
+                                        <small class="text-muted">Respect Délais</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Demandes Patients -->
+        <div class="tab-pane fade" id="demandes-patients">
+            <!-- KPIs principaux -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-user-injured fa-xl text-info"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-info mb-0">{{ total_demandes_patients }}</h3>
+                                <p class="text-muted mb-0">Demandes Patients</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-user-check fa-xl text-success"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-success mb-0">{{ patients_actifs }}</h3>
+                                <p class="text-muted mb-0">Patients Actifs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-user-plus fa-xl text-warning"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-warning mb-0">{{ nouveaux_patients }}</h3>
+                                <p class="text-muted mb-0">Nouveaux Patients</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card-light bg-light h-100">
+                        <div class="kpi-content d-flex align-items-center">
+                            <div class="kpi-icon me-3">
+                                <i class="fas fa-user-friends fa-xl text-primary"></i>
+                            </div>
+                            <div class="kpi-text">
+                                <h3 class="text-primary mb-0">{{ patients_recurrents }}</h3>
+                                <p class="text-muted mb-0">Patients Récurrents</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphiques et statistiques -->
+            <div class="row">
+                <!-- Graphique circulaire - Répartition par type de demande -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Répartition par Type de Demande Patient</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="typesDemandesPatientsChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique en barres - Patients par nombre de demandes -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Patients par Nombre de Demandes</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="patientsParDemandesChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique linéaire - Évolution des demandes patients -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Évolution des Demandes Patients (6 derniers mois)</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="evolutionDemandesPatientsChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique en barres - Top des patients -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Top des Patients par Nombre de Demandes</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="topPatientsChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques détaillées -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-star me-2"></i>Top Patients</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                {% for patient in top_patients %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ patient.prenom }} {{ patient.nom }}</span>
+                                    <span class="badge bg-primary rounded-pill">{{ patient.demandes_count }}</span>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">Aucun patient avec des demandes</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Métriques Satisfaction</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="border-end">
+                                        <h4 class="text-info mb-1">{{ temps_moyen_reponse_patient|floatformat:1 }}</h4>
+                                        <small class="text-muted">Temps Réponse (heures)</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-success mb-1">{{ taux_resolution_patient|floatformat:1 }}%</h4>
+                                    <small class="text-muted">Taux Résolution</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript pour les graphiques et charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration globale de Chart.js
+    Chart.defaults.font.family = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    Chart.defaults.color = '#6c757d';
+    
+    // 1. Graphique circulaire - Demandes Internes Status
+    const demandesInternesStatusCtx = document.getElementById('demandesInternesStatusChart');
+    if (demandesInternesStatusCtx) {
+        new Chart(demandesInternesStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['En Cours', 'Terminées', 'En Attente', 'Annulées'],
+                datasets: [{
+                    data: [
+                        {{ demandes_internes_en_cours }},
+                        {{ demandes_internes_terminees }},
+                        {{ demandes_internes_en_attente|default:0 }},
+                        {{ demandes_internes_annulees|default:0 }}
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(40, 167, 69, 0.8)',
+                        'rgba(23, 162, 184, 0.8)',
+                        'rgba(220, 53, 69, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Graphique en barres - Par département
+    const demandesParDepartementCtx = document.getElementById('demandesParDepartementChart');
+    if (demandesParDepartementCtx) {
+        new Chart(demandesParDepartementCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for dept in demandes_par_departement %}
+                        '{{ dept.name|escapejs }}',
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Nombre de demandes',
+                    data: [
+                        {% for dept in demandes_par_departement %}
+                            {{ dept.count }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre de demandes'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. Graphique en barres - Par priorité
+    const demandesParPrioriteCtx = document.getElementById('demandesParPrioriteChart');
+    if (demandesParPrioriteCtx) {
+        new Chart(demandesParPrioriteCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for priorite in demandes_par_priorite %}
+                        '{{ priorite.nom|escapejs }}',
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Nombre de demandes',
+                    data: [
+                        {% for priorite in demandes_par_priorite %}
+                            {{ priorite.count }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre de demandes'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 4. Graphique linéaire - Évolution demandes internes
+    const evolutionDemandesInternesCtx = document.getElementById('evolutionDemandesInternesChart');
+    if (evolutionDemandesInternesCtx) {
+        new Chart(evolutionDemandesInternesCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
+                datasets: [{
+                    label: 'Demandes internes',
+                    data: [15, 22, 18, 25, 30, 28],
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre de demandes'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 5. Graphique circulaire - Types de demandes patients
+    const typesDemandesPatientsCtx = document.getElementById('typesDemandesPatientsChart');
+    if (typesDemandesPatientsCtx) {
+        new Chart(typesDemandesPatientsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    {% for type in types_demandes_patients %}
+                        '{{ type.nom|escapejs }}',
+                    {% endfor %}
+                ],
+                datasets: [{
+                    data: [
+                        {% for type in types_demandes_patients %}
+                            {{ type.count }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: [
+                        '#FF6384',
+                        '#36A2EB',
+                        '#FFCE56',
+                        '#4BC0C0',
+                        '#9966FF',
+                        '#FF9F40'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 6. Graphique en barres - Patients par nombre de demandes
+    const patientsParDemandesCtx = document.getElementById('patientsParDemandesChart');
+    if (patientsParDemandesCtx) {
+        new Chart(patientsParDemandesCtx, {
+            type: 'bar',
+            data: {
+                labels: ['1 demande', '2-3 demandes', '4-5 demandes', '6+ demandes'],
+                datasets: [{
+                    label: 'Nombre de patients',
+                    data: [
+                        {{ patients_1_demande|default:0 }},
+                        {{ patients_2_3_demandes|default:0 }},
+                        {{ patients_4_5_demandes|default:0 }},
+                        {{ patients_6_plus_demandes|default:0 }}
+                    ],
+                    backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre de patients'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 7. Graphique linéaire - Évolution demandes patients
+    const evolutionDemandesPatientsCtx = document.getElementById('evolutionDemandesPatientsChart');
+    if (evolutionDemandesPatientsCtx) {
+        new Chart(evolutionDemandesPatientsCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
+                datasets: [{
+                    label: 'Demandes patients',
+                    data: [12, 19, 15, 25, 22, 30],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre de demandes'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 8. Graphique en barres - Top des patients
+    const topPatientsCtx = document.getElementById('topPatientsChart');
+    if (topPatientsCtx) {
+        new Chart(topPatientsCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for patient in top_patients %}
+                        '{{ patient.prenom|escapejs }} {{ patient.nom|escapejs }}',
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Nombre de demandes',
+                    data: [
+                        {% for patient in top_patients %}
+                            {{ patient.demandes_count }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(255, 159, 64, 0.8)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre de demandes'
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+

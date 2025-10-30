@@ -1,0 +1,136 @@
+<div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+        <i class="fas fa-check-circle me-2"></i>
+        Consultations Validées
+    </div>
+    <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="consultations-search-form">
+            <div class="row g-2 mb-3">
+                <!-- Barre de recherche -->
+                <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                    <div class="input-group">
+                        <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="search" id="search-done" name="search_done" class="form-control border-primary" placeholder="Rechercher Une Consultation..." value="{{ search_done|default:'' }}">
+                    </div>
+                </div>
+                <!-- Filtre médecin -->
+                <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+                    <select class="form-select" id="filter-done-medecin" name="filter_done_medecin" title="Filtrer Par Médecin">
+                        <option value="">Tous Les Médecins</option>
+                        {% for med in medecins %}
+                        <option value="{{ med.id }}" {% if filter_done_medecin == med.id|stringformat:'s' %}selected{% endif %}>{{ med.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Bouton export -->
+                <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="export-consultations" title="Exporter">
+                            <i class="fas fa-file-export"></i>
+                            <span class="d-none d-lg-inline ms-1">Exporter</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="tableConsultations">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <th class="d-none d-md-table-cell">
+                            <input type="checkbox" id="selectAllConsultations">
+                        </th>
+                        <th>
+                            <div class="d-flex align-items-center">
+                                <span>Date/Heure</span>
+                                <i class="fas fa-sort sort-icon ms-1 text-white-50"></i>
+                            </div>
+                        </th>
+                        <th>
+                            <div class="d-flex align-items-center">
+                                <span>Patient</span>
+                                <i class="fas fa-sort sort-icon ms-1 text-white-50"></i>
+                            </div>
+                        </th>
+                        <th class="d-none d-lg-table-cell">
+                            <div class="d-flex align-items-center">
+                                <span>Médecin</span>
+                                <i class="fas fa-sort sort-icon ms-1 text-white-50"></i>
+                            </div>
+                        </th>
+                        <th class="d-none d-lg-table-cell">
+                            <div class="d-flex align-items-center">
+                                <span>Motif</span>
+                                <i class="fas fa-sort sort-icon ms-1 text-white-50"></i>
+                            </div>
+                        </th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in consultations %}
+                    <tr>
+                        <td data-label="Sélection" class="d-none d-md-table-cell">
+                            <input type="checkbox" class="row-check" 
+                                   data-id="{{ c.id }}"
+                                   data-date="{{ c.date|date:'d/m/Y H:i' }}"
+                                   data-patient="{% if c.patient %}{{ c.patient.last_name }} {{ c.patient.first_name }}{% else %}Patient inconnu{% endif %}"
+                                   data-medecin="{% if c.medecin %}{{ c.medecin.full_name }}{% else %}Médecin inconnu{% endif %}">
+                        </td>
+                        <td data-label="Date/Heure">{{ c.date|date:'d/m/Y H:i' }}</td>
+                        <td data-label="Patient">{% if c.patient %}{{ c.patient.last_name }} {{ c.patient.first_name }}{% else %}Patient inconnu{% endif %}</td>
+                        <td data-label="Médecin" class="d-none d-lg-table-cell">{% if c.medecin %}{{ c.medecin.full_name }}{% else %}Médecin inconnu{% endif %}</td>
+                        <td data-label="Motif" class="d-none d-lg-table-cell">{{ c.commentaires|truncatewords:5 }}</td>
+                        <td data-label="Actions" class="text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                <button type="button" class="btn btn-sm btn-light border text-info view-consultation-details" data-id="{{ c.id }}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <a href="{% url 'patient:consultation_pdf' c.id %}" class="btn btn-sm btn-light border text-primary" target="_blank" title="Imprimer PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                                {% if request.session.user.permissions.patient.delete %}
+                                <button type="button" class="btn btn-sm btn-light border text-danger delete-consultation-btn" data-consultation-id="{{ c.id }}" data-patient-name="{% if c.patient %}{{ c.patient.last_name }} {{ c.patient.first_name }}{% else %}Patient inconnu{% endif %}" title="Supprimer">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr id="consultations-no-results"><td colspan="6" class="text-center">Aucune Consultation Validée</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination consultations validées -->
+        {% if paginator_consult.num_pages > 1 %}
+        <div class="pagination-container mt-4">
+            <nav aria-label="Pagination des consultations validées">
+                <ul class="pagination justify-content-center">
+                    {% if consultations.has_previous %}
+                        <li class="page-item"><a class="page-link page-ajax" href="?page_consult={{ consultations.previous_page_number }}&search_done={{ search_done }}&filter_done_medecin={{ filter_done_medecin }}">&laquo;</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                    {% endif %}
+                    {% for num in paginator_consult.page_range %}
+                        {% if consultations.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link page-ajax" href="?page_consult={{ num }}&search_done={{ search_done }}&filter_done_medecin={{ filter_done_medecin }}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if consultations.has_next %}
+                        <li class="page-item"><a class="page-link page-ajax" href="?page_consult={{ consultations.next_page_number }}&search_done={{ search_done }}&filter_done_medecin={{ filter_done_medecin }}">&raquo;</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>

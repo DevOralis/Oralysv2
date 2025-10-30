@@ -1,0 +1,444 @@
+
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}" />
+<link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}" />
+<style>
+:root {
+  --main-blue: #1e90ff;
+  --dark-blue: #1c86ee;
+  --light-blue: #e6f0fa;
+  --hover-blue: #1a7ad9;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-footer {
+  margin-top: auto;
+  margin-left: 0;
+  margin-right: 0;
+  margin-bottom: 0;
+  background-color: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  padding: 1rem 0;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  transition: margin-left 0.3s ease, width 0.3s ease;
+  text-align: center;
+}
+
+/* Ensure no underlines globally for <a> and <h5> */
+a {
+  text-decoration: none !important;
+}
+
+h5 {
+  text-decoration: none !important;
+}
+
+.navbar {
+  background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-blue) 100%);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 1rem 0;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+  color: white !important;
+}
+
+.navbar-brand:hover {
+  transform: scale(1.05);
+  color: white !important;
+}
+
+.navbar-brand img {
+  height: 45px;
+  margin-right: 12px;
+  border-radius: 8px;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  object-fit: cover;
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: scale(1.05);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  color: white;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.navbar-nav .nav-link {
+  color: white !important;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  margin-left: 5px;
+}
+
+.navbar-nav .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.navbar-nav .nav-link i {
+  margin-right: 5px;
+}
+
+.logout-btn {
+  background-color: rgba(231, 76, 60, 0.8);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background-color: #e74c3c;
+  transform: translateY(-1px);
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem 0;
+}
+
+.page-title {
+  color: #2c3e50;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.search-container {
+  margin-bottom: 2rem;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.search-input {
+  border-radius: 25px;
+  border: 1px solid #ced4da;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: var(--main-blue);
+  box-shadow: 0 0 0 0.2rem rgba(30, 144, 255, 0.25);
+  outline: none;
+}
+
+.card {
+  border: none;
+  border-radius: 15px;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  background: white;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  height: 100%;
+  min-height: 140px;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--main-blue), var(--dark-blue));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.card:hover::before {
+  transform: scaleX(1);
+}
+
+.card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(30, 144, 255, 0.2);
+}
+
+.card-content {
+  padding: 1.5rem;
+  text-align: center;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.card i {
+  font-size: 2.5rem;
+  color: var(--main-blue);
+  margin-bottom: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.card:hover i {
+  color: var(--hover-blue);
+  transform: scale(1.1);
+}
+
+.card h5 {
+  color: #34495e;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  margin: 0;
+  transition: color 0.3s ease;
+}
+
+.card:hover h5 {
+  color: var(--dark-blue);
+}
+
+.footer {
+  background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-blue) 100%);
+  color: white;
+  padding: 5px 0;
+  text-align: center;
+  margin-top: auto;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  line-height: 1.2;
+  height: auto;
+}
+
+.footer p {
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .user-info {
+    display: none;
+  }
+  
+  .user-profile {
+    gap: 5px;
+  }
+  
+  .navbar-nav {
+    margin-top: 10px;
+  }
+  
+  .card {
+    min-height: 120px;
+  }
+  
+  .card i {
+    font-size: 2rem;
+  }
+  
+  .card h5 {
+    font-size: 0.85rem;
+  }
+  
+  .page-title {
+    font-size: 1.8rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .card-content {
+    padding: 1rem;
+  }
+  
+  .main-content {
+    padding: 1rem 0;
+  }
+  
+  .search-container {
+    margin-bottom: 1.5rem;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="navbar navbar-expand-lg" style="background: linear-gradient(135deg, var(--main-blue) 0%, var(--dark-blue) 100%);">
+  <div class="container-fluid">
+    <a class="navbar-brand d-flex align-items-center text-white" href="#">
+      <i class="fas fa-stethoscope fs-4 me-2"></i>
+      Oralys ERP Clinique
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <div class="navbar-nav ms-auto d-flex align-items-center">
+        <!-- Notifications -->
+        <div class="dropdown notification-dropdown me-2 p-2" >
+          <button class="btn notif-btn position-relative text-white" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-bell"></i>
+            <span class="notif-badge position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">12</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="min-width: 250px;">
+            <li class="dropdown-header">Notifications</li>
+            <li><a class="dropdown-item" href="#">Nouvelle prise de rendez-vous</a></li>
+            <li><a class="dropdown-item" href="#">Commande validée</a></li>
+            <li><a class="dropdown-item" href="#">Message du support</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-center text-primary" href="#">Voir toutes les notifications</a></li>
+          </ul>
+        </div>
+        <!-- Language Selector -->
+        <div class="dropdown language-selector me-2">
+          <button class="btn  dropdown-toggle d-flex align-items-center gap-2" type="button" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-globe text-white"></i>
+            <span id="currentLanguage" class="d-none d-sm-inline text-white">Français</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+            <li><a class="dropdown-item" href="#" data-lang="fr" data-display="Français"><i class="fas fa-flag me-2"></i> Français</a></li>
+            <li><a class="dropdown-item" href="#" data-lang="en" data-display="English"><i class="fas fa-flag me-2"></i> English</a></li>
+            <li><a class="dropdown-item" href="#" data-lang="es" data-display="Español"><i class="fas fa-flag me-2"></i> Español</a></li>
+          </ul>
+        </div>
+        <!-- User Dropdown -->
+        <div class="dropdown user-dropdown">
+          <button class="btn user-dropdown-toggle d-flex align-items-center text-white" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="user-avatar me-2">
+              <span class="avatar-initials bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">{{ user.nom|first }}{{ user.prenom|first }}</span>
+            </div>
+            <span class="user-name me-1 d-none d-sm-inline">{{ user.nom }} {{ user.prenom }}</span>
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown" style="min-width: 200px;">
+            <li class="dropdown-header">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2">
+                  <span class="avatar-initials bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">{{ user.nom|first }}{{ user.prenom|first }}</span>
+                </div>
+                <div>
+                  <div class="fw-semibold">{{ user.nom }} {{ user.prenom }}</div>
+                  <small class="text-muted">Administrateur</small>
+                </div>
+              </div>
+            </li>
+            <li><hr class="dropdown-divider my-1"></li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center text-danger" href="{% url 'login' %}">
+                <i class="fas fa-sign-out-alt me-2"></i>
+                <span>Déconnexion</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="main-content">
+  <div class="container">
+    <h2 class="page-title text-center">Bienvenue sur l'ERP de la Clinique</h2>
+    
+    <div class="search-container">
+      <input type="text" id="cardSearch" class="search-input" placeholder="Rechercher une fonctionnalité...">
+    </div>
+    
+    <div class="row g-4" id="cardContainer">
+      {% for app_name, label, url, icon in authorized_apps %}
+        <div class="col-lg-3 col-md-6">
+          <a href="{{ url }}" class="card">
+            <div class="card-content">
+              <i class="{{ icon }}"></i>
+              <h5>{{ label }}</h5>
+            </div>
+          </a>
+        </div>
+      {% empty %}
+        <div class="col-12 text-center">
+          <p>Aucune application autorisée pour cet utilisateur.</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<footer class="main-footer">
+  <p>© 2025 Clinique Oralys - ERP développé pour la gestion médicale.</p>
+</footer>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('cardSearch');
+  const cardContainer = document.getElementById('cardContainer');
+  const cards = cardContainer.getElementsByClassName('col-lg-3');
+
+  searchInput.addEventListener('input', function() {
+    const searchText = this.value.trim().toLowerCase();
+
+    Array.from(cards).forEach(card => {
+      const title = card.querySelector('h5').textContent.toLowerCase();
+      if (searchText === '' || title.includes(searchText)) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

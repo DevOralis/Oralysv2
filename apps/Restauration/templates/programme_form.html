@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block menu %}
+{% include "menu_restauration.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 text-gray-800">
+                    <i class="fas fa-calendar-plus"></i> {{ title }}
+                </h1>
+                <a href="{% url 'programme_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+          {% if message.tags == 'success' %}
+            <div class="alert alert-success d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-check-circle me-2 fw-bold"></i>
+              <div><strong>Succès :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'error' %}
+            <div class="alert alert-danger d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-times-circle me-2 fw-bold"></i>
+              <div><strong>Erreur :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'warning' %}
+            <div class="alert alert-warning d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+              <div><strong>Attention :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'info' %}
+            <div class="alert alert-info d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-info-circle me-2 fw-bold"></i>
+              <div><strong>Information :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% else %}
+            <div class="alert alert-{{ message.tags }} d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-bell me-2 fw-bold"></i>
+              <div><strong>Info :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="m-0"><i class="fas fa-edit me-2"></i>{{ action }} un Programme</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="programmeForm">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.nom.id_for_label }}">
+                                        <i class="fas fa-tag"></i> Nom du programme *
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                                        {{ form.nom }}
+                                    </div>
+                                    {% if form.nom.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.nom.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">
+                                        Donnez un nom descriptif à votre programme (ex: "Programme Été 2024")
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.lieu.id_for_label }}">
+                                        <i class="fas fa-map-marker-alt"></i> Lieu *
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                                        {{ form.lieu }}
+                                    </div>
+                                    {% if form.lieu.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.lieu.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">
+                                        Lieu où se déroule le programme (ex: "Salle de restauration principale")
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.date_debut.id_for_label }}">
+                                        <i class="fas fa-calendar-day"></i> Date de début *
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-calendar-day"></i></span>
+                                        {{ form.date_debut }}
+                                    </div>
+                                    {% if form.date_debut.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.date_debut.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.date_fin.id_for_label }}">
+                                        <i class="fas fa-calendar-check"></i> Date de fin *
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-calendar-check"></i></span>
+                                        {{ form.date_fin }}
+                                    </div>
+                                    {% if form.date_fin.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.date_fin.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Conseil :</strong> Après avoir créé le programme, vous pourrez générer automatiquement tous les jours entre la date de début et la date de fin.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'programme_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> Annuler
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> {{ action }} le Programme
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation des dates
+    const dateDebut = document.getElementById('{{ form.date_debut.id_for_label }}');
+    const dateFin = document.getElementById('{{ form.date_fin.id_for_label }}');
+    
+    function validateDates() {
+        if (dateDebut.value && dateFin.value) {
+            const debut = new Date(dateDebut.value);
+            const fin = new Date(dateFin.value);
+            
+            if (debut > fin) {
+                dateFin.setCustomValidity('La date de fin doit être postérieure à la date de début');
+            } else {
+                dateFin.setCustomValidity('');
+            }
+        }
+    }
+    
+    dateDebut.addEventListener('change', validateDates);
+    dateFin.addEventListener('change', validateDates);
+    
+    // Validation du formulaire
+    document.getElementById('programmeForm').addEventListener('submit', function(e) {
+        if (!this.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        this.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}

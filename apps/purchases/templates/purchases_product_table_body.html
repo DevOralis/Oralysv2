@@ -1,0 +1,21 @@
+{% for product in page_obj %}
+<tr>
+  <td><input type="checkbox" class="select-product"></td>
+  <td>{{ product.name }}</td>
+  <td>{{ product.default_code }}</td>
+  <td>{{ product.categ.label }}</td>
+  <td>{{ product.standard_price|floatformat:2 }}</td>
+  <td>{{ product.stock_minimal }}</td>
+  <td>{{ product.uom.label }}</td>
+  <td>{{ product.total_quantity|floatformat:2 }}</td>
+  <td class="text-center">
+ {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+    <a href="{% url 'purchases_product_update' product.pk %}#product-form-card" class="btn btn-sm btn-light border me-1"><i class="fas fa-edit"></i></a>
+    <button type="button" class="btn btn-sm btn-light border text-danger btn-delete-product me-1" data-id="{{ product.pk }}" data-name="{{ product.name }}"><i class="fas fa-trash-alt"></i></button>
+{% endif %}
+    <button type="button" class="btn btn-sm btn-light border btn-details-product" data-id="{{ product.pk }}" data-bs-toggle="modal" data-bs-target="#productOrderHistoryModal"><i class="fas fa-eye"></i></button>
+  </td>
+</tr>
+{% empty %}
+<tr><td colspan="9" class="text-center">Aucun produit</td></tr>
+{% endfor %}

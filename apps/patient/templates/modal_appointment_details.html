@@ -1,0 +1,15 @@
+<div class="modal-header">
+    <h5 class="modal-title">Détails du rendez-vous</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <p><strong>Patient:</strong> {% if appointment.patient %}{{ appointment.patient.last_name }} {{ appointment.patient.first_name }}{% else %}{{ appointment.nom }} {{ appointment.prenom }}{% endif %}</p>
+    <p><strong>Médecin:</strong> {{ appointment.medecin.full_name }}</p>
+    <p><strong>Date:</strong> {{ appointment.date_heure|date:"d/m/Y H:i" }}</p>
+    <p><strong>Statut:</strong> <span class="badge bg-success">{{ appointment.get_statut_display }}</span></p>
+    <p><strong>Notes:</strong> {{ appointment.motif|default:"Aucune" }}</p>
+</div>
+<div class="modal-footer">
+    <a href="{% url 'patient:complete_consultation' appointment.id %}" class="btn btn-success">Compléter la consultation</a>
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+</div>

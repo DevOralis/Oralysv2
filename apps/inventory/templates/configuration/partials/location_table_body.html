@@ -1,0 +1,27 @@
+{% for location in locations %}
+<tr data-id="{{ location.location_id }}" data-name="{{ location.name }}" data-type="{{ location.location_type_id }}" data-parent="{{ location.parent_location_id|default:'' }}">
+  <td>{{ location.name }}</td>
+  <td>
+    {% if location.location_type %}
+      {{ location.location_type.label }}
+    {% else %}
+      -
+    {% endif %}
+  </td>
+  <td>
+    {% if location.parent_location %}
+      {{ location.parent_location.name }}
+    {% else %}
+      -
+    {% endif %}
+  </td>
+  {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+  <td>
+    <button type="button" class="btn btn-sm btn-light btn-edit-config" data-entity="location" title="Modifier"><i class="fas fa-edit"></i></button>
+    <button type="button" class="btn btn-sm btn-light text-danger btn-location-delete" title="Supprimer"><i class="fas fas fa-trash-alt"></i></button>
+  </td>
+  {% endif %}
+</tr>
+{% empty %}
+<tr><td colspan="4" class="text-center text-muted">Aucun emplacement trouvé</td></tr>
+{% endfor %} 

@@ -1,0 +1,1770 @@
+{% extends "base.html" %}
+{% block title %}Configuration - Gestion des Demandes{% endblock %}
+{% block menu %}
+{% include "menu_demandes.html" %}
+{% endblock %}
+
+{% block content %}
+<style>
+  .product-img {
+    max-height: 50px;
+    width: auto;
+    border-radius: 6px;
+  }
+
+  .patient-img {
+    max-height: 50px;
+    width: auto;
+    border-radius: 6px;
+  }
+
+  .badge.bg-pink {
+    background-color: #e83e8c !important;
+  }
+
+  /* Ajustements pour le footer fixe */
+  .content {
+    min-height: calc(100vh - 140px); /* Ajuste la hauteur pour le footer */
+    padding-bottom: 2rem; /* Espace avant le footer */
+  }
+</style>
+
+<style>
+  /* Couleur primaire de cette page forcée à #1e90ff */
+  .bg-gradient-primary,
+  .bg-primary { background-color: #1e90ff !important; background-image: none !important; }
+  .text-primary { color: #1e90ff !important; }
+  .border-primary { border-color: #1e90ff !important; }
+  .form-control.border-primary,
+  .input-group-text.border-primary { border-color: #1e90ff !important; }
+  .btn-primary { background-color: #1e90ff !important; border-color: #1e90ff !important; }
+  .btn-outline-primary { color: #1e90ff !important; border-color: #1e90ff !important; }
+  .btn-outline-primary:hover,
+  .btn-outline-primary:focus { background-color: #1e90ff !important; color: #fff !important; border-color: #1e90ff !important; }
+  .page-link { color: #1e90ff; }
+  .page-link:hover { color: #1e90ff; }
+  .page-item.active .page-link { background-color: #1e90ff !important; border-color: #1e90ff !important; }
+</style>
+
+<div class="content">
+
+  <ul class="nav nav-tabs flex-column flex-sm-row mb-3" id="configTabs">
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if not active_tab or active_tab == 'produits' %}active{% endif %}" href="#produits">Produits</a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if active_tab == 'statuts' %}active{% endif %}" href="#statuts">Statuts</a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if active_tab == 'priorites' %}active{% endif %}" href="#priorites">Priorités</a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if active_tab == 'patients' %}active{% endif %}" href="#patients">Patients</a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if active_tab == 'departements' %}active{% endif %}" href="#departements">Départements</a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if active_tab == 'prestataires' %}active{% endif %}" href="#prestataires">Prestataires</a>
+    </li>
+  </ul>
+
+  <!-- Messages Django - Affichés globalement -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="tab-content">
+    <!-- Onglet Produits -->
+    <div class="tab-pane fade {% if not active_tab or active_tab == 'produits' %}show active{% endif %}" id="produits">
+
+      <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-box me-2"></i>
+          Produits
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text bg-primary text-white border-primary">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control border-primary" id="searchProduit" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm('add-produit')">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+          
+          <div class="table-container">
+            <table class="table table-striped table-hover">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAll">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Image</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="d-none d-md-table-cell">Nom</th>
+                  <th class="d-none d-md-table-cell">Type de Demande</th>
+                  <th class="d-none d-md-table-cell">Disponible</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="produitsTable">
+                {% for produit in produits_page %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check">
+                  </td>
+                  <td>
+                    {% if produit.image %}
+                      <img src="{{ produit.image.url }}" alt="{{ produit.nom }}" class="product-img">
+                    {% else %}
+                      <span class="text-muted">Aucune</span>
+                    {% endif %}
+                  </td>
+                  <td class="d-none d-md-table-cell">{{ produit.nom }}</td>
+                  <td class="d-none d-md-table-cell">{{ produit.get_type_demande_display }}</td>
+                  <td class="d-none d-md-table-cell">
+                    {% if produit.disponible %}
+                      <span class="badge bg-success">Oui</span>
+                    {% else %}
+                      <span class="badge bg-danger">Non</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark" 
+                              onclick="openEditForm(this, 'edit-produit')"
+                              data-id="{{ produit.id }}"
+                              data-nom="{{ produit.nom }}"
+                              data-description="{{ produit.description }}"
+                              data-type="{{ produit.type_demande }}"
+                              data-disponible="{{ produit.disponible|yesno:'1,0' }}"
+                              {% if produit.image %}data-image="{{ produit.image.url }}"{% endif %}
+                              title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" 
+                              data-bs-toggle="modal"
+                              data-bs-target="#modalDeleteProduit"
+                              data-id="{{ produit.id }}"
+                              data-nom="{{ produit.nom }}"
+                              title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted">Aucun produit trouvé.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour produits -->
+          {% if produits_page.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if produits_page.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=produits&page_produits={{ produits_page.previous_page_number }}" aria-label="Page précédente">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in produits_page.paginator.page_range %}
+                {% if produits_page.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > produits_page.number|add:'-2' and num < produits_page.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?active_tab=produits&page_produits={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if produits_page.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=produits&page_produits={{ produits_page.next_page_number }}" aria-label="Page suivante">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Formulaire d'ajout de produit -->
+      <div class="card mb-3" id="add-produit">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-plus me-2"></i>
+          Nouveau Produit
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'demandes:configuration_demandes' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_produit">
+            <input type="hidden" name="active_tab" value="produits">
+            <input type="hidden" name="page_produits" value="{{ produits_page.number }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-box"></i></span>
+                  <input type="text" name="nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Type de demande <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-list"></i></span>
+                  <select name="type_demande" class="form-select" required>
+                    <option value="interne">Interne</option>
+                    <option value="patient">Patient</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea name="description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Image</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-image"></i></span>
+                  <input type="file" name="image" class="form-control" accept="image/*">
+                </div>
+              </div>
+              <div class="col-md-6 d-flex align-items-end">
+                <div class="form-check">
+                  <input type="checkbox" name="disponible" class="form-check-input" id="disponible" checked>
+                  <label class="form-check-label" for="disponible">Disponible</label>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de modification de produit -->
+      <div class="card mb-3" id="edit-produit" style="display: none;">
+        <div class="card-header bg-gradient-primary text-white">
+          <i class="fas fa-edit me-2"></i>
+          Modifier le Produit
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'demandes:configuration_demandes' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_produit">
+            <input type="hidden" name="produit_id" id="edit_produit_id">
+            <input type="hidden" name="active_tab" value="produits">
+            <input type="hidden" name="page_produits" value="{{ produits_page.number }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-box"></i></span>
+                  <input type="text" name="nom" id="edit_produit_nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Type de demande <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-list"></i></span>
+                  <select name="type_demande" id="edit_produit_type" class="form-select" required>
+                    <option value="interne">Interne</option>
+                    <option value="patient">Patient</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea name="description" id="edit_produit_description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Image actuelle</label>
+                <div id="current_image_container"></div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Nouvelle image</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-image"></i></span>
+                  <input type="file" name="image" class="form-control" accept="image/*">
+                </div>
+              </div>
+              <div class="col-md-12 d-flex align-items-center">
+                <div class="form-check">
+                  <input type="checkbox" name="disponible" class="form-check-input" id="edit_produit_disponible">
+                  <label class="form-check-label" for="edit_produit_disponible">Disponible</label>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Mettre à jour
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onglet Statuts -->
+    <div class="tab-pane fade {% if active_tab == 'statuts' %}show active{% endif %}" id="statuts">
+      <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-tags me-2"></i>
+          Statuts
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text bg-primary text-white border-primary">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control border-primary" id="searchStatut" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm('add-statut')">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+          
+          <div class="table-container">
+            <table class="table table-striped table-hover">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAllStatuts">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Nom</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="d-none d-md-table-cell">Couleur</th>
+                  <th class="d-none d-md-table-cell">Catégorie</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="statutsTable">
+                {% for obj in statuts_page %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check-statut">
+                  </td>
+                  <td>{{ obj.nom }}</td>
+                  <td class="d-none d-md-table-cell">
+                    {% if obj.couleur %}
+                      <span class="badge bg-{{ obj.couleur }}">{{ obj.couleur }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="d-none d-md-table-cell">
+                    <span class="badge bg-secondary">{{ obj.get_category_display }}</span>
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark" 
+                              onclick="openEditForm(this, 'edit-statut')"
+                              data-id="{{ obj.id }}"
+                              data-nom="{{ obj.nom }}"
+                              data-couleur="{{ obj.couleur }}"
+                              data-category="{{ obj.category }}"
+                              title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" 
+                              data-bs-toggle="modal"
+                              data-bs-target="#modalDeleteStatut"
+                              data-id="{{ obj.id }}"
+                              data-nom="{{ obj.nom }}"
+                              title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center text-muted">Aucun statut trouvé.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour statuts -->
+          {% if statuts_page.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if statuts_page.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=statuts&page_statuts={{ statuts_page.previous_page_number }}" aria-label="Page précédente">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in statuts_page.paginator.page_range %}
+                {% if statuts_page.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > statuts_page.number|add:'-2' and num < statuts_page.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?active_tab=statuts&page_statuts={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if statuts_page.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=statuts&page_statuts={{ statuts_page.next_page_number }}" aria-label="Page suivante">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Formulaire d'ajout de statut -->
+      <div class="card mb-3" id="add-statut">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-plus me-2"></i>
+          Nouveau Statut
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'demandes:configuration_demandes' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_statut">
+            <input type="hidden" name="active_tab" value="statuts">
+            <input type="hidden" name="page_statuts" value="{{ statuts_page.number }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                  <input type="text" name="nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Couleur <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-palette"></i></span>
+                  <select name="couleur" class="form-select" required>
+                    <option value="primary">Bleu (primary)</option>
+                    <option value="secondary">Gris (secondary)</option>
+                    <option value="success">Vert (success)</option>
+                    <option value="danger">Rouge (danger)</option>
+                    <option value="warning">Jaune (warning)</option>
+                    <option value="info">Cyan (info)</option>
+                    <option value="light">Clair (light)</option>
+                    <option value="dark">Foncé (dark)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Catégorie <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-list"></i></span>
+                  <select name="category" class="form-select" required>
+                    <option value="active">Active</option>
+                    <option value="terminated">Terminée</option>
+                    <option value="cancelled">Annulée</option>
+                    <option value="pending">En attente</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de modification de statut -->
+      <div class="card mb-3" id="edit-statut" style="display: none;">
+        <div class="card-header bg-gradient-primary text-white">
+          <i class="fas fa-edit me-2"></i>
+          Modifier le Statut
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'demandes:configuration_demandes' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_statut">
+            <input type="hidden" name="statut_id" id="edit_statut_id">
+            <input type="hidden" name="active_tab" value="statuts">
+            <input type="hidden" name="page_statuts" value="{{ statuts_page.number }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                  <input type="text" name="nom" id="edit_statut_nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Couleur <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-palette"></i></span>
+                  <select name="couleur" id="edit_statut_couleur" class="form-select" required>
+                    <option value="primary">Bleu (primary)</option>
+                    <option value="secondary">Gris (secondary)</option>
+                    <option value="success">Vert (success)</option>
+                    <option value="danger">Rouge (danger)</option>
+                    <option value="warning">Jaune (warning)</option>
+                    <option value="info">Cyan (info)</option>
+                    <option value="light">Clair (light)</option>
+                    <option value="dark">Foncé (dark)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Catégorie <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-list"></i></span>
+                  <select name="category" id="edit_statut_category" class="form-select" required>
+                    <option value="active">Active</option>
+                    <option value="terminated">Terminée</option>
+                    <option value="cancelled">Annulée</option>
+                    <option value="pending">En attente</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Mettre à jour
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onglet Priorités -->
+    <div class="tab-pane fade {% if active_tab == 'priorites' %}show active{% endif %}" id="priorites">
+      <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Priorités
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text bg-primary text-white border-primary">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control border-primary" id="searchPriorite" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm('add-priorite')">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouvelle</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+          
+          <div class="table-container">
+            <table class="table table-striped table-hover">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAllPriorites">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Nom</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="d-none d-md-table-cell">Niveau</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="prioritesTable">
+                {% for obj in priorites_page %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check-priorite">
+                  </td>
+                  <td>{{ obj.nom }}</td>
+                  <td class="d-none d-md-table-cell">{{ obj.niveau }}</td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark" 
+                              onclick="openEditForm(this, 'edit-priorite')"
+                              data-id="{{ obj.id }}"
+                              data-nom="{{ obj.nom }}"
+                              data-niveau="{{ obj.niveau }}"
+                              title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" 
+                              data-bs-toggle="modal"
+                              data-bs-target="#modalDeletePriorite"
+                              data-id="{{ obj.id }}"
+                              data-nom="{{ obj.nom }}"
+                              title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted">Aucune priorité trouvée.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour priorités -->
+          {% if priorites_page.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if priorites_page.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=priorites&page_priorites={{ priorites_page.previous_page_number }}" aria-label="Page précédente">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in priorites_page.paginator.page_range %}
+                {% if priorites_page.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > priorites_page.number|add:'-2' and num < priorites_page.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?active_tab=priorites&page_priorites={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if priorites_page.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=priorites&page_priorites={{ priorites_page.next_page_number }}" aria-label="Page suivante">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Formulaire d'ajout de priorité -->
+      <div class="card mb-3" id="add-priorite">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-plus me-2"></i>
+          Nouvelle Priorité
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'demandes:configuration_demandes' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_priorite">
+            <input type="hidden" name="active_tab" value="priorites">
+            <input type="hidden" name="page_priorites" value="{{ priorites_page.number }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                  <input type="text" name="nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Niveau <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-sort-numeric-up"></i></span>
+                  <input type="number" name="niveau" class="form-control" required min="1">
+                </div>
+                <small class="text-muted">Plus le nombre est élevé, plus la priorité est haute</small>
+              </div>
+            </div>
+            <div class="mt-4 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de modification de priorité -->
+      <div class="card mb-3" id="edit-priorite" style="display: none;">
+        <div class="card-header bg-gradient-primary text-white">
+          <i class="fas fa-edit me-2"></i>
+          Modifier la Priorité
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'demandes:configuration_demandes' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_priorite">
+            <input type="hidden" name="priorite_id" id="edit_priorite_id">
+            <input type="hidden" name="active_tab" value="priorites">
+            <input type="hidden" name="page_priorites" value="{{ priorites_page.number }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                  <input type="text" name="nom" id="edit_priorite_nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Niveau <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-sort-numeric-up"></i></span>
+                  <input type="number" name="niveau" id="edit_priorite_niveau" class="form-control" required min="1">
+                </div>
+                <small class="text-muted">Plus le nombre est élevé, plus la priorité est haute</small>
+              </div>
+            </div>
+            <div class="mt-4 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Mettre à jour
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onglet Patients -->
+    <div class="tab-pane fade {% if active_tab == 'patients' %}show active{% endif %}" id="patients">
+      <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-user-injured me-2"></i>
+          Patients
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text bg-primary text-white border-primary">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control border-primary" id="searchPatient" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm('add-patient')">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+          
+          <div class="table-container">
+            <table class="table table-striped table-hover">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAllPatients">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Nom</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="d-none d-md-table-cell">Prénom</th>
+                  <th class="d-none d-md-table-cell">Sexe</th>
+                  <th class="d-none d-md-table-cell">Date de naissance</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="patientsTable">
+                {% for patient in patients_page %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check-patient">
+                  </td>
+                  <td>{{ patient.nom }}</td>
+                  <td class="d-none d-md-table-cell">{{ patient.prenom }}</td>
+                  <td class="d-none d-md-table-cell">
+                    {% if patient.sexe == 'M' %}
+                      <span class="badge bg-primary">Masculin</span>
+                    {% elif patient.sexe == 'F' %}
+                      <span class="badge bg-pink">Féminin</span>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td class="d-none d-md-table-cell">
+                    {% if patient.date_naissance %}
+                      {{ patient.date_naissance|date:"d/m/Y" }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark" 
+                              onclick="openEditForm(this, 'edit-patient')"
+                              data-id="{{ patient.id }}"
+                              data-nom="{{ patient.nom }}"
+                              data-prenom="{{ patient.prenom }}"
+                              data-sexe="{{ patient.sexe }}"
+                              data-date-naissance="{{ patient.date_naissance|date:'Y-m-d' }}"
+                              title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" 
+                              data-bs-toggle="modal"
+                              data-bs-target="#modalDeletePatient"
+                              data-id="{{ patient.id }}"
+                              data-nom="{{ patient.nom }}"
+                              data-prenom="{{ patient.prenom }}"
+                              title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted">Aucun patient trouvé.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour patients -->
+          {% if patients_page.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if patients_page.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=patients&page_patients={{ patients_page.previous_page_number }}" aria-label="Page précédente">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in patients_page.paginator.page_range %}
+                {% if patients_page.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > patients_page.number|add:'-2' and num < patients_page.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?active_tab=patients&page_patients={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if patients_page.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=patients&page_patients={{ patients_page.next_page_number }}" aria-label="Page suivante">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Formulaire d'ajout de patient -->
+      <div class="card mb-3" id="add-patient">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-plus me-2"></i>
+          Nouveau Patient
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'demandes:configuration_demandes' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_patient">
+            <input type="hidden" name="active_tab" value="patients">
+            <input type="hidden" name="page_patients" value="{{ patients_page.number|default:1 }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  <input type="text" name="nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Prénom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  <input type="text" name="prenom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Sexe</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-venus-mars"></i></span>
+                  <select name="sexe" class="form-select">
+                    <option value="">Sélectionner...</option>
+                    <option value="M">Masculin</option>
+                    <option value="F">Féminin</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Date de naissance</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                  <input type="date" name="date_naissance" class="form-control">
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de modification de patient -->
+      <div class="card mb-3" id="edit-patient" style="display: none;">
+        <div class="card-header bg-gradient-primary text-white">
+          <i class="fas fa-edit me-2"></i>
+          Modifier le Patient
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'demandes:configuration_demandes' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_patient">
+            <input type="hidden" name="patient_id" id="edit_patient_id">
+            <input type="hidden" name="active_tab" value="patients">
+            <input type="hidden" name="page_patients" value="{{ patients_page.number|default:1 }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  <input type="text" name="nom" id="edit_patient_nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Prénom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  <input type="text" name="prenom" id="edit_patient_prenom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Sexe</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-venus-mars"></i></span>
+                  <select name="sexe" id="edit_patient_sexe" class="form-select">
+                    <option value="">Sélectionner...</option>
+                    <option value="M">Masculin</option>
+                    <option value="F">Féminin</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Date de naissance</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                  <input type="date" name="date_naissance" id="edit_patient_date_naissance" class="form-control">
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Mettre à jour
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onglet Départements -->
+    <div class="tab-pane fade {% if active_tab == 'departements' %}show active{% endif %}" id="departements">
+      <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-building me-2"></i>
+          Départements
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text bg-primary text-white border-primary">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control border-primary" id="searchDepartement" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm('add-departement')">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+          
+          <div class="table-container">
+            <table class="table table-striped table-hover">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAllDepartements">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Nom</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="d-none d-md-table-cell">Description</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="departementsTable">
+                {% for departement in departements_page %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check-departement">
+                  </td>
+                  <td>{{ departement.name }}</td>
+                  <td class="d-none d-md-table-cell">
+                    {% if departement.description %}
+                      {{ departement.description|truncatechars:50 }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark" 
+                              onclick="openEditForm(this, 'edit-departement')"
+                              data-id="{{ departement.id }}"
+                              data-name="{{ departement.name }}"
+                              data-description="{{ departement.description|default:'' }}"
+                              title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" 
+                              data-bs-toggle="modal"
+                              data-bs-target="#modalDeleteDepartement"
+                              data-id="{{ departement.id }}"
+                              data-name="{{ departement.name }}"
+                              title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted">Aucun département trouvé.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour départements -->
+          {% if departements_page.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if departements_page.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=departements&page_departements={{ departements_page.previous_page_number }}" aria-label="Page précédente">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in departements_page.paginator.page_range %}
+                {% if departements_page.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > departements_page.number|add:'-2' and num < departements_page.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?active_tab=departements&page_departements={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if departements_page.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=departements&page_departements={{ departements_page.next_page_number }}" aria-label="Page suivante">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Formulaire d'ajout de département -->
+      <div class="card mb-3" id="add-departement">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-plus me-2"></i>
+          Nouveau Département
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'demandes:configuration_demandes' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_departement">
+            <input type="hidden" name="active_tab" value="departements">
+            <input type="hidden" name="page_departements" value="{{ departements_page.number|default:1 }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-building"></i></span>
+                  <input type="text" name="name" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea name="description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de modification de département -->
+      <div class="card mb-3" id="edit-departement" style="display: none;">
+        <div class="card-header bg-gradient-primary text-white">
+          <i class="fas fa-edit me-2"></i>
+          Modifier le Département
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'demandes:configuration_demandes' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_departement">
+            <input type="hidden" name="departement_id" id="edit_departement_id">
+            <input type="hidden" name="active_tab" value="departements">
+            <input type="hidden" name="page_departements" value="{{ departements_page.number|default:1 }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-building"></i></span>
+                  <input type="text" name="name" id="edit_departement_name" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Description</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                  <textarea name="description" id="edit_departement_description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Mettre à jour
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onglet Prestataires -->
+    <div class="tab-pane fade {% if active_tab == 'prestataires' %}show active{% endif %}" id="prestataires">
+      <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+          <i class="fas fa-handshake me-2"></i>
+          Prestataires
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text bg-primary text-white border-primary">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control border-primary" id="searchPrestataire" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm('add-prestataire')">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+          
+          <div class="table-container">
+            <table class="table table-striped table-hover">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAllPrestataires">
+                  </th>
+                  <th>Nom</th>
+                  <th class="d-none d-md-table-cell">Contact</th>
+                  <th class="d-none d-md-table-cell">Adresse</th>
+                  <th class="d-none d-md-table-cell">Statut</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="prestatairesTable">
+                {% for prestataire in prestataires_page %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check">
+                  </td>
+                  <td>{{ prestataire.name }}</td>
+                  <td class="d-none d-md-table-cell">{{ prestataire.contact|default:"-" }}</td>
+                  <td class="d-none d-md-table-cell">{{ prestataire.adresse|default:"-" }}</td>
+                  <td class="d-none d-md-table-cell">
+                    {% if prestataire.actif %}
+                      <span class="badge bg-success">Actif</span>
+                    {% else %}
+                      <span class="badge bg-danger">Inactif</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark" title="Modifier" onclick="openEditForm(this, 'edit-prestataire')"
+                              data-id="{{ prestataire.id }}"
+                              data-nom="{{ prestataire.name }}"
+                              data-contact="{{ prestataire.contact|default:'' }}"
+                              data-adresse="{{ prestataire.adresse|default:'' }}">
+                        <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" title="Supprimer" data-bs-toggle="modal" data-bs-target="#modalDeletePrestataire"
+                          data-prestataire-id="{{ prestataire.id }}"
+                          data-prestataire-nom="{{ prestataire.name }}">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-5">
+                <i class="fas fa-handshake fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Aucun prestataire enregistré</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination pour prestataires -->
+      {% if prestataires_page.paginator.num_pages > 1 %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if prestataires_page.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?active_tab=prestataires&page_prestataires={{ prestataires_page.previous_page_number }}" aria-label="Page précédente">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Préc</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Préc</span>
+              </span>
+            </li>
+          {% endif %}
+
+          {% for num in prestataires_page.paginator.page_range %}
+            {% if prestataires_page.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+            {% elif num > prestataires_page.number|add:'-2' and num < prestataires_page.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=prestataires&page_prestataires={{ num }}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if prestataires_page.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?active_tab=prestataires&page_prestataires={{ prestataires_page.next_page_number }}" aria-label="Page suivante">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv</span>
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+
+    </div> <!-- fin .card-body (Prestataires liste) -->
+  </div> <!-- fin .card (Prestataires liste) -->
+
+    <!-- Formulaire d'ajout de prestataire -->
+    <div class="card mb-3" id="add-prestataire">
+      <div class="card-header bg-primary text-white">
+        <i class="fas fa-plus me-2"></i>
+        Nouveau Prestataire
+        </div>
+      <div class="card-body">
+    <form method="post" action="{% url 'demandes:configuration_demandes' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_prestataire">
+          <input type="hidden" name="active_tab" value="prestataires">
+      <input type="hidden" name="page_prestataires" value="{{ prestataires_page.number|default:1 }}">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Nom <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-handshake"></i></span>
+                <input type="text" name="nom" class="form-control" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                <input type="text" name="contact" class="form-control">
+              </div>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Adresse</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                <textarea name="adresse" class="form-control" rows="3"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-1"></i> Enregistrer
+          </button>        
+      </div>
+    </form>
+  </div>
+</div>
+
+    <!-- Formulaire de modification de prestataire -->
+    <div class="card mb-3" id="edit-prestataire" style="display: none;">
+      <div class="card-header bg-gradient-primary text-white">
+        <i class="fas fa-edit me-2"></i>
+        Modifier le Prestataire
+      </div>
+      <div class="card-body">
+    <form method="post" action="{% url 'demandes:configuration_demandes' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit_prestataire">
+      <input type="hidden" name="prestataire_id" id="edit_prestataire_id">
+          <input type="hidden" name="active_tab" value="prestataires">
+      <input type="hidden" name="page_prestataires" value="{{ prestataires_page.number|default:1 }}">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Nom <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-handshake"></i></span>
+                <input type="text" name="nom" id="edit_prestataire_nom" class="form-control" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                <input type="text" name="contact" id="edit_prestataire_contact" class="form-control">
+              </div>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Adresse</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                <textarea name="adresse" id="edit_prestataire_adresse" class="form-control" rows="3"></textarea>
+              </div>
+            </div>
+          </div>
+        <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-1"></i> Mettre à jour
+          </button>
+      </div>
+    </form>
+  </div>
+</div>
+        </div>
+        </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des onglets
+    const tabLinks = document.querySelectorAll('#configTabs .nav-link');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
+    // Fonction pour activer un onglet
+    function showDefaultAddFormForTab(tabId) {
+      const tabToAddFormId = {
+        'produits': 'add-produit',
+        'statuts': 'add-statut',
+        'priorites': 'add-priorite',
+        'patients': 'add-patient',
+        'departements': 'add-departement',
+        'prestataires': 'add-prestataire',
+      };
+      const addFormId = tabToAddFormId[tabId];
+      if (addFormId) {
+        // Hide only edit forms, then show the add form for this tab
+        hideAllEditForms();
+        const form = document.getElementById(addFormId);
+        if (form) form.style.display = 'block';
+      }
+    }
+
+    function activateTab(tabId) {
+      // Retirer la classe active de tous les onglets
+      tabLinks.forEach(l => l.classList.remove('active'));
+      tabPanes.forEach(p => p.classList.remove('show', 'active'));
+      
+      // Activer l'onglet correspondant
+      const tabLink = document.querySelector(`[href="#${tabId}"]`);
+      const tabPane = document.getElementById(tabId);
+      
+      if (tabLink && tabPane) {
+        tabLink.classList.add('active');
+        tabPane.classList.add('show', 'active');
+      }
+      // Ensure the add form of this tab is visible by default
+      showDefaultAddFormForTab(tabId);
+    }
+    
+    // Gestion des clics sur les onglets
+    tabLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetTab = this.getAttribute('href').substring(1);
+        activateTab(targetTab);
+      });
+    });
+    
+    // Gérer l'onglet actif depuis l'URL au chargement de la page
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('active_tab');
+    if (activeTab) {
+      activateTab(activeTab);
+    } else {
+      // No active_tab in URL: ensure current active tab shows its add form
+      const currentActive = document.querySelector('#configTabs .nav-link.active');
+      if (currentActive) {
+        const currentTabId = currentActive.getAttribute('href').substring(1);
+        showDefaultAddFormForTab(currentTabId);
+      }
+    }
+
+    // Fonction pour masquer tous les formulaires d'édition
+    function hideAllEditForms() {
+      const editForms = document.querySelectorAll('[id^="edit-"]');
+      editForms.forEach(form => {
+        form.style.display = 'none';
+      });
+    }
+
+    // Fonction pour masquer tous les formulaires (ajout et édition)
+    function hideAllForms() {
+      const forms = document.querySelectorAll('[id^="add-"], [id^="edit-"]');
+      forms.forEach(form => {
+        form.style.display = 'none';
+      });
+    }
+
+    // Fonction pour afficher un formulaire d'ajout
+    window.showAddForm = function(formId) {
+      hideAllEditForms(); // Masquer seulement les formulaires d'édition
+      const form = document.getElementById(formId);
+      if (form) {
+        form.style.display = 'block';
+        // Scroll vers le formulaire
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Reset du formulaire
+        form.querySelector('form').reset();
+      }
+    };
+
+    // Fonction pour ouvrir un formulaire d'édition
+    window.openEditForm = function(button, formId) {
+      hideAllForms();
+      const form = document.getElementById(formId);
+      if (form) {
+        form.style.display = 'block';
+        
+        // Remplir le formulaire avec les données du bouton
+        const formData = {
+          'edit-produit': {
+            id: 'edit_produit_id',
+            nom: 'edit_produit_nom',
+            description: 'edit_produit_description',
+            type: 'edit_produit_type',
+            disponible: 'edit_produit_disponible',
+            image: 'current_image_container'
+          },
+          'edit-statut': {
+            id: 'edit_statut_id',
+            nom: 'edit_statut_nom',
+            couleur: 'edit_statut_couleur',
+            category: 'edit_statut_category'
+          },
+          'edit-priorite': {
+            id: 'edit_priorite_id',
+            nom: 'edit_priorite_nom',
+            niveau: 'edit_priorite_niveau'
+          },
+          'edit-patient': {
+            id: 'edit_patient_id',
+            nom: 'edit_patient_nom',
+            prenom: 'edit_patient_prenom',
+            sexe: 'edit_patient_sexe',
+            'date-naissance': 'edit_patient_date_naissance'
+          },
+          'edit-departement': {
+            id: 'edit_departement_id',
+            name: 'edit_departement_name',
+            description: 'edit_departement_description'
+          },
+          'edit-prestataire': {
+            id: 'edit_prestataire_id',
+            nom: 'edit_prestataire_nom',
+            contact: 'edit_prestataire_contact',
+            adresse: 'edit_prestataire_adresse'
+          }
+        };
+
+        const fields = formData[formId];
+        if (fields) {
+          Object.keys(fields).forEach(dataAttr => {
+            const value = button.getAttribute(`data-${dataAttr}`);
+            const elementId = fields[dataAttr];
+            const element = document.getElementById(elementId);
+            
+            if (element && value !== null) {
+              if (element.type === 'checkbox') {
+                element.checked = value === '1';
+              } else if (elementId === 'current_image_container') {
+                // Gestion spéciale pour l'image
+                if (value) {
+                  element.innerHTML = `<img src="${value}" class="product-img">`;
+                } else {
+                  element.innerHTML = '<span class="text-muted">Aucune image</span>';
+                }
+              } else {
+                element.value = value || '';
+              }
+            }
+          });
+        }
+
+        // Scroll vers le formulaire
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    // Recherche en temps réel pour tous les tableaux
+    function setupSearch(searchInputId, tableId) {
+      const searchInput = document.getElementById(searchInputId);
+      if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+    const filter = this.value.toLowerCase();
+          const rows = document.querySelectorAll(`#${tableId} tr`);
+
+    rows.forEach(row => {
+      if (row.cells.length > 1) { // Skip empty message row
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+      }
+    });
+  });
+      }
+    }
+
+    // Configuration des recherches
+    setupSearch('searchProduit', 'produitsTable');
+    setupSearch('searchStatut', 'statutsTable');
+    setupSearch('searchPriorite', 'prioritesTable');
+    setupSearch('searchPatient', 'patientsTable');
+    setupSearch('searchDepartement', 'departementsTable');
+    setupSearch('searchPrestataire', 'prestatairesTable');
+
+    // Initialisation : masquer les formulaires d'édition au chargement
+    hideAllEditForms();
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

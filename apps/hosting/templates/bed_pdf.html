@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Détails du lit {{ bed.bed_id }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: #333;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        .details {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .details p {
+            margin: 5px 0;
+        }
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 120px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Détails du lit {{ bed.bed_id }}</h1>
+    <div class="details">
+        <p><span class="label">ID :</span> {{ bed.bed_id }}</p>
+        <p><span class="label">Numéro :</span> {{ bed.bed_number }}</p>
+        <p><span class="label">Chambre :</span> {{ bed.room.room_name }}</p>
+        <p><span class="label">Statut :</span> {{ bed.bed_status.display_name }}</p>
+    </div>
+</body>
+</html>

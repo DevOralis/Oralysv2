@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="fr">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Commandes d'Achat - ERP Clinique</title>
+    <link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}">
+    <script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+    <style>
+        /* Style compact pour le tableau */
+        .table-sm th,
+        .table-sm td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .table-sm .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+        
+        .actions-cell {
+            white-space: nowrap;
+        }
+        
+        .actions-cell .btn {
+            margin: 0 0.1rem;
+        }
+        
+        @media (max-width: 991.98px) {
+            .table-responsive {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .table-responsive > .table {
+                margin-bottom: 0;
+            }
+            .table-responsive > .table > thead > tr > th,
+            .table-responsive > .table > tbody > tr > td {
+                white-space: nowrap;
+            }
+            .table-responsive > .table > tbody > tr > td.actions-cell {
+                display: flex;
+                justify-content: flex-end;
+                gap: 0.5rem;
+            }
+        }
+        @media (max-width: 767.98px) {
+            .table-responsive {
+                display: block;
+            }
+            .table-responsive > .table > thead {
+                display: none;
+            }
+            .table-responsive > .table > tbody > tr {
+                display: block;
+                margin-bottom: 1rem;
+                border-bottom: 1px solid #dee2e6;
+            }
+            .table-responsive > .table > tbody > tr > td {
+                display: block;
+                text-align: left !important;
+                position: relative;
+                padding-left: 50%;
+            }
+            .table-responsive > .table > tbody > tr > td:before {
+                content: attr(data-label);
+                position: absolute;
+                left: 0;
+                width: 45%;
+                padding-left: 15px;
+                font-weight: bold;
+                text-align: left;
+            }
+            .table-responsive > .table > tbody > tr > td.actions-cell {
+                display: flex;
+                justify-content: flex-start;
+                padding-left: 15px;
+            }
+        }
+        .pagination-hidden {
+            display: none;
+        }
+        .pagination .page-item .page-link {
+            cursor: pointer;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #1e90ff;
+            border-color: #1e90ff;
+        }
+    </style>
+</head>
+
+<body>
+    {% csrf_token %}
+    <div class="content">
+        <div class="card mb-4">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-shopping-cart me-2"></i>
+                Commandes d'Achat
+            </div>
+            <div class="card-body">
+                <div id="alert-container"></div>
+                <form id="filter-form" method="get" class="mb-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                            <div class="input-group">
+                                <span class="input-group-text text-white" style="background-color: #1e90ff; border: 1px solid #1e90ff;">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="search" id="search" name="q" class="form-control" style="border: 1px solid #1e90ff;" placeholder="Recherche..." value="">
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-2">
+                            <select id="status" name="status" class="form-select" title="Filtrer par statut">
+                                <option value="">Tous les statuts</option>
+                                <option value="draft">Brouillon</option>
+                                <option value="confirmed">Confirmé</option>
+                                <option value="cancelled">Annulé</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-3">
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="importExportBtn">
+                                    <i id="importExportIcon" class="fas fa-file-import"></i>
+                                    <span id="importExportText" class="d-none d-lg-inline ms-1">Importer</span>
+                                </button>
+                                {% if request.session.user.permissions.purchases.write %}
+                                <button id="scrollToForm" type="button" class="btn btn-primary w-100 text-nowrap px-2">
+                                    <i class="fas fa-plus"></i>
+                                    <span class="d-none d-lg-inline ms-1">Nouvelle commande</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-4">
+                            <input type="date" id="start_date" name="start_date" class="form-control" placeholder="Date début">
+                        </div>
+                        <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-5">
+                            <input type="date" id="end_date" name="end_date" class="form-control" placeholder="Date fin">
+                        </div>
+                    </div>
+                </form>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-sm" id="searchableTable">
+                        <thead class="table-light ">
+                            <tr class="main-row">
+                                <th>
+                                    <input type="checkbox" id="selectAll">
+                                </th>
+                                <th>
+                                    <div class="d-flex align-items-center">
+                                        <span>Réf</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th class="d-none d-lg-table-cell">
+                                    <div class="d-flex align-items-center">
+                                        <span>Fournisseur</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th class="d-none d-lg-table-cell">
+                                    <div class="d-flex align-items-center">
+                                        <span>Date</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th class="d-none d-lg-table-cell">
+                                    <div class="d-flex align-items-center">
+                                        <span>Total (MAD)</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="d-flex align-items-center">
+                                        <span>Statut</span>
+                                        <i class="fas fa-sort ms-1 text-muted"></i>
+                                    </div>
+                                </th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="order-table-body">
+                        </tbody>
+                    </table>
+                </div>
+                <nav class="mt-3 pagination-hidden" id="pagination-nav">
+                    <ul class="pagination justify-content-center flex-wrap">
+                        <li class="page-item">
+                            <button class="page-link" id="prev-page" aria-label="Précédent">
+                                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                                <span class="d-none d-sm-block">&laquo; Préc</span>
+                            </button>
+                        </li>
+                        <div id="page-numbers" class="d-flex"></div>
+                        <li class="page-item">
+                            <button class="page-link" id="next-page" aria-label="Suivant">
+                                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                                <span class="d-none d-sm-block">Suiv &raquo;</span>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="order-detail-modal" tabindex="-1" aria-labelledby="orderDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog" style="max-width: 70vw !important; width: 70vw !important; margin: 1rem auto !important;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Détails de la Commande</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="order-detail-content">Chargement des détails...</div>
+                </div>
+                <div class="modal-footer">
+                    <button id="print-order-btn" class="btn btn-primary d-none">Imprimer</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'vendor/js/html2pdf.bundle.min.js' %}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", initialize);
+
+        let allOrders = [];
+        let currentFilteredOrders = [];
+        let currentPage = 1;
+        const itemsPerPage = 5;
+        let currentOrderId = null;
+
+        function initialize() {
+            setupEventListeners();
+            fetchFilteredOrders();
+        }
+
+        function showAlert(type, message) {
+            Swal.fire({
+                icon: type,
+                title: type === 'success' ? 'Succès' : type === 'danger' ? 'Erreur' : type === 'warning' ? 'Attention' : 'Info',
+                text: message,
+                timer: 5000,
+                timerProgressBar: true,
+                showConfirmButton: false
+            });
+        }
+
+        function setupImportExportButton() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const importExportBtn = document.getElementById('importExportBtn');
+            const importExportIcon = document.getElementById('importExportIcon');
+            const importExportText = document.getElementById('importExportText');
+
+            // Fonction pour mettre à jour le bouton selon l'état des checkboxes
+            function updateImportExportButton() {
+                const checkedBoxes = document.querySelectorAll('.row-check:checked');
+                
+                if (checkedBoxes.length > 0) {
+                    // Mode Export
+                    importExportIcon.className = 'fas fa-file-export';
+                    importExportText.textContent = 'Exporter';
+                } else {
+                    // Mode Import
+                    importExportIcon.className = 'fas fa-file-import';
+                    importExportText.textContent = 'Importer';
+                }
+            }
+
+            // Gestionnaire pour "Sélectionner tout"
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    const isChecked = this.checked;
+                    const rowCheckboxes = document.querySelectorAll('.row-check');
+                    rowCheckboxes.forEach(checkbox => {
+                        checkbox.checked = isChecked;
+                    });
+                    updateImportExportButton();
+                });
+            }
+
+            // Gestionnaire de clic sur le bouton Import/Export
+            if (importExportBtn) {
+                importExportBtn.addEventListener('click', function() {
+                    const checkedBoxes = document.querySelectorAll('.row-check:checked');
+                    
+                    if (checkedBoxes.length > 0) {
+                        // Mode Export - récupérer les IDs sélectionnés
+                        const selectedIds = Array.from(checkedBoxes).map(cb => {
+                            const row = cb.closest('tr');
+                            return row ? row.querySelector('[data-order-id]')?.getAttribute('data-order-id') : null;
+                        }).filter(id => id !== null);
+                        
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Export en cours',
+                            text: `Export de ${selectedIds.length} commande(s) sélectionnée(s)...`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        
+                        console.log('Export des commandes:', selectedIds);
+                        // TODO: Implémenter la logique d'export réelle
+                        
+                    } else {
+                        // Mode Import
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Import',
+                            text: 'Fonctionnalité d\'import à implémenter...',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        
+                        console.log('Mode Import activé');
+                        // TODO: Implémenter la logique d'import réelle
+                    }
+                });
+            }
+
+            // Fonction pour ajouter les gestionnaires aux checkboxes individuelles
+            window.updateCheckboxListeners = function() {
+                const rowCheckboxes = document.querySelectorAll('.row-check');
+                rowCheckboxes.forEach(checkbox => {
+                    // Supprimer l'ancien listener s'il existe
+                    checkbox.removeEventListener('change', handleCheckboxChange);
+                    // Ajouter le nouveau listener
+                    checkbox.addEventListener('change', handleCheckboxChange);
+                });
+            };
+
+            function handleCheckboxChange() {
+                const rowCheckboxes = document.querySelectorAll('.row-check');
+                const selectAllCheckbox = document.getElementById('selectAll');
+                
+                // Vérifier si toutes les checkboxes sont cochées
+                const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
+                const noneChecked = Array.from(rowCheckboxes).every(cb => !cb.checked);
+                
+                // Mettre à jour la checkbox "Sélectionner tout"
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allChecked;
+                    selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+                }
+                
+                updateImportExportButton();
+            }
+        }
+
+        function setupEventListeners() {
+            const scrollToFormButton = document.getElementById("scrollToForm");
+            if (scrollToFormButton) {
+                scrollToFormButton.addEventListener("click", () => {
+                    const newOrderForm = document.getElementById("order-form") || document.getElementById("new-order-form");
+                    newOrderForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+            }
+
+            // Gestion des checkboxes et bouton Import/Export
+            setupImportExportButton();
+
+            const form = document.getElementById("filter-form");
+            if (form) {
+                form.addEventListener("submit", fetchFilteredOrders);
+            }
+
+            const searchInput = document.getElementById("search");
+            if (searchInput) {
+                searchInput.addEventListener("input", () => {
+                    clearTimeout(window.searchTimeout);
+                    window.searchTimeout = setTimeout(searchOrders, 300);
+                });
+            }
+
+            ["start_date", "end_date", "status"].forEach(id => {
+                const input = document.getElementById(id);
+                if (input) input.addEventListener("change", fetchFilteredOrders);
+            });
+
+            const prevButton = document.getElementById("prev-page");
+            const nextButton = document.getElementById("next-page");
+            if (prevButton) {
+                prevButton.addEventListener("click", () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        displayOrders();
+                    }
+                });
+            }
+            if (nextButton) {
+                nextButton.addEventListener("click", () => {
+                    const totalPages = Math.ceil(currentFilteredOrders.length / itemsPerPage);
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        displayOrders();
+                    }
+                });
+            }
+
+            document.addEventListener("click", handleButtonClicks);
+            document.getElementById("page-numbers").addEventListener("click", handlePageNumberClick);
+        }
+
+        function handlePageNumberClick(e) {
+            const target = e.target.closest(".page-link");
+            if (!target || !target.dataset.page) return;
+            currentPage = parseInt(target.dataset.page);
+            displayOrders();
+        }
+
+        function handleButtonClicks(e) {
+            const target = e.target.closest(".view-order-btn, .delete-order-btn, .confirm-order-btn, .duplicate-order-btn");
+            if (!target) return;
+
+            const orderId = target.getAttribute("data-order-id");
+            if (!orderId) return;
+
+            if (target.matches(".view-order-btn")) {
+                viewOrderDetails(orderId);
+            } else if (target.matches(".delete-order-btn")) {
+                confirmDelete(orderId);
+            } else if (target.matches(".confirm-order-btn")) {
+                confirmOrder(orderId);
+            } else if (target.matches(".duplicate-order-btn")) {
+                duplicateOrder(orderId);
+            }
+        }
+
+        function confirmDelete(orderId) {
+            Swal.fire({
+                title: 'Supprimer la commande ?',
+                text: 'Cette action est irréversible.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Oui, supprimer',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/purchases/orders/delete/${orderId}/`, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+                        }
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Commande supprimée',
+                                text: 'La commande a été supprimée avec succès !',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
+                            });
+                        })
+                        .catch(error => {
+                            showAlert("danger", "Erreur lors de la suppression de la commande.");
+                            console.error("Erreur:", error);
+                        });
+                }
+            });
+        }
+
+        function getStatusBadge(state, state_display) {
+            let badgeClass = '';
+            switch (state) {
+                case 'draft':
+                    badgeClass = 'bg-primary';
+                    break;
+                case 'confirmed':
+                    badgeClass = 'bg-success';
+                    break;
+                case 'cancelled':
+                    badgeClass = 'bg-secondary';
+                    break;
+                default:
+                    badgeClass = 'bg-secondary';
+            }
+            return `<span class="badge ${badgeClass}">${escapeHtml(state_display || state || 'N/A')}</span>`;
+        }
+
+        function searchOrders() {
+            const searchInput = document.getElementById("search");
+            const statusInput = document.getElementById("status");
+            const startDateInput = document.getElementById("start_date");
+            const endDateInput = document.getElementById("end_date");
+
+            const searchTerm = searchInput?.value.toLowerCase().trim() || "";
+            const status = statusInput?.value || "";
+            const startDate = startDateInput?.value ? new Date(startDateInput.value) : null;
+            const endDate = endDateInput?.value ? new Date(endDateInput.value) : null;
+
+            currentFilteredOrders = allOrders.filter(order => {
+                const matchesSearch = searchTerm
+                    ? (order.name?.toLowerCase().includes(searchTerm) || order.partner_name?.toLowerCase().includes(searchTerm))
+                    : true;
+                const matchesStatus = status
+                    ? order.state === status
+                    : true;
+                const orderDate = order.date_order ? new Date(order.date_order) : null;
+                const matchesStartDate = startDate ? orderDate && orderDate >= startDate : true;
+                const matchesEndDate = endDate ? orderDate && orderDate <= endDate : true;
+
+                return matchesSearch && matchesStatus && matchesStartDate && matchesEndDate;
+            });
+
+            currentPage = 1;
+            displayOrders();
+        }
+
+        function displayOrders() {
+            const tableBody = document.getElementById("order-table-body");
+            if (!tableBody) return;
+
+            tableBody.innerHTML = "";
+
+            if (!currentFilteredOrders?.length) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="text-center">Aucune commande trouvée.</td></tr>`;
+                updatePagination();
+                return;
+            }
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const paginatedOrders = currentFilteredOrders.slice(startIndex, startIndex + itemsPerPage);
+
+            paginatedOrders.forEach((order, index) => {
+                const row = document.createElement("tr");
+                row.className = "main-row";
+                row.setAttribute("data-order-id", order.id);
+                row.innerHTML = `
+                    <td data-label="Sélection">
+                        <input type="checkbox" class="row-check">
+                    </td>
+                    <td data-label="Réf">${escapeHtml(order.name || "N/A")}</td>
+                    <td data-label="Fournisseur" class="d-none d-lg-table-cell">${escapeHtml(order.partner_name || "N/A")}</td>
+                    <td data-label="Date" class="d-none d-lg-table-cell">${escapeHtml(order.date_order || "N/A")}</td>
+                    <td data-label="Total (MAD)" class="d-none d-lg-table-cell">${escapeHtml(order.amount_total || "0")}</td>
+                    <td data-label="Statut">${getStatusBadge(order.state, order.state_display)}</td>
+                    <td data-label="Actions" class="actions-cell">
+                        <button class="btn btn-sm btn-primary d-lg-none" data-bs-toggle="collapse" data-bs-target="#details-${index}">
+                            Voir détails
+                        </button>
+                        <div class="d-none d-lg-flex gap-1 justify-content-end">
+                            <button class="btn btn-sm btn-light border text-info view-order-btn" data-order-id="${order.id}" data-bs-toggle="modal" data-bs-target="#order-detail-modal" title="Voir">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${order.state === "draft" ? `
+                            <a href="/purchases/orders/request-price/${order.id}/pdf/" class="btn btn-sm btn-light border text-primary" title="Imprimer">
+                                <i class="fas fa-print"></i>
+                            </a>` : ""}
+                            {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                            <a href="/purchases/orders/edit/${order.id}/" class="btn btn-sm btn-light border text-dark" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-light border text-danger delete-order-btn" data-order-id="${order.id}" title="Supprimer">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-light border text-success confirm-order-btn" data-order-id="${order.id}" ${order.state !== "draft" ? "disabled" : ""} title="${order.state !== "draft" ? "Confirmé" : "Confirmer"}">
+                                <i class="${order.state !== "draft" ? "fas fa-check-double" : "fas fa-check"}"></i>
+                            </button>
+                            ${order.state !== "confirmed" ? `
+                            <button class="btn btn-sm btn-light border text-warning duplicate-order-btn" data-order-id="${order.id}" title="Dupliquer">
+                                <i class="fas fa-copy"></i>
+                            </button>` : ""}
+                            {% endif %}
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+
+                const collapseRow = document.createElement("tr");
+                collapseRow.className = "collapse bg-light";
+                collapseRow.id = `details-${index}`;
+                collapseRow.innerHTML = `
+                    <td colspan="7" class="p-3">
+                        <div class="row">
+                            <div class="col-12">
+                                <p class="mb-2"><strong>Fournisseur:</strong> ${escapeHtml(order.partner_name || "N/A")}</p>
+                                <p class="mb-2"><strong>Date:</strong> ${escapeHtml(order.date_order || "N/A")}</p>
+                                <p class="mb-2"><strong>Total (MAD):</strong> ${escapeHtml(order.amount_total || "0")}</p>
+                                <p class="mb-2"><strong>Statut:</strong> ${getStatusBadge(order.state, order.state_display)}</p>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    ${order.state === "draft" ? `
+                                    <a href="/purchases/orders/request-price/${order.id}/pdf/" class="btn btn-sm btn-light border text-primary" title="Imprimer">
+                                        <i class="fas fa-print me-1"></i>
+                                    </a>` : ""}
+                                    <button class="btn btn-sm btn-light border text-info view-order-btn" data-order-id="${order.id}" data-bs-toggle="modal" data-bs-target="#order-detail-modal" title="Voir">
+                                        <i class="fas fa-eye me-1"></i>
+                                    </button>
+                                    {% if request.session.user.permissions.purchases.update and request.session.user.permissions.purchases.delete %}
+                                    <a href="/purchases/orders/edit/${order.id}/" class="btn btn-sm btn-light border text-dark" title="Modifier">
+                                        <i class="fas fa-edit me-1"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-light border text-danger delete-order-btn" data-order-id="${order.id}" title="Supprimer">
+                                        <i class="fas fa-trash-alt me-1"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-light border text-success confirm-order-btn" data-order-id="${order.id}" ${order.state !== "draft" ? "disabled" : ""} title="${order.state !== "draft" ? "Confirmé" : "Confirmer"}">
+                                        <i class="${order.state !== "draft" ? "fas fa-check-double me-1" : "fas fa-check me-1"}"></i>
+                                    </button>
+                                    ${order.state !== "confirmed" ? `
+                                    <button class="btn btn-sm btn-light border text-warning duplicate-order-btn" data-order-id="${order.id}" title="Dupliquer">
+                                        <i class="fas fa-copy me-1"></i>
+                                    </button>` : ""}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(collapseRow);
+            });
+
+            updatePagination();
+            
+            // Mettre à jour les gestionnaires de checkboxes après le rendu
+            if (window.updateCheckboxListeners) {
+                window.updateCheckboxListeners();
+            }
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(currentFilteredOrders.length / itemsPerPage);
+            const paginationNav = document.getElementById("pagination-nav");
+            const pageNumbersContainer = document.getElementById("page-numbers");
+
+            if (!paginationNav || !pageNumbersContainer) return;
+
+            if (currentFilteredOrders.length > itemsPerPage) {
+                paginationNav.classList.remove("pagination-hidden");
+            } else {
+                paginationNav.classList.add("pagination-hidden");
+            }
+
+            const prevButton = document.getElementById("prev-page");
+            const nextButton = document.getElementById("next-page");
+            if (prevButton) prevButton.disabled = currentPage === 1;
+            if (nextButton) nextButton.disabled = currentPage === totalPages || totalPages === 0;
+
+            pageNumbersContainer.innerHTML = "";
+            for (let i = 1; i <= totalPages; i++) {
+                const pageItem = document.createElement("li");
+                pageItem.className = `page-item ${i === currentPage ? "active" : ""}`;
+                pageItem.innerHTML = `<button class="page-link" data-page="${i}">${i}</button>`;
+                pageNumbersContainer.appendChild(pageItem);
+            }
+        }
+
+        function escapeHtml(text) {
+            const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+            return text.toString().replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function fetchFilteredOrders(e) {
+            if (e) e.preventDefault();
+
+            const inputs = {
+                start_date: document.getElementById("start_date")?.value || "",
+                end_date: document.getElementById("end_date")?.value || "",
+                status: document.getElementById("status")?.value || "",
+                search: document.getElementById("search")?.value || ""
+            };
+            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+
+            if (!csrfToken) {
+                showAlert("danger", "Token CSRF non trouvé.");
+                return;
+            }
+
+            fetch("{% url 'order_list_filtered' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrfToken,
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: new URLSearchParams(inputs)
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    allOrders = data.orders || [];
+                    searchOrders();
+                })
+                .catch(error => {
+                    console.error("Erreur lors du chargement :", error);
+                    const tableBody = document.getElementById("order-table-body");
+                    if (tableBody) {
+                        tableBody.innerHTML = `<tr><td colspan="7" class="text-danger">Erreur lors du chargement des données.</td></tr>`;
+                    }
+                    showAlert("danger", "Erreur lors du chargement des données.");
+                });
+        }
+
+        function viewOrderDetails(orderId) {
+            currentOrderId = orderId;
+            const modalContent = document.getElementById("order-detail-content");
+            if (!modalContent) return;
+
+            modalContent.innerHTML = "<p>Chargement des détails...</p>";
+
+            fetch(`/purchases/orders/detail-json/${orderId}/`, {
+                method: "GET",
+                headers: {
+                    "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")?.value || "",
+                    "Content-Type": "application/json"
+                }
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    const order = data.order || {};
+                    const supplier = data.supplier || {};
+                    const lines = data.order_lines || [];
+
+                    let html = `
+                        <h1>Demande de prix: ${escapeHtml(order.name || "N/A")}</h1>
+                        <div class="order-info">
+                            <p><strong>Fournisseur:</strong> ${escapeHtml(supplier.name || "N/A")}</p>
+                            <p><strong>Adresse:</strong> ${escapeHtml(supplier.address || "N/A")}, ${escapeHtml(supplier.city || "N/A")}</p>
+                            <p><strong>Date:</strong> ${escapeHtml(order.date_order || "N/A")}</p>
+                            <p><strong>Statut:</strong> ${getStatusBadge(order.state, order.state)}</p>
+                            <p><strong>Devise:</strong> ${escapeHtml(order.currency || "MAD")}</p>
+                            <p><strong>Notes:</strong> ${escapeHtml(order.notes || "Aucune")}</p>
+                    `;
+
+                    if (order.state_code === "confirmed") {
+                        html += `
+                            <div class="order-info">
+                                <p><strong>Référence Fournisseur :</strong> ${escapeHtml(order.supplier_ref || "Non spécifiée")}</p>
+                                <p><strong>Mode de Paiement :</strong> ${escapeHtml(order.payment_mode || "Non spécifié")}</p>
+                            </div>
+                        `;
+                    }
+
+                    html += `
+                        </div>
+                        <h6>Lignes de commande</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Produit</th>
+                                        <th>Quantité</th>
+                                        <th>Prix unitaire</th>
+                                        <th>Taxe</th>
+                                        <th>Sous-total HT</th>
+                                        <th>Taxe (MAD)</th>
+                                        <th>Total TTC</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    html += lines.length === 0
+                        ? `<tr><td colspan="7" class="text-center">Aucune ligne de commande.</td></tr>`
+                        : lines.map(line => `
+                            <tr>
+                                <td>${escapeHtml(line.name || "N/A")}</td>
+                                <td>${escapeHtml(line.product_qty || "0")}</td>
+                                <td>${escapeHtml(line.price_unit || "0")}</td>
+                                <td>${escapeHtml(Array.isArray(line.taxes) ? line.taxes.join(", ") : (line.taxes || "Aucune"))}</td>
+                                <td>${escapeHtml(line.price_subtotal || "0")}</td>
+                                <td>${escapeHtml(line.tax_amount || "0")}</td>
+                                <td>${escapeHtml(line.total_ttc || "0")}</td>
+                            </tr>
+                        `).join("");
+
+                    html += `
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>Total HT:</strong></td>
+                                        <td>${escapeHtml(order.amount_untaxed || "0")}</td>
+                                        <td>${escapeHtml(order.amount_tax || "0")}</td>
+                                        <td>${escapeHtml(order.amount_total || "0")}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    `;
+
+                    modalContent.innerHTML = html;
+
+                    const printButton = document.getElementById("print-order-btn");
+                    if (printButton) {
+                        printButton.setAttribute("data-order-id", orderId);
+                        printButton.onclick = () => {
+                            window.location.href = `/purchases/order/${orderId}/pdf/`;
+                        };
+                    }
+                })
+                .catch(error => {
+                    modalContent.innerHTML = `<p class="text-danger">Erreur lors du chargement des détails.</p>`;
+                    console.error("Erreur:", error);
+                    showAlert("danger", "Erreur lors du chargement des détails de la commande.");
+                });
+        }
+
+        function confirmOrder(orderId) {
+            const supplierRefModal = document.createElement("div");
+            supplierRefModal.className = "modal fade";
+            supplierRefModal.id = "supplierRefModal";
+            supplierRefModal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Référence fournisseur</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <label for="supplierRefInput" class="form-label">Entrez la référence du fournisseur</label>
+                            <input type="text" id="supplierRefInput" class="form-control" placeholder="REF-FOURNISSEUR">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-primary" id="nextSupplierRefBtn">Suivant</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(supplierRefModal);
+
+            const modal = new bootstrap.Modal(supplierRefModal);
+            modal.show();
+
+            document.getElementById("nextSupplierRefBtn").addEventListener("click", () => {
+                const supplierRef = document.getElementById("supplierRefInput").value.trim();
+                if (!supplierRef) {
+                    showAlert("warning", "La référence du fournisseur est requise !");
+                    return;
+                }
+                modal.hide();
+                supplierRefModal.remove();
+
+                const paymentModeModal = document.createElement("div");
+                paymentModeModal.className = "modal fade";
+                paymentModeModal.id = "paymentModeModal";
+                paymentModeModal.innerHTML = `
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Mode de paiement</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <label for="paymentModeSelect" class="form-label">Choisissez un mode</label>
+                                <select id="paymentModeSelect" class="form-select">
+                                    <option value="">Sélectionnez un mode</option>
+                                    ${Object.entries(window.PAYMENT_MODES || {}).map(([id, name]) => `<option value="${id}">${name}</option>`).join("")}
+                                </select>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                <button type="button" class="btn btn-primary" id="confirmPaymentModeBtn">Confirmer</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(paymentModeModal);
+
+                const paymentModal = new bootstrap.Modal(paymentModeModal);
+                paymentModal.show();
+
+                document.getElementById("confirmPaymentModeBtn").addEventListener("click", () => {
+                    const paymentModeId = document.getElementById("paymentModeSelect").value;
+                    if (!paymentModeId) {
+                        showAlert("warning", "Veuillez sélectionner un mode de paiement.");
+                        return;
+                    }
+
+                    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+                    if (!csrfToken) {
+                        showAlert("danger", "Token CSRF non trouvé.");
+                        paymentModal.hide();
+                        return;
+                    }
+
+                    fetch(`/purchases/orders/confirm/${orderId}/`, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": csrfToken,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ supplier_ref: supplierRef, payment_mode_id: paymentModeId })
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Commande confirmée',
+                                    text: 'La commande a été confirmée avec succès !',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                showAlert("danger", data.error || "Impossible de confirmer la commande.");
+                            }
+                        })
+                        .catch(error => {
+                            showAlert("danger", "Une erreur est survenue lors de la confirmation.");
+                            console.error("Erreur:", error);
+                        })
+                        .finally(() => paymentModal.hide());
+                });
+
+                paymentModeModal.addEventListener("hidden.bs.modal", () => paymentModeModal.remove());
+            });
+
+            supplierRefModal.addEventListener("hidden.bs.modal", () => supplierRefModal.remove());
+        }
+
+        function duplicateOrder(orderId) {
+            const supplierModal = document.createElement("div");
+            supplierModal.className = "modal fade";
+            supplierModal.id = "duplicateSupplierModal";
+            supplierModal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Choisir le fournisseur</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <select id="new-supplier-id" class="form-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px;">
+                                <option value="">Sélectionnez un fournisseur</option>
+                                {% for supplier in suppliers %}
+                                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-primary" id="confirmDuplicateBtn">Dupliquer</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(supplierModal);
+
+            const modal = new bootstrap.Modal(supplierModal);
+            modal.show();
+
+            document.getElementById("confirmDuplicateBtn").addEventListener("click", () => {
+                const supplierId = document.getElementById("new-supplier-id").value;
+                if (!supplierId) {
+                    showAlert("warning", "Veuillez sélectionner un fournisseur.");
+                    return;
+                }
+
+                const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+                if (!csrfToken) {
+                    showAlert("danger", "Token CSRF non trouvé.");
+                    modal.hide();
+                    return;
+                }
+
+                fetch(`/purchases/orders/duplicate/${orderId}/`, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": csrfToken,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ supplier_id: supplierId })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Commande dupliquée',
+                                text: 'La commande a été dupliquée avec succès !',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            showAlert("danger", data.error || "Erreur lors de la duplication de la commande.");
+                        }
+                    })
+                    .catch(error => {
+                        showAlert("danger", "Une erreur est survenue lors de la duplication.");
+                        console.error("Erreur:", error);
+                    })
+                    .finally(() => modal.hide());
+            });
+
+            supplierModal.addEventListener("hidden.bs.modal", () => supplierModal.remove());
+        }
+    </script>
+    <script>
+        window.ORDER_LIST_FILTERED_URL = "{% url 'order_list_filtered' %}";
+        window.PAYMENT_MODES = {};
+        {% for mode in payment_modes %}
+        window.PAYMENT_MODES['{{ mode.id }}'] = '{{ mode.name|escapejs }}';
+        {% endfor %}
+    </script>
+</body>
+</html>

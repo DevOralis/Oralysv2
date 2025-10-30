@@ -1,0 +1,1096 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Configuration - MiniERP{% endblock %}
+
+{% block menu %}
+  {% include "menu_maintenance.html" %}
+{% endblock %}
+
+{% block content %}
+<!-- Style custom -->
+
+
+<div class="content">
+
+
+  <ul class="nav nav-tabs flex-column flex-sm-row mb-3" id="configTabs">
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'equipements' or not tab %}active{% endif %}" href="#equipements">Équipements</a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'prestataires' %}active{% endif %}" href="#prestataires">Prestataires</a>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- Bloc de gestion des équipements -->
+    <div class="tab-pane fade {% if tab == 'equipements' or not tab %}show active{% endif %}" id="equipements">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+            <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="card mb-3">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-tools me-2"></i>
+          Équipements
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control" style="border-color: #1e90ff;" id="searchEquipement" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="toggleAddEquipementForm()">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+          
+          <div class="table-container">
+            <table class="table table-striped table-hover"  id="searchableTable">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAll">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Nom</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                  <th class="d-none d-md-table-cell">Référence</th>
+                  <th class="d-none d-md-table-cell">Acquisition</th>
+                  <th class="d-none d-md-table-cell">Emplacement</th>
+                  <th class="d-none d-md-table-cell">État</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="equipements-table">
+                {% for e in equipements %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                  <input type="checkbox" class="row-check">
+                </td>
+                  <td class="d-none d-md-table-cell">{{ e.nom }}</td>
+                  <td class="d-none d-md-table-cell">{{ e.reference }}</td>
+                  <td class="d-none d-md-table-cell">{{ e.date_acquisition|date:"d/m/Y" }}</td>
+                  <td class="d-none d-md-table-cell">{{ e.emplacement }}</td>
+                  <td class="d-none d-md-table-cell">
+                    <span class="badge bg-{% if e.etat == 'neuf' %}success{% elif e.etat == 'bon' %}primary{% elif e.etat == 'moyen' %}warning{% elif e.etat == 'mauvais' %}danger{% else %}secondary{% endif %}">
+                      {{ e.get_etat_display }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-info" title="Voir" 
+                              data-equipement-nom="{{ e.nom }}"
+                              data-equipement-reference="{{ e.reference }}"
+                              data-equipement-acquisition="{{ e.date_acquisition|date:'d/m/Y' }}"
+                              data-equipement-emplacement="{{ e.emplacement }}"
+                              data-equipement-etat="{{ e.get_etat_display }}"
+                              onclick="toggleDetailsEquipementForm(this)">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-dark" title="Modifier" 
+                              data-equipement-id="{{ e.id }}"
+                              data-equipement-nom="{{ e.nom }}"
+                              data-equipement-reference="{{ e.reference }}"
+                              data-equipement-acquisition="{{ e.date_acquisition|date:'Y-m-d' }}"
+                              data-equipement-emplacement="{{ e.emplacement }}"
+                              data-equipement-etat="{{ e.etat }}"
+                              onclick="toggleEditEquipementForm(this)">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" title="Supprimer" data-bs-toggle="modal" data-bs-target="#modalDeleteEquipement"
+                              data-equipement-id="{{ e.id }}"
+                              data-equipement-nom="{{ e.nom }}">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted">Aucun équipement trouvé.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour équipements -->
+          {% if equipements_paginated %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if equipements_page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?tab=equipements&equipements_page={{ equipements_page_obj.previous_page_number }}" aria-label="Page précédente">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in equipements_page_obj.paginator.page_range %}
+                {% if equipements_page_obj.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > equipements_page_obj.number|add:'-2' and num < equipements_page_obj.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?tab=equipements&equipements_page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if equipements_page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?tab=equipements&equipements_page={{ equipements_page_obj.next_page_number }}" aria-label="Page suivante">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Formulaire d'ajout d'équipement -->
+      <div class="card mb-4" id="addEquipementFormSection">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-plus me-2"></i>Ajouter un nouvel équipement
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'maintenance:configuration' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="ajouter_equipement" value="1">
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="id_nom_equipement">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-tools"></i></span>
+                  <input type="text" id="id_nom_equipement" name="nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_reference_equipement">Référence <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                  <input type="text" id="id_reference_equipement" name="reference" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_date_acquisition_equipement">Date d'acquisition <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                  <input type="date" id="id_date_acquisition_equipement" name="date_acquisition" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_emplacement_equipement">Emplacement <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                  <input type="text" id="id_emplacement_equipement" name="emplacement" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_etat_equipement">État</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                  <select id="id_etat_equipement" name="etat" class="form-select">
+                    <option value="neuf">Neuf</option>
+                    <option value="bon" selected>Bon état</option>
+                    <option value="moyen">État moyen</option>
+                    <option value="mauvais">Mauvais état</option>
+                    <option value="hors_service">Hors service</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleAddEquipementForm()">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de modification d'équipement -->
+      <div class="card mb-4" id="editEquipementFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-edit me-2"></i>Modifier l'équipement
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'maintenance:configuration' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="modifier_equipement" value="1">
+            <input type="hidden" name="equipement_id" id="edit_equipement_id">
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="edit_nom_equipement">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-tools"></i></span>
+                  <input type="text" id="edit_nom_equipement" name="nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_reference_equipement">Référence <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                  <input type="text" id="edit_reference_equipement" name="reference" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_date_acquisition_equipement">Date d'acquisition <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                  <input type="date" id="edit_date_acquisition_equipement" name="date_acquisition" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_emplacement_equipement">Emplacement <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                  <input type="text" id="edit_emplacement_equipement" name="emplacement" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_etat_equipement">État</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                  <select id="edit_etat_equipement" name="etat" class="form-select">
+                    <option value="neuf">Neuf</option>
+                    <option value="bon">Bon état</option>
+                    <option value="moyen">État moyen</option>
+                    <option value="mauvais">Mauvais état</option>
+                    <option value="hors_service">Hors service</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleEditEquipementForm()">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Mettre à jour
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de détails d'équipement -->
+      <div class="card mb-4" id="detailsEquipementFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>Détails de l'Équipement
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Nom</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-tools"></i></span>
+                  <input type="text" class="form-control" id="details_nom_equipement" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Référence</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                  <input type="text" class="form-control" id="details_reference_equipement" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Date d'acquisition</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                  <input type="text" class="form-control" id="details_acquisition_equipement" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Emplacement</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                  <input type="text" class="form-control" id="details_emplacement_equipement" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">État</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                  <input type="text" class="form-control" id="details_etat_equipement" readonly>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 text-end">
+            <button type="button" class="btn btn-secondary" onclick="toggleDetailsEquipementForm()">
+              <i class="fas fa-times me-2"></i>Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal suppression équipement -->
+      <div class="modal fade" id="modalDeleteEquipement" tabindex="-1" aria-labelledby="modalDeleteEquipementLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post" action="{% url 'maintenance:configuration' %}">
+              {% csrf_token %}
+              <input type="hidden" name="supprimer_equipement" value="1">
+              <input type="hidden" name="equipement_id" id="delete_equipement_id">
+              <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalDeleteEquipementLabel">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h5 class="text-danger">Attention!</h5>
+                <p>Êtes-vous sûr de vouloir supprimer l'équipement <strong id="delete_equipement_nom" class="text-primary"></strong> ?</p>
+                <p class="text-danger"><small>Cette action est irréversible et supprimera définitivement toutes les données associées.</small></p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                  <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-trash-alt me-2"></i>Supprimer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloc de gestion des prestataires -->
+    <div class="tab-pane fade {% if tab == 'prestataires' %}show active{% endif %}" id="prestataires">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+            <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="card mb-3">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <i class="fas fa-handshake me-2"></i>
+          Prestataires
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control" style="border-color: #1e90ff;" id="searchPrestataire" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-sm-12 col-md-6 col-lg-6 order-2">
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="toggleAddPrestataireForm()">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+          
+          <div class="table-container">
+            <table class="table table-striped table-hover" id="prestatairesTable">
+              <thead class="table-light borderless">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAllPrestataires">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Nom</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="d-none d-md-table-cell">Contact</th>
+                  <th class="d-none d-md-table-cell">Adresse</th>
+                  <th class="d-none d-md-table-cell">Date création</th>
+                  <th class="d-none d-md-table-cell">Statut</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="prestataires-table">
+                {% for p in prestataires %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check-prestataire">
+                  </td>
+                  <td>{{ p.nom }}</td>
+                  <td class="d-none d-md-table-cell">{{ p.contact|default:"-" }}</td>
+                  <td class="d-none d-md-table-cell">{{ p.adresse|default:"-"|truncatechars:50 }}</td>
+                  <td class="d-none d-md-table-cell">{{ p.date_creation|date:"d/m/Y" }}</td>
+                  <td class="d-none d-md-table-cell">
+                    <span class="badge bg-{% if p.actif %}success{% else %}danger{% endif %}">
+                      {% if p.actif %}Actif{% else %}Inactif{% endif %}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-info" title="Voir" 
+                              data-prestataire-nom="{{ p.nom }}"
+                              data-prestataire-contact="{{ p.contact|default:'-' }}"
+                              data-prestataire-adresse="{{ p.adresse|default:'-' }}"
+                              data-prestataire-creation="{{ p.date_creation|date:'d/m/Y' }}"
+                              data-prestataire-statut="{% if p.actif %}Actif{% else %}Inactif{% endif %}"
+                              onclick="toggleDetailsPrestataireForm(this)">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-dark" title="Modifier" 
+                              data-prestataire-id="{{ p.id }}"
+                              data-prestataire-nom="{{ p.nom }}"
+                              data-prestataire-contact="{{ p.contact|default:'' }}"
+                              data-prestataire-adresse="{{ p.adresse|default:'' }}"
+                              data-prestataire-actif="{{ p.actif }}"
+                              onclick="toggleEditPrestataireForm(this)">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" title="Supprimer" data-bs-toggle="modal" data-bs-target="#modalDeletePrestataire"
+                              data-prestataire-id="{{ p.id }}"
+                              data-prestataire-nom="{{ p.nom }}">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center text-muted">Aucun prestataire trouvé.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination pour prestataires -->
+          {% if prestataires_paginated %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if prestataires_page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?tab=prestataires&prestataires_page={{ prestataires_page_obj.previous_page_number }}" aria-label="Page précédente">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in prestataires_page_obj.paginator.page_range %}
+                {% if prestataires_page_obj.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > prestataires_page_obj.number|add:'-2' and num < prestataires_page_obj.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?tab=prestataires&prestataires_page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if prestataires_page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?tab=prestataires&prestataires_page={{ prestataires_page_obj.next_page_number }}" aria-label="Page suivante">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Formulaire d'ajout de prestataire -->
+      <div class="card mb-4" id="addPrestataireFormSection">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-plus me-2"></i>Ajouter un nouveau prestataire
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'maintenance:configuration' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="ajouter_prestataire" value="1">
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="id_nom_prestataire">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-handshake"></i></span>
+                  <input type="text" id="id_nom_prestataire" name="nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_contact_prestataire">Contact</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  <input type="text" id="id_contact_prestataire" name="contact" class="form-control">
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label" for="id_adresse_prestataire">Adresse</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                  <textarea id="id_adresse_prestataire" name="adresse" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_actif_prestataire">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <select id="id_actif_prestataire" name="actif" class="form-select">
+                    <option value="True" selected>Actif</option>
+                    <option value="False">Inactif</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleAddPrestataireForm()">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de modification de prestataire -->
+      <div class="card mb-4" id="editPrestataireFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-edit me-2"></i>Modifier le prestataire
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'maintenance:configuration' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="modifier_prestataire" value="1">
+            <input type="hidden" name="prestataire_id" id="edit_prestataire_id">
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="edit_nom_prestataire">Nom <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-handshake"></i></span>
+                  <input type="text" id="edit_nom_prestataire" name="nom" class="form-control" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_contact_prestataire">Contact</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  <input type="text" id="edit_contact_prestataire" name="contact" class="form-control">
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label" for="edit_adresse_prestataire">Adresse</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                  <textarea id="edit_adresse_prestataire" name="adresse" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit_actif_prestataire">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <select id="edit_actif_prestataire" name="actif" class="form-select">
+                    <option value="True">Actif</option>
+                    <option value="False">Inactif</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleEditPrestataireForm()">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Mettre à jour
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Formulaire de détails de prestataire -->
+      <div class="card mb-4" id="detailsPrestataireFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+          <h6 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>Détails du Prestataire
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Nom</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-handshake"></i></span>
+                  <input type="text" class="form-control" id="details_nom_prestataire" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Contact</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  <input type="text" class="form-control" id="details_contact_prestataire" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Date de création</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                  <input type="text" class="form-control" id="details_creation_prestataire" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Statut</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                  <input type="text" class="form-control" id="details_statut_prestataire" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Adresse</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                  <textarea class="form-control" id="details_adresse_prestataire" rows="3" readonly></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 text-end">
+            <button type="button" class="btn btn-secondary" onclick="toggleDetailsPrestataireForm()">
+              <i class="fas fa-times me-2"></i>Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal suppression prestataire -->
+      <div class="modal fade" id="modalDeletePrestataire" tabindex="-1" aria-labelledby="modalDeletePrestataireLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post" action="{% url 'maintenance:configuration' %}">
+              {% csrf_token %}
+              <input type="hidden" name="supprimer_prestataire" value="1">
+              <input type="hidden" name="prestataire_id" id="delete_prestataire_id">
+              <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalDeletePrestataireLabel">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h5 class="text-danger">Attention!</h5>
+                <p>Êtes-vous sûr de vouloir supprimer le prestataire <strong id="delete_prestataire_nom" class="text-primary"></strong> ?</p>
+                <p class="text-danger"><small>Cette action est irréversible et supprimera définitivement toutes les données associées.</small></p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                  <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-trash-alt me-2"></i>Supprimer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // Variables de state pour gérer la visibilité des formulaires
+  let isAddEquipementFormVisible = true; // Formulaire d'ajout visible par défaut
+  let isEditEquipementFormVisible = false;
+  let isDetailsEquipementFormVisible = false;
+  let isAddPrestataireFormVisible = true; // Formulaire d'ajout visible par défaut
+  let isEditPrestataireFormVisible = false;
+  let isDetailsPrestataireFormVisible = false;
+
+  // Fonctions pour les équipements
+  function toggleAddEquipementForm() {
+    const addFormSection = document.getElementById('addEquipementFormSection');
+    
+    if (isAddEquipementFormVisible) {
+      addFormSection.style.display = 'none';
+      isAddEquipementFormVisible = false;
+      clearAddEquipementForm();
+    } else {
+      hideAllEquipementForms();
+      addFormSection.style.display = 'block';
+      isAddEquipementFormVisible = true;
+      window.scrollTo({ top: addFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function toggleEditEquipementForm(button) {
+    const editFormSection = document.getElementById('editEquipementFormSection');
+    
+    if (isEditEquipementFormVisible) {
+      editFormSection.style.display = 'none';
+      isEditEquipementFormVisible = false;
+      clearEditEquipementForm();
+    } else {
+      hideAllEquipementForms();
+      editFormSection.style.display = 'block';
+      isEditEquipementFormVisible = true;
+      fillEditEquipementForm(button);
+      window.scrollTo({ top: editFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function toggleDetailsEquipementForm(button) {
+    const detailsFormSection = document.getElementById('detailsEquipementFormSection');
+    
+    if (isDetailsEquipementFormVisible) {
+      detailsFormSection.style.display = 'none';
+      isDetailsEquipementFormVisible = false;
+    } else {
+      hideAllEquipementForms();
+      detailsFormSection.style.display = 'block';
+      isDetailsEquipementFormVisible = true;
+      if (button) {
+        fillDetailsEquipementForm(button);
+      }
+      window.scrollTo({ top: detailsFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function hideAllEquipementForms() {
+    if (isAddEquipementFormVisible) {
+      document.getElementById('addEquipementFormSection').style.display = 'none';
+      isAddEquipementFormVisible = false;
+      clearAddEquipementForm();
+    }
+    if (isEditEquipementFormVisible) {
+      document.getElementById('editEquipementFormSection').style.display = 'none';
+      isEditEquipementFormVisible = false;
+      clearEditEquipementForm();
+    }
+    if (isDetailsEquipementFormVisible) {
+      document.getElementById('detailsEquipementFormSection').style.display = 'none';
+      isDetailsEquipementFormVisible = false;
+    }
+  }
+
+  function fillEditEquipementForm(button) {
+    document.getElementById('edit_equipement_id').value = button.getAttribute('data-equipement-id');
+    document.getElementById('edit_nom_equipement').value = button.getAttribute('data-equipement-nom');
+    document.getElementById('edit_reference_equipement').value = button.getAttribute('data-equipement-reference');
+    document.getElementById('edit_date_acquisition_equipement').value = button.getAttribute('data-equipement-acquisition');
+    document.getElementById('edit_emplacement_equipement').value = button.getAttribute('data-equipement-emplacement');
+    document.getElementById('edit_etat_equipement').value = button.getAttribute('data-equipement-etat');
+  }
+
+  function clearAddEquipementForm() {
+    document.getElementById('addEquipementFormSection').querySelector('form').reset();
+  }
+
+  function clearEditEquipementForm() {
+    document.getElementById('editEquipementFormSection').querySelector('form').reset();
+  }
+
+  function fillDetailsEquipementForm(button) {
+    document.getElementById('details_nom_equipement').value = button.getAttribute('data-equipement-nom');
+    document.getElementById('details_reference_equipement').value = button.getAttribute('data-equipement-reference');
+    document.getElementById('details_acquisition_equipement').value = button.getAttribute('data-equipement-acquisition');
+    document.getElementById('details_emplacement_equipement').value = button.getAttribute('data-equipement-emplacement');
+    document.getElementById('details_etat_equipement').value = button.getAttribute('data-equipement-etat');
+  }
+
+  // Fonctions pour les prestataires
+  function toggleAddPrestataireForm() {
+    const addFormSection = document.getElementById('addPrestataireFormSection');
+    
+    if (isAddPrestataireFormVisible) {
+      addFormSection.style.display = 'none';
+      isAddPrestataireFormVisible = false;
+      clearAddPrestataireForm();
+    } else {
+      hideAllPrestataireForms();
+      addFormSection.style.display = 'block';
+      isAddPrestataireFormVisible = true;
+      window.scrollTo({ top: addFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function toggleEditPrestataireForm(button) {
+    const editFormSection = document.getElementById('editPrestataireFormSection');
+    
+    if (isEditPrestataireFormVisible) {
+      editFormSection.style.display = 'none';
+      isEditPrestataireFormVisible = false;
+      clearEditPrestataireForm();
+    } else {
+      hideAllPrestataireForms();
+      editFormSection.style.display = 'block';
+      isEditPrestataireFormVisible = true;
+      fillEditPrestataireForm(button);
+      window.scrollTo({ top: editFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function toggleDetailsPrestataireForm(button) {
+    const detailsFormSection = document.getElementById('detailsPrestataireFormSection');
+    
+    if (isDetailsPrestataireFormVisible) {
+      detailsFormSection.style.display = 'none';
+      isDetailsPrestataireFormVisible = false;
+    } else {
+      hideAllPrestataireForms();
+      detailsFormSection.style.display = 'block';
+      isDetailsPrestataireFormVisible = true;
+      if (button) {
+        fillDetailsPrestataireForm(button);
+      }
+      window.scrollTo({ top: detailsFormSection.offsetTop - 80, behavior: 'smooth' });
+    }
+  }
+
+  function hideAllPrestataireForms() {
+    if (isAddPrestataireFormVisible) {
+      document.getElementById('addPrestataireFormSection').style.display = 'none';
+      isAddPrestataireFormVisible = false;
+      clearAddPrestataireForm();
+    }
+    if (isEditPrestataireFormVisible) {
+      document.getElementById('editPrestataireFormSection').style.display = 'none';
+      isEditPrestataireFormVisible = false;
+      clearEditPrestataireForm();
+    }
+    if (isDetailsPrestataireFormVisible) {
+      document.getElementById('detailsPrestataireFormSection').style.display = 'none';
+      isDetailsPrestataireFormVisible = false;
+    }
+  }
+
+  function fillEditPrestataireForm(button) {
+    document.getElementById('edit_prestataire_id').value = button.getAttribute('data-prestataire-id');
+    document.getElementById('edit_nom_prestataire').value = button.getAttribute('data-prestataire-nom');
+    document.getElementById('edit_contact_prestataire').value = button.getAttribute('data-prestataire-contact');
+    document.getElementById('edit_adresse_prestataire').value = button.getAttribute('data-prestataire-adresse');
+    document.getElementById('edit_actif_prestataire').value = button.getAttribute('data-prestataire-actif');
+  }
+
+  function clearAddPrestataireForm() {
+    document.getElementById('addPrestataireFormSection').querySelector('form').reset();
+  }
+
+  function clearEditPrestataireForm() {
+    document.getElementById('editPrestataireFormSection').querySelector('form').reset();
+  }
+
+  function fillDetailsPrestataireForm(button) {
+    document.getElementById('details_nom_prestataire').value = button.getAttribute('data-prestataire-nom');
+    document.getElementById('details_contact_prestataire').value = button.getAttribute('data-prestataire-contact');
+    document.getElementById('details_creation_prestataire').value = button.getAttribute('data-prestataire-creation');
+    document.getElementById('details_statut_prestataire').value = button.getAttribute('data-prestataire-statut');
+    document.getElementById('details_adresse_prestataire').value = button.getAttribute('data-prestataire-adresse');
+  }
+
+  // Gestion des onglets
+  document.addEventListener('DOMContentLoaded', function() {
+    const tabLinks = document.querySelectorAll('#configTabs .nav-link');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
+    // Fonction pour activer un onglet
+    function activateTab(tabId) {
+      // Retirer la classe active de tous les onglets
+      tabLinks.forEach(l => l.classList.remove('active'));
+      tabPanes.forEach(p => p.classList.remove('show', 'active'));
+      
+      // Activer l'onglet correspondant
+      const tabLink = document.querySelector(`[href="#${tabId}"]`);
+      const tabPane = document.getElementById(tabId);
+      
+      if (tabLink && tabPane) {
+        tabLink.classList.add('active');
+        tabPane.classList.add('show', 'active');
+      }
+    }
+    
+    // Gestion des clics sur les onglets
+    tabLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetTab = this.getAttribute('href').substring(1);
+        activateTab(targetTab);
+      });
+    });
+    
+    // Gérer l'onglet actif depuis l'URL au chargement de la page
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab) {
+      activateTab(activeTab);
+    }
+
+    // Initialiser l'affichage par défaut
+    const addEquipementFormSection = document.getElementById('addEquipementFormSection');
+    const editEquipementFormSection = document.getElementById('editEquipementFormSection');
+    const detailsEquipementFormSection = document.getElementById('detailsEquipementFormSection');
+    const addPrestataireFormSection = document.getElementById('addPrestataireFormSection');
+    const editPrestataireFormSection = document.getElementById('editPrestataireFormSection');
+    const detailsPrestataireFormSection = document.getElementById('detailsPrestataireFormSection');
+    
+    // S'assurer que seuls les formulaires d'ajout sont visibles par défaut
+    if (addEquipementFormSection) addEquipementFormSection.style.display = 'block';
+    if (editEquipementFormSection) editEquipementFormSection.style.display = 'none';
+    if (detailsEquipementFormSection) detailsEquipementFormSection.style.display = 'none';
+    if (addPrestataireFormSection) addPrestataireFormSection.style.display = 'block';
+    if (editPrestataireFormSection) editPrestataireFormSection.style.display = 'none';
+    if (detailsPrestataireFormSection) detailsPrestataireFormSection.style.display = 'none';
+
+    // Remplissage des modales de suppression
+    var modalDeleteEquipement = document.getElementById('modalDeleteEquipement');
+    modalDeleteEquipement && modalDeleteEquipement.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      document.getElementById('delete_equipement_id').value = button.getAttribute('data-equipement-id');
+      document.getElementById('delete_equipement_nom').textContent = button.getAttribute('data-equipement-nom');
+    });
+
+    var modalDeletePrestataire = document.getElementById('modalDeletePrestataire');
+    modalDeletePrestataire && modalDeletePrestataire.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      document.getElementById('delete_prestataire_id').value = button.getAttribute('data-prestataire-id');
+      document.getElementById('delete_prestataire_nom').textContent = button.getAttribute('data-prestataire-nom');
+    });
+  });
+
+  // Recherche équipements
+  document.getElementById('searchEquipement').addEventListener('keyup', function() {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#equipements-table tr');
+
+    rows.forEach(row => {
+      if (row.cells.length > 1) { // Skip empty message row
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+      }
+    });
+  });
+
+  // Recherche prestataires
+  document.getElementById('searchPrestataire').addEventListener('keyup', function() {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#prestataires-table tr');
+
+    rows.forEach(row => {
+      if (row.cells.length > 1) { // Skip empty message row
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+      }
+    });
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

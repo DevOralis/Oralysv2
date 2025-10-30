@@ -1,0 +1,670 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestion des Interventions - MiniERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/maintenance_css/interventions.css' %}">
+{% endblock %}
+
+{% block menu %}
+{% include "menu_maintenance.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+        </div>
+    </div>
+    
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+            <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-tools me-2"></i>
+            Liste des Interventions
+        </div>
+        <div class="card-body">
+            <form method="get" id="search-form" class="mb-4">
+                <div class="row g-2">
+                    <!-- Barre de recherche -->
+                    <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-1">
+                        <div class="input-group">
+                            <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="search" name="q" id="intervention-search" class="form-control" style="border-color: #1e90ff;" placeholder="Recherche interventions..." value="{{ request.GET.q|default:'' }}">
+                        </div>
+                    </div>
+                    <!-- Filtre statut -->
+                    <div class="col-6 col-sm-6 col-md-2 col-lg-2 order-2">
+                        <select name="statut" class="form-select" title="Filtrer par statut">
+                            <option value="" {% if not filtre_statut %}selected{% endif %}>Tous les statuts</option>
+                            <option value="planifiee" {% if filtre_statut == 'planifiee' %}selected{% endif %}>Planifiées</option>
+                            <option value="en_cours" {% if filtre_statut == 'en_cours' %}selected{% endif %}>En cours</option>
+                            <option value="terminee" {% if filtre_statut == 'terminee' %}selected{% endif %}>Terminées</option>
+                        </select>
+                    </div>
+                    <!-- Filtre criticité -->
+                    <div class="col-6 col-sm-6 col-md-2 col-lg-2 order-3">
+                        <select name="criticite" class="form-select" title="Filtrer par criticité">
+                            <option value="" {% if not filtre_criticite %}selected{% endif %}>Toutes criticités</option>
+                            <option value="faible" {% if filtre_criticite == 'faible' %}selected{% endif %}>Faible</option>
+                            <option value="moyenne" {% if filtre_criticite == 'moyenne' %}selected{% endif %}>Moyenne</option>
+                            <option value="haute" {% if filtre_criticite == 'haute' %}selected{% endif %}>Haute</option>
+                        </select>
+                    </div>
+                    <!-- Boutons d'action -->
+                    <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-4">
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-light border w-100 text-nowrap px-2" onclick="window.location.href='{% url 'maintenance:intervention_list' %}'">
+                                <i class="fas fa-undo"></i>
+                                <span class="d-none d-lg-inline ms-1">Réinitialiser</span>
+                            </button>
+                            <button type="submit" class="btn btn-primary w-100 text-nowrap px-2">
+                                <i class="fas fa-filter"></i>
+                                <span class="d-none d-lg-inline ms-1">Filtrer</span>
+                            </button>
+                            <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="toggleAddForm()">
+                                <i class="fas fa-plus"></i>
+                                <span class="d-none d-lg-inline ms-1">Nouvelle </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <div class="table-container">
+                <table class="table table-striped table-hover"  id="searchableTable">
+                    <thead class="table-light borderless">
+                        <tr class="main-row">
+                            <th class="d-none d-md-table-cell">
+                                <input type="checkbox" id="selectAll">
+                            </th>
+
+                            <th>
+                                <div class="d-flex align-items-center">
+                                    <span>Equipement</span>
+                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                </div>
+                                </th>
+
+                            <th class="d-none d-md-table-cell">Prestataire</th>
+                            <th class="d-none d-md-table-cell">
+                                <div class="d-flex align-items-center">
+                                    <span>Dates</span>
+                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                </div>
+                                </th>
+                            <th class="d-none d-md-table-cell">Type</th>
+                            <th class="d-none d-md-table-cell">Criticité</th>
+                            <th class="d-none d-md-table-cell">Statut</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="intervention-table">
+                        {% for intervention in interventions %}
+                        <tr class="main-row">
+                            <td class="d-none d-md-table-cell">
+                                <input type="checkbox" class="row-check">
+                            </td>
+                            <td class="d-none d-md-table-cell">{{ intervention.equipement.nom }}</td>
+                            <td class="d-none d-md-table-cell">{{ intervention.supplier.name|default:"-" }}</td>
+                            <td class="d-none d-md-table-cell">{{ intervention.date_intervention|date:"d/m/Y H:i" }}</td>
+                            <td class="d-none d-md-table-cell">
+                                {% if intervention.type_intervention == 'preventive' %}
+                                    <span class="badge bg-info">{{ intervention.get_type_intervention_display }}</span>
+                                {% elif intervention.type_intervention == 'corrective' %}
+                                    <span class="badge bg-warning">{{ intervention.get_type_intervention_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ intervention.get_type_intervention_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                {% if intervention.criticite == 'haute' %}
+                                    <span class="badge bg-danger">{{ intervention.get_criticite_display }}</span>
+                                {% elif intervention.criticite == 'moyenne' %}
+                                    <span class="badge bg-warning">{{ intervention.get_criticite_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-success">{{ intervention.get_criticite_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                {% if intervention.statut == 'terminee' %}
+                                    <span class="badge bg-success">{{ intervention.get_statut_display }}</span>
+                                {% elif intervention.statut == 'en_cours' %}
+                                    <span class="badge bg-info">{{ intervention.get_statut_display }}</span>
+                                {% elif intervention.statut == 'planifiee' %}
+                                    <span class="badge bg-primary">{{ intervention.get_statut_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ intervention.get_statut_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-light border text-dark" 
+                                        onclick="toggleEditForm(this)"
+                                        data-intervention-id="{{ intervention.id }}"
+                                        data-equipement-id="{{ intervention.equipement.id }}"
+                                        data-prestataire-id="{{ intervention.supplier.id|default:'' }}"
+                                        data-date-intervention="{{ intervention.date_intervention|date:'Y-m-d\TH:i' }}"
+                                        data-type-intervention="{{ intervention.type_intervention }}"
+                                        data-criticite="{{ intervention.criticite }}"
+                                        data-statut="{{ intervention.statut }}"
+                                        data-description="{{ intervention.description }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteIntervention" 
+                                    data-intervention-id="{{ intervention.id }}"
+                                    data-intervention-equipement="{{ intervention.equipement.nom }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fas fa-tools fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Aucune intervention enregistrée</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <!-- Pagination Component - Centered and functional -->
+                {% if is_paginated %}
+                <nav class="mt-3">
+                  <ul class="pagination justify-content-center flex-wrap">
+                    {% if page_obj.has_previous %}
+                      <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if filtre_statut %}&statut={{ filtre_statut }}{% endif %}{% if filtre_criticite %}&criticite={{ filtre_criticite }}{% endif %}" aria-label="Page précédente">
+                          <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Préc</span>
+                        </a>
+                      </li>
+                    {% else %}
+                      <li class="page-item disabled">
+                        <span class="page-link">
+                          <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Préc</span>
+                        </span>
+                      </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                      {% if page_obj.number == num %}
+                        <li class="page-item active">
+                          <span class="page-link">{{ num }}</span>
+                        </li>
+                      {% elif num > page_obj.number|add:'-2' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                          <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if filtre_statut %}&statut={{ filtre_statut }}{% endif %}{% if filtre_criticite %}&criticite={{ filtre_criticite }}{% endif %}">{{ num }}</a>
+                        </li>
+                      {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                      <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if filtre_statut %}&statut={{ filtre_statut }}{% endif %}{% if filtre_criticite %}&criticite={{ filtre_criticite }}{% endif %}" aria-label="Page suivante">
+                          <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Suiv</span>
+                        </a>
+                      </li>
+                    {% else %}
+                      <li class="page-item disabled">
+                        <span class="page-link">
+                          <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                          <span class="d-none d-sm-block">Suiv</span>
+                        </span>
+                      </li>
+                    {% endif %}
+                  </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire d'ajout d'intervention -->
+    <div class="card mb-4" id="addFormSection">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <h6 class="mb-0">
+                <i class="fas fa-plus me-2"></i>Nouvelle Intervention
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'maintenance:intervention_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="equipement" class="form-label fw-semibold">Équipement</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-cogs"></i></span>
+                            <select class="form-select" id="equipement" name="equipement" required>
+                                <option value="">Sélectionner un équipement</option>
+                                {% for equipement in equipements %}
+                                <option value="{{ equipement.id }}">{{ equipement.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="prestataire" class="form-label fw-semibold">Prestataire</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                            <select class="form-select" id="prestataire" name="prestataire">
+                                <option value="">Sélectionner un prestataire</option>
+                                {% for prestataire in prestataires %}
+                                <option value="{{ prestataire.id }}">{{ prestataire.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="date_intervention" class="form-label fw-semibold">Date d'intervention</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                            <input type="datetime-local" class="form-control" id="date_intervention" name="date_intervention" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="type_intervention" class="form-label fw-semibold">Type d'intervention</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-tools"></i></span>
+                            <select class="form-select" id="type_intervention" name="type_intervention" required>
+                                <option value="">Sélectionner le type</option>
+                                <option value="preventive">Préventive</option>
+                                <option value="corrective">Corrective</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="criticite" class="form-label fw-semibold">Criticité</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                            <select class="form-select" id="criticite" name="criticite" required>
+                                <option value="">Sélectionner la criticité</option>
+                                <option value="faible">Faible</option>
+                                <option value="moyenne">Moyenne</option>
+                                <option value="haute">Haute</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="statut" class="form-label fw-semibold">Statut</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                            <select class="form-select" id="statut" name="statut" required>
+                                <option value="planifiee">Planifiée</option>
+                                <option value="en_cours">En cours</option>
+                                <option value="terminee">Terminée</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label for="description" class="form-label fw-semibold">Description</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 text-end">
+                    <button type="button" class="btn btn-secondary" onclick="clearAddForm()">
+                        <i class="fas fa-times me-2"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Formulaire de modification d'intervention -->
+    <div class="card mb-4" id="editFormSection" style="display: none;">
+        <div class="card-header text-white" style="background-color: #1e90ff;">
+            <h6 class="mb-0">
+                <i class="fas fa-edit me-2"></i>Modifier Intervention
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'maintenance:intervention_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="id" id="edit_intervention_id">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="edit_equipement" class="form-label fw-semibold">Équipement</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-cogs"></i></span>
+                            <select class="form-select" id="edit_equipement" name="equipement" required>
+                                <option value="">Sélectionner un équipement</option>
+                                {% for equipement in equipements %}
+                                <option value="{{ equipement.id }}">{{ equipement.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="edit_prestataire" class="form-label fw-semibold">Prestataire</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                            <select class="form-select" id="edit_prestataire" name="prestataire">
+                                <option value="">Sélectionner un prestataire</option>
+                                {% for prestataire in prestataires %}
+                                <option value="{{ prestataire.id }}">{{ prestataire.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="edit_date_intervention" class="form-label fw-semibold">Date d'intervention</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                            <input type="datetime-local" class="form-control" id="edit_date_intervention" name="date_intervention" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="edit_type_intervention" class="form-label fw-semibold">Type d'intervention</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-tools"></i></span>
+                            <select class="form-select" id="edit_type_intervention" name="type_intervention" required>
+                                <option value="">Sélectionner le type</option>
+                                <option value="preventive">Préventive</option>
+                                <option value="corrective">Corrective</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="edit_criticite" class="form-label fw-semibold">Criticité</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                            <select class="form-select" id="edit_criticite" name="criticite" required>
+                                <option value="">Sélectionner la criticité</option>
+                                <option value="faible">Faible</option>
+                                <option value="moyenne">Moyenne</option>
+                                <option value="haute">Haute</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="edit_statut" class="form-label fw-semibold">Statut</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                            <select class="form-select" id="edit_statut" name="statut" required>
+                                <option value="planifiee">Planifiée</option>
+                                <option value="en_cours">En cours</option>
+                                <option value="terminee">Terminée</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label for="edit_description" class="form-label fw-semibold">Description</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                            <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 text-end">
+                    <button type="button" class="btn btn-secondary" onclick="clearEditForm()">
+                        <i class="fas fa-times me-2"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Modifier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+    <!-- Modal Modifier Intervention -->
+    <div class="modal fade" id="modalInterventionEdit" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="post" action="{% url 'maintenance:intervention_list' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="id" id="edit_intervention_id">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Modifier Intervention</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="edit_equipement" class="form-label">Équipement</label>
+                            <select class="form-select" id="edit_equipement" name="equipement" required>
+                                <option value="">Sélectionner un équipement</option>
+                                {% for equipement in equipements %}
+                                <option value="{{ equipement.id }}">{{ equipement.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="edit_prestataire" class="form-label">Prestataire</label>
+                            <select class="form-select" id="edit_prestataire" name="prestataire">
+                                <option value="">Sélectionner un prestataire</option>
+                                {% for prestataire in prestataires %}
+                                <option value="{{ prestataire.id }}">{{ prestataire.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="edit_date_intervention" class="form-label">Date d'intervention</label>
+                            <input type="datetime-local" class="form-control" id="edit_date_intervention" name="date_intervention" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="edit_type_intervention" class="form-label">Type d'intervention</label>
+                            <select class="form-select" id="edit_type_intervention" name="type_intervention" required>
+                                <option value="">Sélectionner le type</option>
+                                <option value="preventive">Préventive</option>
+                                <option value="corrective">Corrective</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="edit_criticite" class="form-label">Criticité</label>
+                            <select class="form-select" id="edit_criticite" name="criticite" required>
+                                <option value="">Sélectionner la criticité</option>
+                                <option value="faible">Faible</option>
+                                <option value="moyenne">Moyenne</option>
+                                <option value="haute">Haute</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="edit_statut" class="form-label">Statut</label>
+                            <select class="form-select" id="edit_statut" name="statut" required>
+                                <option value="planifiee">Planifiée</option>
+                                <option value="en_cours">En cours</option>
+                                <option value="terminee">Terminée</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="edit_description" class="form-label">Description</label>
+                            <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Annuler
+                        </button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save me-2"></i>Modifier
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+<!-- Modal Supprimer Intervention -->
+<div class="modal fade" id="modalDeleteIntervention" tabindex="-1" aria-labelledby="modalDeleteInterventionLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'maintenance:intervention_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="id" id="delete_intervention_id">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="modalDeleteInterventionLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                    <h5 class="text-danger">Attention!</h5>
+                    <p>Êtes-vous sûr de vouloir supprimer l'intervention sur <strong id="delete_intervention_equipement" class="text-primary"></strong> ?</p>
+                    <p class="text-danger"><small>Cette action est irréversible et supprimera définitivement toutes les données associées.</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-2"></i>Supprimer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Inclusion du fichier JavaScript pour les interventions -->
+<script src="{% static 'js/maintenance_js/interventions.js' %}"></script>
+
+<script>
+// Variables de state pour gérer la visibilité des formulaires
+let isAddFormVisible = true; // Formulaire d'ajout visible par défaut
+let isEditFormVisible = false;
+
+// Fonction pour afficher/masquer le formulaire d'ajout
+function toggleAddForm() {
+    const addFormSection = document.getElementById('addFormSection');
+    const editFormSection = document.getElementById('editFormSection');
+    
+    if (isAddFormVisible) {
+        addFormSection.style.display = 'none';
+        isAddFormVisible = false;
+    } else {
+        hideAllForms();
+        addFormSection.style.display = 'block';
+        isAddFormVisible = true;
+        window.scrollTo({
+            top: addFormSection.offsetTop - 80,
+            behavior: 'smooth'
+        });
+    }
+}
+
+// Fonction pour afficher/masquer le formulaire de modification
+function toggleEditForm(button) {
+    const editFormSection = document.getElementById('editFormSection');
+    const addFormSection = document.getElementById('addFormSection');
+    
+    if (isEditFormVisible) {
+        editFormSection.style.display = 'none';
+        isEditFormVisible = false;
+    } else {
+        hideAllForms();
+        editFormSection.style.display = 'block';
+        isEditFormVisible = true;
+        fillEditForm(button);
+        window.scrollTo({
+            top: editFormSection.offsetTop - 80,
+            behavior: 'smooth'
+        });
+    }
+}
+
+// Fonction pour masquer tous les formulaires
+function hideAllForms() {
+    const addFormSection = document.getElementById('addFormSection');
+    const editFormSection = document.getElementById('editFormSection');
+    
+    if (addFormSection) addFormSection.style.display = 'none';
+    if (editFormSection) editFormSection.style.display = 'none';
+    
+    isAddFormVisible = false;
+    isEditFormVisible = false;
+}
+
+// Fonction pour vider le formulaire d'ajout
+function clearAddForm() {
+    document.getElementById('equipement').value = '';
+    document.getElementById('prestataire').value = '';
+    document.getElementById('date_intervention').value = '';
+    document.getElementById('type_intervention').value = '';
+    document.getElementById('criticite').value = '';
+    document.getElementById('statut').value = 'planifiee';
+    document.getElementById('description').value = '';
+    hideAllForms();
+}
+
+// Fonction pour vider le formulaire de modification
+function clearEditForm() {
+    document.getElementById('edit_equipement').value = '';
+    document.getElementById('edit_prestataire').value = '';
+    document.getElementById('edit_date_intervention').value = '';
+    document.getElementById('edit_type_intervention').value = '';
+    document.getElementById('edit_criticite').value = '';
+    document.getElementById('edit_statut').value = 'planifiee';
+    document.getElementById('edit_description').value = '';
+    hideAllForms();
+}
+
+// Fonction pour remplir le formulaire de modification
+function fillEditForm(button) {
+    document.getElementById('edit_intervention_id').value = button.getAttribute('data-intervention-id');
+    document.getElementById('edit_equipement').value = button.getAttribute('data-equipement-id');
+    document.getElementById('edit_prestataire').value = button.getAttribute('data-prestataire-id');
+    document.getElementById('edit_date_intervention').value = button.getAttribute('data-date-intervention');
+    document.getElementById('edit_type_intervention').value = button.getAttribute('data-type-intervention');
+    document.getElementById('edit_criticite').value = button.getAttribute('data-criticite');
+    document.getElementById('edit_statut').value = button.getAttribute('data-statut');
+    document.getElementById('edit_description').value = button.getAttribute('data-description');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('Initialisation des interventions...');
+    
+    // Initialiser l'affichage par défaut
+    const addFormSection = document.getElementById('addFormSection');
+    const editFormSection = document.getElementById('editFormSection');
+    
+    // S'assurer que seul le formulaire d'ajout est visible par défaut
+    if (addFormSection) addFormSection.style.display = 'block';
+    if (editFormSection) editFormSection.style.display = 'none';
+
+    // Modal Delete
+    $('#modalDeleteIntervention').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var interventionId = button.data('intervention-id');
+        var interventionEquipement = button.data('intervention-equipement');
+        
+        $('#delete_intervention_id').val(interventionId);
+        $('#delete_intervention_equipement').text(interventionEquipement);
+    });
+});
+</script>
+
+{% endblock %}

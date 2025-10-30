@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Suivi Consommation Clients - Restauration{% endblock %}
+{% block menu %}
+{% include "menu_restauration.html" %}
+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pagination.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% if messages %}
+        {% for message in messages %}
+          {% if message.tags == 'success' %}
+            <div class="alert alert-success d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-check-circle me-2 fw-bold"></i>
+              <div><strong>Succès :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'error' %}
+            <div class="alert alert-danger d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-times-circle me-2 fw-bold"></i>
+              <div><strong>Erreur :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'warning' %}
+            <div class="alert alert-warning d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+              <div><strong>Attention :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% elif message.tags == 'info' %}
+            <div class="alert alert-info d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-info-circle me-2 fw-bold"></i>
+              <div><strong>Information :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% else %}
+            <div class="alert alert-{{ message.tags }} d-flex align-items-center alert-dismissible fade show" role="alert">
+              <i class="fas fa-bell me-2 fw-bold"></i>
+              <div><strong>Info :</strong> {{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
+        {% endfor %}
+    {% endif %}
+    <!-- En-tête de la page -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-chart-line text-primary"></i>
+            Suivi Consommation Clients
+        </h1>
+        <a href="{% url 'dashboard_restauration' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Retour au Dashboard
+        </a>
+    </div>
+
+    <!-- Barre de recherche -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Recherche</h5>
+      </div>
+      <div class="card-body">
+        <form method="GET" class="row g-2 align-items-center">
+          <div class="col-12 col-sm-12 col-md-6">
+            <div class="input-group">
+              <span class="input-group-text bg-primary text-white border-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="text" name="search" value="{{ search_query }}" class="form-control border-primary" placeholder="Rechercher un client par nom...">
+            </div>
+          </div>
+          <div class="col-12 col-sm-12 col-md-6 d-flex gap-2 justify-content-end">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-search"></i> Rechercher
+            </button>
+            {% if search_query %}
+            <a href="{% url 'suivi_consommation_clients' %}" class="btn btn-secondary">
+              <i class="fas fa-times"></i> Effacer
+            </a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Résumé des statistiques -->
+    <div class="stats-summary">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_clients }}</div>
+                <div class="stat-label">Clients Actifs</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ pagination_info.total_count }}</div>
+                <div class="stat-label">Résultats Affichés</div>
+            </div>
+            {% if search_query %}
+                <div class="stat-item">
+                    <div class="stat-number">"{{ search_query }}"</div>
+                    <div class="stat-label">Terme de Recherche</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Liste des clients -->
+    {% if clients_data %}
+        {% for client in clients_data %}
+            <div class="card client-card">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h3 class="mb-1">{{ client.nom_complet }}</h3>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="info-item">
+                            <i class="fas fa-bed"></i>
+                            <span>Chambre(s): {{ client.chambres|join:", "|default:"Non assignée" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Période: {{ client.periode_hebergement }}</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-users"></i>
+                            <span>Accompagnants: {{ client.reservation.accompagnants.count }}</span>
+                        </div>
+                        <div class="info-item">
+                            {% if client.statut == "active" %}
+                                <i class="fas fa-check-circle text-success"></i>
+                                <span class="text-success">Réservation Active</span>
+                            {% elif client.statut == "terminée" %}
+                                <i class="fas fa-clock text-warning"></i>
+                                <span class="text-warning">Réservation Terminée</span>
+                            {% else %}
+                                <i class="fas fa-calendar-plus text-info"></i>
+                                <span class="text-info">Réservation Future</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Menus personnalisés -->
+                    {% if client.menus_personnalises %}
+                        <h6 class="section-title">
+                            <i class="fas fa-utensils text-primary"></i>
+                            Menus Personnalisés
+                        </h6>
+                        <div class="menu-grid">
+                            {% for menu in client.menus_personnalises %}
+                                <div class="menu-item">
+                                    <h6>{{ menu.repas }} - {{ menu.date }}</h6>
+                                    <ul class="plat-list">
+                                        {% for plat in menu.plats.all %}
+                                            <li class="plat-item">
+                                                <span class="plat-name">{{ plat.nom }}</span>
+                                                <span class="plat-quantity">{{ menu.quantite }}</span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% if menu.description %}
+                                        <small class="text-muted">{{ menu.description }}</small>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Menus supplémentaires -->
+                    {% if client.menus_supplementaires %}
+                        <h6 class="section-title">
+                            <i class="fas fa-plus-circle text-success"></i>
+                            Plats Supplémentaires
+                        </h6>
+                        <div class="menu-grid">
+                            {% for menu in client.menus_supplementaires %}
+                                <div class="menu-item">
+                                    <h6>{{ menu.repas }} - {{ menu.date }}</h6>
+                                    <div class="plat-item">
+                                        <span class="plat-name">Plat supplémentaire</span>
+                                        <span class="plat-quantity">{{ menu.quantite }}</span>
+                                    </div>
+                                    {% if menu.num_chambre %}
+                                        <small class="text-muted">Chambre: {{ menu.num_chambre }}</small>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Message si aucun menu -->
+                    {% if not client.menus_personnalises and not client.menus_supplementaires %}
+                        <div class="no-data">
+                            <i class="fas fa-info-circle fa-2x text-muted mb-3"></i>
+                            <p>Aucun menu personnalisé ou plat supplémentaire commandé pour ce client.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+
+        <!-- Pagination -->
+        {% include 'includes/pagination.html' %}
+        
+    {% else %}
+        <!-- Aucun résultat -->
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">
+                {% if search_query %}
+                    Aucun client trouvé pour "{{ search_query }}"
+                {% else %}
+                    Aucun client actuellement hébergé
+                {% endif %}
+            </h4>
+            <p class="text-muted">
+                {% if search_query %}
+                    Essayez de modifier votre recherche ou vérifiez l'orthographe.
+                {% else %}
+                    Tous les clients ont peut-être quitté l'établissement.
+                {% endif %}
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit du formulaire de recherche lors de la saisie
+    const searchInput = document.querySelector('.search-input');
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            if (this.value.length >= 2 || this.value.length === 0) {
+                this.form.submit();
+            }
+        }, 500);
+    });
+    
+    // Focus automatique sur le champ de recherche
+    searchInput.focus();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% for user in users %}
+{% if user.pk %}
+<tr class="user-row">
+  <td data-label="Sélection"><input type="checkbox" class="user-checkbox" data-id="{{ user.pk }}"></td>
+  <td data-label="Nom d'utilisateur">{{ user.username }}</td>
+  <td data-label="Nom">{{ user.nom }}</td>
+  <td data-label="Prénom" class="d-none d-lg-table-cell">{{ user.prenom }}</td>
+  <td data-label="Activé">
+    <span class="badge {% if user.is_activated %}bg-success{% else %}bg-danger{% endif %}">
+      {% if user.is_activated %}Actif{% else %}Désactivé{% endif %}
+    </span>
+  </td>
+  <td data-label="Employé" class="d-none d-lg-table-cell">{{ user.employee.full_name|default:"Aucun" }}</td>
+  <td data-label="Actions" class="actions-cell">
+    <div class="d-flex gap-1 justify-content-end">
+      <button class="btn btn-sm btn-light border text-dark btn-update-user" title="Modifier" data-id="{{ user.pk }}">
+        <i class="fas fa-edit"></i>
+      </button>
+      <button class="btn btn-sm btn-light border {% if user.is_activated %}text-success{% else %}text-secondary{% endif %} btn-toggle-user" title="Toggle Activation" data-id="{{ user.pk }}">
+        <i class="fas fa-toggle-{% if user.is_activated %}on{% else %}off{% endif %}"></i>
+      </button>
+      <button class="btn btn-sm btn-light border text-warning btn-reset-password" title="Réinitialiser Mot de Passe" data-id="{{ user.pk }}" data-name="{{ user.username }}">
+        <i class="fas fa-key"></i>
+      </button>
+      <button class="btn btn-sm btn-light border text-danger btn-delete-user" title="Supprimer" data-id="{{ user.pk }}" data-name="{{ user.username }}">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+    </div>
+  </td>
+</tr>
+{% else %}
+{% with user_data=user.username|default:"Unknown" %}
+  <tr class="user-row">
+    <td colspan="7">Invalid user (no PK): {{ user_data }}</td>
+  </tr>
+{% endwith %}
+{% endif %}
+{% empty %}
+<tr><td colspan="7">Aucun utilisateur trouvé.</td></tr>
+{% endfor %}

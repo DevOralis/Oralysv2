@@ -1,0 +1,3208 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Configurations{% endblock %}
+
+{% block menu %}
+  {% include "menu_parcauto.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+ 
+  <div class="card p-3">
+    <ul class="nav nav-tabs flex-column flex-sm-row mb-3" role="tablist">
+      <li class="nav-item flex-sm-fill text-sm-center">
+        <button class="nav-link {% if not request.GET.active_tab or request.GET.active_tab == 'marques' %}active{% endif %} border-bottom-0" 
+                data-bs-toggle="tab" 
+                data-bs-target="#marques-tab">Marques</button>
+      </li>
+      <li class="nav-item flex-sm-fill text-sm-center">
+        <button class="nav-link {% if request.GET.active_tab == 'modeles' %}active{% endif %} border-bottom-0" 
+                data-bs-toggle="tab" 
+                data-bs-target="#modeles-tab">Modèles</button>
+      </li>
+      <li class="nav-item flex-sm-fill text-sm-center">
+        <button class="nav-link {% if request.GET.active_tab == 'entretien_types' %}active{% endif %} border-bottom-0" 
+                data-bs-toggle="tab" 
+                data-bs-target="#entretien_types-tab">Types Entretien</button>
+      </li>
+      <li class="nav-item flex-sm-fill text-sm-center">
+        <button class="nav-link {% if request.GET.active_tab == 'contract_types' %}active{% endif %} border-bottom-0" 
+                data-bs-toggle="tab" 
+                data-bs-target="#contract_types-tab">Types de Contrat</button>
+      </li>
+      <li class="nav-item flex-sm-fill text-sm-center">
+        <button class="nav-link {% if request.GET.active_tab == 'providers' %}active{% endif %} border-bottom-0" 
+                data-bs-toggle="tab" 
+                data-bs-target="#providers-tab">Fournisseurs</button>
+      </li>
+    </ul>
+
+    <div class="tab-content mt-3">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- Tab Marques -->
+      <div class="tab-pane fade {% if not request.GET.active_tab or request.GET.active_tab == 'marques' %}show active{% endif %}" id="marques-tab">
+        <form method="get" id="search-form-marques">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchMarque" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            
+            <!-- Boutons d'action -->
+            <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+              <div class="d-flex gap-1">
+        <button type="button" class="btn w-100 text-nowrap px-2 text-white" style="background-color: #1e90ff;" id="toggleMarqueFormBtn" data-original-text='<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouvelle Marque</span>'>
+          <i class="fas fa-plus"></i>
+          <span class="d-none d-lg-inline ms-1">Nouvelle Marque</span>
+        </button>
+              </div>
+            </div>
+          </div>
+        </form>
+        
+
+
+        <div class="table-container">
+          <table class="table table-striped table-hover" id="marquesTable">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllMarques">
+                </th>
+                <th class="d-none">ID</th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Logo</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Nom</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for marque in marques %}
+              <tr class="main-row">
+                <td class="d-none d-md-table-cell">
+                  <input type="checkbox" class="row-check-marques">
+                </td>
+                <td class="d-none">{{ marque.id }}</td>
+                <td>
+                  {% if marque.logo %}
+                    <img src="{{marque.logo.url}}" alt="{{ marque.nom }}" style="max-height: 30px; max-width: 50px;">
+                  {% else %}
+                    <span class="text-muted">Aucun logo</span>
+                  {% endif %}
+                </td>
+                <td>{{ marque.nom }}</td>
+                <td class="text-end">
+                  <div class="d-none d-md-flex gap-1 justify-content-end">
+                    <button class="btn btn-sm btn-light border text-dark"
+                            onclick="showEditMarqueForm('{{ marque.id }}', '{{ marque.nom }}', '{% if marque.logo %}{{ marque.logo.url }}{% endif %}')"
+                            title="Modifier la marque">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light border text-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalDeleteMarque"
+                            data-marque-id="{{ marque.id }}"
+                            data-marque-nom="{{ marque.nom }}"
+                            title="Supprimer la marque">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                  <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#marque-details-{{ marque.id }}">
+                    Voir détails
+                  </button>
+                </td>
+              </tr>
+              <tr class="collapse bg-light" id="marque-details-{{ marque.id }}">
+                <td colspan="5" class="p-3">
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="mb-2"><strong>ID:</strong> {{ marque.id }}</p>
+                      <p class="mb-2"><strong>Nom:</strong> {{ marque.nom }}</p>
+                    </div>
+                    <div class="col-12 mt-3">
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-dark"
+                                onclick="showEditMarqueForm('{{ marque.id }}', '{{ marque.nom }}', '{% if marque.logo %}{{ marque.logo.url }}{% endif %}')"
+                                title="Modifier la marque">
+                          <i class="fas fa-edit me-1"></i> Modifier
+                        </button>
+                        <button class="btn btn-sm btn-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalDeleteMarque"
+                                data-marque-id="{{ marque.id }}"
+                                data-marque-nom="{{ marque.nom }}"
+                                title="Supprimer la marque">
+                          <i class="fas fa-trash-alt me-1"></i> Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center">Aucune marque disponible</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if marques.has_other_pages %}
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap">
+            {% if marques.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=marques&marques_page={{ marques.previous_page_number }}{% if request.GET.marques_per_page %}&marques_per_page={{ request.GET.marques_per_page }}{% endif %}" aria-label="Précédent">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </span>
+              </li>
+            {% endif %}
+
+            {% for num in marques.paginator.page_range %}
+              {% if marques.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > marques.number|add:'-3' and num < marques.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=marques&marques_page={{ num }}{% if request.GET.marques_per_page %}&marques_per_page={{ request.GET.marques_per_page }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if marques.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=marques&marques_page={{ marques.next_page_number }}{% if request.GET.marques_per_page %}&marques_per_page={{ request.GET.marques_per_page }}{% endif %}" aria-label="Suivant">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </span>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+
+      </div>
+
+      <!-- Tab Modèles -->
+      <div class="tab-pane fade {% if request.GET.active_tab == 'modeles' %}show active{% endif %}" id="modeles-tab">
+        <form method="get" id="search-form-modeles">
+          <div class="row g-3 align-items-end">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchModele" class="form-control border-primary" placeholder="Rechercher..." value="{{ request.GET.q }}">
+              </div>
+            </div>
+            
+            <!-- Filtre marques -->
+            <div class="col-6 col-sm-6 col-md-3 col-lg-3 order-2">
+              <select name="marque_id" id="search-marque-modeles" class="form-select" title="Filtrer par marque">
+                <option value="">Toutes les marques</option>
+                {% for marque in marques %}
+                  <option value="{{ marque.id }}" {% if request.GET.marque_id == marque.id|stringformat:'s' %}selected{% endif %}>{{ marque.nom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <!-- Boutons d'action -->
+            <div class="col-6 col-sm-6 col-md-5 col-lg-5 order-3">
+              <div class="d-flex gap-1">
+        <button type="button" class="btn w-100 text-nowrap px-2 text-white" style="background-color: #1e90ff;" id="toggleModeleFormBtn" data-original-text='<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Modèle</span>'>
+          <i class="fas fa-plus"></i>
+          <span class="d-none d-lg-inline ms-1">Nouveau Modèle</span>
+        </button>
+              </div>
+            </div>
+          </div>
+        </form>
+        
+        <!-- Espace entre la barre de recherche et le tableau -->
+        <div class="mb-4"></div>
+
+        <div class="table-container">
+          <table class="table table-striped table-hover" id="modelesTable">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllModeles">
+                </th>
+                <th class="d-none">ID</th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Nom</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Marque</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for modele in modeles %}
+              <tr class="main-row">
+                <td class="d-none d-md-table-cell">
+                  <input type="checkbox" class="row-check-modeles">
+                </td>
+                <td class="d-none">{{ modele.id }}</td>
+                <td>{{ modele.nom }}</td>
+                <td data-marque-id="{{ modele.marque.id }}">
+                  {% if modele.marque.logo %}
+                    <img src="{{ modele.marque.logo.url }}" alt="{{ modele.marque.nom }}" style="max-height: 20px; margin-right: 8px;">
+                  {% endif %}
+                  {{ modele.marque.nom }}
+                </td>
+                <td class="text-end">
+                  <div class="d-none d-md-flex gap-1 justify-content-end">
+                    <button class="btn btn-sm btn-light border text-dark"
+                            onclick="showEditModeleForm('{{ modele.id }}', '{{ modele.nom }}', '{{ modele.marque.id }}', '{{ modele.marque.nom }}')"
+                            title="Modifier le modèle">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light border text-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalDeleteModele"
+                            data-modele-id="{{ modele.id }}"
+                            data-modele-nom="{{ modele.nom }}"
+                            title="Supprimer le modèle">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                  <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#modele-details-{{ modele.id }}">
+                    Voir détails
+                  </button>
+                </td>
+              </tr>
+              <tr class="collapse bg-light" id="modele-details-{{ modele.id }}">
+                <td colspan="5" class="p-3">
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="mb-2"><strong>ID:</strong> {{ modele.id }}</p>
+                      <p class="mb-2"><strong>Nom:</strong> {{ modele.nom }}</p>
+                      <p class="mb-2"><strong>Marque:</strong> {{ modele.marque.nom }}</p>
+                    </div>
+                    <div class="col-12 mt-3">
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-dark"
+                                onclick="showEditModeleForm('{{ modele.id }}', '{{ modele.nom }}', '{{ modele.marque.id }}', '{{ modele.marque.nom }}')"
+                                title="Modifier le modèle">
+                          <i class="fas fa-edit me-1"></i> Modifier
+                        </button>
+                        <button class="btn btn-sm btn-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalDeleteModele"
+                                data-modele-id="{{ modele.id }}"
+                                data-modele-nom="{{ modele.nom }}"
+                                title="Supprimer le modèle">
+                          <i class="fas fa-trash-alt me-1"></i> Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center">Aucun modèle disponible</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if modeles.has_other_pages %}
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap">
+            {% if modeles.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=modeles&modeles_page={{ modeles.previous_page_number }}{% if request.GET.modeles_per_page %}&modeles_per_page={{ request.GET.modeles_per_page }}{% endif %}" aria-label="Précédent">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </span>
+              </li>
+            {% endif %}
+
+            {% for num in modeles.paginator.page_range %}
+              {% if modeles.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > modeles.number|add:'-3' and num < modeles.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=modeles&modeles_page={{ num }}{% if request.GET.modeles_per_page %}&modeles_per_page={{ request.GET.modeles_per_page }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if modeles.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=modeles&modeles_page={{ modeles.next_page_number }}{% if request.GET.modeles_per_page %}&modeles_per_page={{ request.GET.modeles_per_page }}{% endif %}" aria-label="Suivant">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </span>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+
+      </div>
+
+      <!-- Tab Types Entretien -->
+      <div class="tab-pane fade {% if request.GET.active_tab == 'entretien_types' %}show active{% endif %}" id="entretien_types-tab">
+        <form method="get" id="search-form-entretien-types">
+          <div class="row g-3 align-items-end">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchEntretienType" class="form-control border-primary" placeholder="Rechercher..." value="{{ request.GET.q }}">
+              </div>
+            </div>
+            
+            <!-- Filtre statut -->
+            <div class="col-6 col-sm-6 col-md-3 col-lg-3 order-2">
+              <select name="statut" id="search-statut-entretien-types" class="form-select" title="Filtrer par statut">
+                <option value="">Tous les statuts</option>
+                <option value="Actif" {% if request.GET.statut == 'Actif' %}selected{% endif %}>Actif</option>
+                <option value="Inactif" {% if request.GET.statut == 'Inactif' %}selected{% endif %}>Inactif</option>
+              </select>
+            </div>
+            
+            <!-- Boutons d'action -->
+            <div class="col-6 col-sm-6 col-md-5 col-lg-5 order-3">
+              <div class="d-flex gap-1">
+        <button type="button" class="btn w-100 text-nowrap px-2 text-white" style="background-color: #1e90ff;" id="toggleEntretienTypeFormBtn" data-original-text='<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Type</span>'>
+          <i class="fas fa-plus"></i>
+          <span class="d-none d-lg-inline ms-1">Nouveau Type</span>
+        </button>
+              </div>
+            </div>
+          </div>
+        </form>
+        
+        <!-- Espace entre la barre de recherche et le tableau -->
+        <div class="mb-4"></div>
+
+        <div class="table-container">
+          <table class="table table-striped table-hover" id="entretienTypesTable">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllEntretienTypes">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Nom</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Description</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Statut</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for type in entretien_types %}
+              <tr class="main-row">
+                <td class="d-none d-md-table-cell">
+                  <input type="checkbox" class="row-check-entretien-types">
+                </td>
+                <td>{{ type.nom }}</td>
+                <td>{{ type.description|truncatechars:50 }}</td>
+                <td>
+                  {% if type.is_active %}
+                    <span class="badge bg-success">Actif</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Inactif</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="d-none d-md-flex gap-1 justify-content-end">
+                    <button class="btn btn-sm btn-light border text-dark"
+                            onclick="showEditEntretienTypeForm('{{ type.id }}', '{{ type.nom }}', '{{ type.description }}', '{% if type.is_active %}true{% else %}false{% endif %}')"
+                            title="Modifier">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light border text-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalDeleteEntretienType"
+                            data-bs-type-id="{{ type.id }}"
+                            data-bs-type-nom="{{ type.nom }}"
+                            title="Supprimer">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                  <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#entretien-type-details-{{ type.id }}">
+                    Voir détails
+                  </button>
+                </td>
+              </tr>
+              <tr class="collapse bg-light" id="entretien-type-details-{{ type.id }}">
+                <td colspan="5" class="p-3">
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="mb-2"><strong>Nom:</strong> {{ type.nom }}</p>
+                      <p class="mb-2"><strong>Description:</strong> {{ type.description }}</p>
+                      <p class="mb-2"><strong>Statut:</strong> 
+                        {% if type.is_active %}
+                          <span class="badge bg-success">Actif</span>
+                        {% else %}
+                          <span class="badge bg-secondary">Inactif</span>
+                        {% endif %}
+                      </p>
+                    </div>
+                    <div class="col-12 mt-3">
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-dark"
+                                onclick="showEditEntretienTypeForm('{{ type.id }}', '{{ type.nom }}', '{{ type.description }}', '{% if type.is_active %}1{% else %}0{% endif %}')"
+                                title="Modifier">
+                          <i class="fas fa-edit me-1"></i> Modifier
+                        </button>
+                        <button class="btn btn-sm btn-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalDeleteEntretienType"
+                                data-type-id="{{ type.id }}"
+                                data-type-nom="{{ type.nom }}"
+                                title="Supprimer">
+                          <i class="fas fa-trash-alt me-1"></i> Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center">Aucun type d'entretien disponible</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if entretien_types.has_other_pages %}
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap">
+            {% if entretien_types.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=entretien_types&entretien_types_page={{ entretien_types.previous_page_number }}{% if request.GET.entretien_types_per_page %}&entretien_types_per_page={{ request.GET.entretien_types_per_page }}{% endif %}" aria-label="Précédent">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </span>
+              </li>
+            {% endif %}
+
+            {% for num in entretien_types.paginator.page_range %}
+              {% if entretien_types.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > entretien_types.number|add:'-3' and num < entretien_types.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=entretien_types&entretien_types_page={{ num }}{% if request.GET.entretien_types_per_page %}&entretien_types_per_page={{ request.GET.entretien_types_per_page }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if entretien_types.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=entretien_types&entretien_types_page={{ entretien_types.next_page_number }}{% if request.GET.entretien_types_per_page %}&entretien_types_per_page={{ request.GET.entretien_types_per_page }}{% endif %}" aria-label="Suivant">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </span>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+
+      </div>
+
+      <!-- Tab Contract Types -->
+      <div class="tab-pane fade {% if request.GET.active_tab == 'contract_types' %}show active{% endif %}" id="contract_types-tab">
+        <form method="get" id="search-form-contract-types">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchContractType" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            
+            <!-- Boutons d'action -->
+            <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+              <div class="d-flex gap-1">
+        <button type="button" class="btn w-100 text-nowrap px-2 text-white" style="background-color: #1e90ff;" id="toggleContractTypeFormBtn" data-original-text='<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Type</span>'>
+          <i class="fas fa-plus"></i>
+          <span class="d-none d-lg-inline ms-1">Nouveau Type</span>
+        </button>
+              </div>
+            </div>
+          </div>
+        </form>
+        
+
+
+        <div class="table-container">
+          <table class="table table-striped table-hover" id="contractTypesTable">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllContractTypes">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Nom</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Code</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Description</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for type in contract_types %}
+              <tr class="main-row">
+                <td class="d-none d-md-table-cell">
+                  <input type="checkbox" class="row-check-contract-types">
+                </td>
+                <td>{{ type.name }}</td>
+                <td>{{ type.code }}</td>
+                <td>{{ type.description|truncatechars:50 }}</td>
+                <td class="text-end">
+                  <div class="d-none d-md-flex gap-1 justify-content-end">
+                    <button class="btn btn-sm btn-light border text-dark"
+                            onclick="showEditContractTypeForm('{{ type.id }}', '{{ type.name }}', '{{ type.code }}', '{{ type.description }}')"
+                            title="Modifier">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light border text-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalDeleteContractType"
+                            data-bs-id="{{ type.id }}"
+                            data-bs-name="{{ type.name }}"
+                            title="Supprimer">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                  <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#contract-type-details-{{ type.id }}">
+                    Voir détails
+                  </button>
+                </td>
+              </tr>
+              <tr class="collapse bg-light" id="contract-type-details-{{ type.id }}">
+                <td colspan="5" class="p-3">
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="mb-2"><strong>Nom:</strong> {{ type.name }}</p>
+                      <p class="mb-2"><strong>Code:</strong> {{ type.code }}</p>
+                      <p class="mb-2"><strong>Description:</strong> {{ type.description }}</p>
+                    </div>
+                    <div class="col-12 mt-3">
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-dark"
+                                onclick="showEditContractTypeForm('{{ type.id }}', '{{ type.name }}', '{{ type.code }}', '{{ type.description }}')"
+                                title="Modifier">
+                          <i class="fas fa-edit me-1"></i> Modifier
+                        </button>
+                        <button class="btn btn-sm btn-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalDeleteContractType"
+                                data-bs-id="{{ type.id }}"
+                                data-bs-name="{{ type.name }}"
+                                title="Supprimer">
+                          <i class="fas fa-trash-alt me-1"></i> Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center">Aucun type de contrat disponible</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if contract_types.has_other_pages %}
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap">
+            {% if contract_types.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=contract_types&contract_types_page={{ contract_types.previous_page_number }}{% if request.GET.contract_types_per_page %}&contract_types_per_page={{ request.GET.contract_types_per_page }}{% endif %}" aria-label="Précédent">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </span>
+              </li>
+            {% endif %}
+
+            {% for num in contract_types.paginator.page_range %}
+              {% if contract_types.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > contract_types.number|add:'-3' and num < contract_types.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=contract_types&contract_types_page={{ num }}{% if request.GET.contract_types_per_page %}&contract_types_per_page={{ request.GET.contract_types_per_page }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if contract_types.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=contract_types&contract_types_page={{ contract_types.next_page_number }}{% if request.GET.contract_types_per_page %}&contract_types_per_page={{ request.GET.contract_types_per_page }}{% endif %}" aria-label="Suivant">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </span>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+
+      </div>
+
+      <!-- Tab Providers -->
+      <div class="tab-pane fade {% if request.GET.active_tab == 'providers' %}show active{% endif %}" id="providers-tab">
+        <form method="get" id="search-form-providers">
+          <div class="row g-2 mb-3">
+            <!-- Barre de recherche -->
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+              <div class="input-group">
+                <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" name="q" id="searchProvider" class="form-control border-primary" placeholder="Rechercher..." value="">
+              </div>
+            </div>
+            
+            <!-- Boutons d'action -->
+            <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+              <div class="d-flex gap-1">
+        <button type="button" class="btn w-100 text-nowrap px-2 text-white" style="background-color: #1e90ff;" id="toggleProviderFormBtn" data-original-text='<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Fournisseur</span>'>
+          <i class="fas fa-plus"></i>
+          <span class="d-none d-lg-inline ms-1">Nouveau Fournisseur</span>
+        </button>
+              </div>
+            </div>
+          </div>
+        </form>
+        
+
+
+        <div class="table-container">
+          <table class="table table-striped table-hover" id="providersTable">
+            <thead class="table-light borderless">
+              <tr class="main-row">
+                <th class="d-none d-md-table-cell">
+                  <input type="checkbox" id="selectAllProviders">
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Nom</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Email</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Téléphone</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-flex align-items-center">
+                    <span>Adresse</span>
+                    <i class="fas fa-sort ms-1 text-muted"></i>
+                  </div>
+                </th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for provider in providers %}
+              <tr class="main-row">
+                <td class="d-none d-md-table-cell">
+                  <input type="checkbox" class="row-check-providers">
+                </td>
+                <td>{{ provider.name }}</td>
+                <td>{{ provider.email|default:"-" }}</td>
+                <td>{{ provider.phone|default:"-" }}</td>
+                <td>{{ provider.address|default:"-" }}</td>
+                <td class="text-end">
+                  <div class="d-none d-md-flex gap-1 justify-content-end">
+                    <button class="btn btn-sm btn-light border text-dark"
+                            onclick="showEditProviderForm('{{ provider.id }}', '{{ provider.name|escapejs }}', '{{ provider.email|default:'-'|escapejs }}', '{{ provider.phone|default:'-'|escapejs }}', '{{ provider.address|default:'-'|escapejs }}')"
+                            title="Modifier">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light border text-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalDeleteProvider"
+                            data-bs-id="{{ provider.id }}"
+                            data-bs-name="{{ provider.name }}"
+                            title="Supprimer">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                  <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#provider-details-{{ provider.id }}">
+                    Voir détails
+                  </button>
+                </td>
+              </tr>
+              <tr class="collapse bg-light" id="provider-details-{{ provider.id }}">
+                <td colspan="6" class="p-3">
+                  <div class="row">
+                    <div class="col-6">
+                      <p class="mb-2"><strong>Nom:</strong> {{ provider.name }}</p>
+                      <p class="mb-2"><strong>Email:</strong> {{ provider.email|default:"-" }}</p>
+                      <p class="mb-2"><strong>Téléphone:</strong> {{ provider.phone|default:"-" }}</p>
+                      <p class="mb-2"><strong>Adresse:</strong> {{ provider.address|default:"-" }}</p>
+                    </div>
+                    <div class="col-12 mt-3">
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-dark"
+                                onclick="showEditProviderForm('{{ provider.id }}', '{{ provider.name|escapejs }}', '{{ provider.email|default:'-'|escapejs }}', '{{ provider.phone|default:'-'|escapejs }}', '{{ provider.address|default:'-'|escapejs }}')"
+                                title="Modifier">
+                          <i class="fas fa-edit me-1"></i> Modifier
+                        </button>
+                        <button class="btn btn-sm btn-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalDeleteProvider"
+                                data-bs-id="{{ provider.id }}"
+                                data-bs-name="{{ provider.name }}"
+                                title="Supprimer">
+                          <i class="fas fa-trash-alt me-1"></i> Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" class="text-center">Aucun fournisseur disponible</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if providers.has_other_pages %}
+        <nav class="mt-3">
+          <ul class="pagination justify-content-center flex-wrap">
+            {% if providers.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=providers&providers_page={{ providers.previous_page_number }}{% if request.GET.providers_per_page %}&providers_per_page={{ request.GET.providers_per_page }}{% endif %}" aria-label="Précédent">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">&laquo; Préc</span>
+                </span>
+              </li>
+            {% endif %}
+
+            {% for num in providers.paginator.page_range %}
+              {% if providers.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > providers.number|add:'-3' and num < providers.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?active_tab=providers&providers_page={{ num }}{% if request.GET.providers_per_page %}&providers_per_page={{ request.GET.providers_per_page }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if providers.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?active_tab=providers&providers_page={{ providers.next_page_number }}{% if request.GET.providers_per_page %}&providers_per_page={{ request.GET.providers_per_page }}{% endif %}" aria-label="Suivant">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                  <span class="d-none d-sm-block">Suiv &raquo;</span>
+                </span>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout inline pour les Marques - Card séparée -->
+  <div class="card mt-4" id="addMarqueFormCard">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus-circle me-2"></i>
+      Ajouter une Marque
+    </div>
+    <div class="card-body">
+      <form id="addMarqueForm" method="post" action="{% url 'marque_create' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" value="marques">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nom de la marque <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                <input type="text" name="nom_marque" class="form-control" placeholder="Entrez le nom de la marque" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Logo de la marque</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-image"></i></span>
+                <input type="file" name="logo_marque" class="form-control" accept="image/*">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12">
+            <div class="d-flex gap-2 justify-content-end">
+              <button type="button" class="btn btn-secondary" id="cancelMarqueFormBtn">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout inline pour les Modèles - Card séparée -->
+  <div class="card mt-4" id="addModeleFormCard">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus-circle me-2"></i>
+      Ajouter un Modèle
+    </div>
+    <div class="card-body">
+      <form id="addModeleForm" method="post" action="{% url 'modele_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" value="modeles">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Marque <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                <select class="form-select" name="marque_modele" required>
+                  <option value="">-- Choisir une marque --</option>
+                  {% for marque in marques %}
+                  <option value="{{ marque.id }}">{{ marque.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nom du modèle <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-cog"></i></span>
+                <input type="text" name="nom_modele" class="form-control" placeholder="Entrez le nom du modèle" required>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12">
+            <div class="d-flex gap-2 justify-content-end">
+              <button type="button" class="btn btn-secondary" id="cancelModeleFormBtn">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout inline pour les Types d'Entretien - Card séparée -->
+  <div class="card mt-4" id="addEntretienTypeFormCard">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus-circle me-2"></i>
+      Ajouter un Type d'Entretien
+    </div>
+    <div class="card-body">
+      <form id="addEntretienTypeForm" method="post" action="{% url 'entretien_type_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" value="entretien_types">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-tools"></i></span>
+                <input type="text" name="entretien_type_name" class="form-control" placeholder="Entrez le nom du type d'entretien" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Statut</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                <div class="form-check mt-2 ms-3">
+                  <input type="checkbox" class="form-check-input" name="entretien_type_active" checked>
+                  <label class="form-check-label">Actif</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Description</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                <textarea name="entretien_type_description" class="form-control" rows="3" placeholder="Entrez une description..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12">
+            <div class="d-flex gap-2 justify-content-end">
+              <button type="button" class="btn btn-secondary" id="cancelEntretienTypeFormBtn">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout inline pour les Types de Contrat - Card séparée -->
+  <div class="card mt-4" id="addContractTypeFormCard">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus-circle me-2"></i>
+      Ajouter un Type de Contrat
+    </div>
+    <div class="card-body">
+      <form id="addContractTypeForm" method="post" action="{% url 'contract_type_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" value="contract_types">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-file-contract"></i></span>
+                <input type="text" name="type_name" class="form-control" placeholder="Entrez le nom du type de contrat" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Code <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                <input type="text" name="type_code" class="form-control" placeholder="Entrez le code du type de contrat" required>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Description</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                <textarea name="type_description" class="form-control" rows="3" placeholder="Entrez une description..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12">
+            <div class="d-flex gap-2 justify-content-end">
+              <button type="button" class="btn btn-secondary" id="cancelContractTypeFormBtn">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire d'ajout inline pour les Fournisseurs - Card séparée -->
+  <div class="card mt-4" id="addProviderFormCard">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus-circle me-2"></i>
+      Ajouter un Fournisseur
+    </div>
+    <div class="card-body">
+      <form id="addProviderForm" method="post" action="{% url 'provider_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" value="providers">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-building"></i></span>
+                <input type="text" name="provider_name" class="form-control" placeholder="Entrez le nom du fournisseur" required>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Email</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                <input type="email" name="provider_email" class="form-control" placeholder="Entrez l'email du fournisseur">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Téléphone</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                <input type="tel" name="provider_phone" class="form-control" placeholder="+33 1 23 45 67 89">
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Adresse</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                <textarea name="provider_address" class="form-control" rows="3" placeholder="Entrez l'adresse du fournisseur"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12">
+            <div class="d-flex gap-2 justify-content-end">
+              <button type="button" class="btn btn-secondary" id="cancelProviderFormBtn">
+                <i class="fas fa-times me-2"></i>Annuler
+              </button>
+              <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-save me-2"></i>Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Nouvelle Marque -->
+  <div class="modal fade" id="modalMarque" tabindex="-1" aria-labelledby="modalMarqueLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" action="{% url 'marque_create' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="marques">
+          <div class="modal-header bg-gradient-primary text-white">
+            <h5 class="modal-title" id="modalMarqueLabel">
+              <i class="fas fa-plus-circle me-2"></i>Ajouter une Marque
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_nom_marque" class="form-label fw-semibold">Nom de la marque <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                    <input type="text" id="id_nom_marque" name="nom_marque" class="form-control" placeholder="Entrez le nom de la marque" required>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_logo_marque" class="form-label fw-semibold">Logo de la marque</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-image"></i></span>
+                    <input type="file" id="id_logo_marque" name="logo_marque" class="form-control" accept="image/*">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-2"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulaires de modification en bas de page -->
+  
+  <!-- Formulaire de modification de marque -->
+  <div class="card mt-4" id="editMarqueFormCard" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier la marque
+    </div>
+    <div class="card-body">
+      <form id="editMarqueFormInline" method="post" action="{% url 'marque_update' 0 %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" value="marques">
+        <input type="hidden" name="marque_id" id="edit_marque_id">
+        
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_marque_nom" class="form-label">Nom de la marque <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="edit_marque_nom" name="nom_marque" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_marque_logo" class="form-label">Logo</label>
+              <input type="file" class="form-control" id="edit_marque_logo" name="logo_marque" accept="image/*">
+              <small class="form-text text-muted">Formats acceptés: JPG, PNG, GIF</small>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="remove_logo" name="remove_logo">
+                <label class="form-check-label" for="remove_logo">Supprimer le logo actuel</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" onclick="hideEditMarqueForm()">
+            <i class="fas fa-times me-1"></i> Annuler
+          </button>
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i> Modifier la marque
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de modèle -->
+  <div class="card mt-4" id="editModeleFormCard" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier le modèle
+    </div>
+    <div class="card-body">
+      <form id="editModeleFormInline" method="post" action="{% url 'modele_update' 0 %}">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" value="modeles">
+        <input type="hidden" name="modele_id" id="edit_modele_id">
+        
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_modele_nom" class="form-label">Nom du modèle <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="edit_modele_nom" name="nom_modele" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_modele_marque" class="form-label">Marque <span class="text-danger">*</span></label>
+              <select class="form-select" id="edit_modele_marque" name="marque_modele" required>
+                <option value="">Sélectionner une marque</option>
+                {% for marque in marques %}
+                  <option value="{{ marque.id }}">{{ marque.nom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" onclick="hideEditModeleForm()">
+            <i class="fas fa-times me-1"></i> Annuler
+          </button>
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i> Modifier le modèle
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de type d'entretien -->
+  <div class="card mt-4" id="editEntretienTypeFormCard" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier le type d'entretien
+    </div>
+    <div class="card-body">
+      <form id="editEntretienTypeFormInline" method="post" action="{% url 'entretien_type_update' 0 %}">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" value="entretien_types">
+        <input type="hidden" name="type_id" id="edit_entretien_type_id">
+        
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_entretien_type_nom" class="form-label">Nom du type <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="edit_entretien_type_nom" name="entretien_type_name" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <div class="form-check mt-4">
+                <input class="form-check-input" type="checkbox" id="edit_entretien_type_active" name="entretien_type_active">
+                <label class="form-check-label" for="edit_entretien_type_active">
+                  Type actif
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label for="edit_entretien_type_description" class="form-label">Description</label>
+          <textarea class="form-control" id="edit_entretien_type_description" name="entretien_type_description" rows="3"></textarea>
+        </div>
+        
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" onclick="hideEditEntretienTypeForm()">
+            <i class="fas fa-times me-1"></i> Annuler
+          </button>
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i> Modifier le type
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de type de contrat -->
+  <div class="card mt-4" id="editContractTypeFormCard" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier le type de contrat
+    </div>
+    <div class="card-body">
+      <form id="editContractTypeFormInline" method="post" action="{% url 'contract_type_update' 0 %}">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" value="contract_types">
+        <input type="hidden" name="type_id" id="edit_contract_type_id">
+        
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_contract_type_name" class="form-label">Nom du type <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="edit_contract_type_name" name="type_name" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_contract_type_code" class="form-label">Code <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="edit_contract_type_code" name="type_code" required>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label for="edit_contract_type_description" class="form-label">Description</label>
+          <textarea class="form-control" id="edit_contract_type_description" name="type_description" rows="3"></textarea>
+        </div>
+        
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" onclick="hideEditContractTypeForm()">
+            <i class="fas fa-times me-1"></i> Annuler
+          </button>
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i> Modifier le type
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de fournisseur -->
+  <div class="card mt-4" id="editProviderFormCard" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier le fournisseur
+    </div>
+    <div class="card-body">
+      <form id="editProviderFormInline" method="post" action="{% url 'provider_update' 0 %}">
+        {% csrf_token %}
+        <input type="hidden" name="active_tab" value="providers" id="edit_provider_active_tab">
+        <input type="hidden" name="provider_id" id="edit_provider_id">
+        
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_provider_name" class="form-label">Nom du fournisseur <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="edit_provider_name" name="provider_name" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_provider_email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="edit_provider_email" name="provider_email">
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_provider_phone" class="form-label">Téléphone</label>
+              <input type="tel" class="form-control" id="edit_provider_phone" name="provider_phone">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="edit_provider_address" class="form-label">Adresse</label>
+              <textarea class="form-control" id="edit_provider_address" name="provider_address" rows="3"></textarea>
+            </div>
+          </div>
+        </div>
+        
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" onclick="hideEditProviderForm()">
+            <i class="fas fa-times me-1"></i> Annuler
+          </button>
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i> Modifier le fournisseur
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- Modal Supprimer Marque -->
+  <div class="modal fade" id="modalDeleteMarque" tabindex="-1" aria-labelledby="modalDeleteMarqueLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="deleteMarqueForm" method="post" action="{% url 'marque_delete' 0 %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="marques">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalDeleteMarqueLabel">Confirmer la suppression</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer la marque : <strong id="delete_marque_nom"></strong> ?
+            </div>
+            <p class="text-danger mb-0">
+              <i class="fas fa-info-circle me-1"></i>
+              Cette action est irréversible.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times"></i>
+                <span class="d-none d-sm-inline ms-1">Annuler</span>
+              </button>
+              <button type="submit" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i>
+                <span class="d-none d-sm-inline ms-1">Supprimer</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nouveau Modèle -->
+  <div class="modal fade" id="modalModele" tabindex="-1" aria-labelledby="modalModeleLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" action="{% url 'modele_create' %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="modeles">
+          <div class="modal-header bg-gradient-primary text-white">
+            <h5 class="modal-title" id="modalModeleLabel">
+              <i class="fas fa-plus-circle me-2"></i>Ajouter un Modèle
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_marque_select" class="form-label fw-semibold">Marque <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                    <select class="form-select" id="marqueModeleSelect" name="marque_modele" required>
+                      <option value="">-- Choisir une marque --</option>
+                      {% for marque in marques %}
+                        <option value="{{ marque.id }}">{{ marque.nom }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_nom_modele" class="form-label fw-semibold">Nom du modèle <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-cog"></i></span>
+                    <input type="text" id="nomModeleInput" name="nom_modele" class="form-control" placeholder="Entrez le nom du modèle" required>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-2"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Modifier Modèle -->
+  <div class="modal fade" id="modalEditModele" tabindex="-1" aria-labelledby="modalEditModeleLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form id="editModeleForm" method="post" action="{% url 'modele_update' 0 %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="modeles">
+          <div class="modal-header bg-warning text-dark">
+            <h5 class="modal-title" id="modalEditModeleLabel">
+              <i class="fas fa-edit me-2"></i>Modifier le Modèle
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="edit_marque_select" class="form-label fw-semibold">Marque <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                    <select id="edit_marque_select" name="marque_modele" class="form-select" required>
+                      <option value="">-- Choisir une marque --</option>
+                      {% for marque in marques %}
+                        <option value="{{ marque.id }}">{{ marque.nom }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="edit_nom_modele" class="form-label fw-semibold">Nom du modèle <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-cog"></i></span>
+                    <input type="text" id="edit_nom_modele" name="nom_modele" class="form-control" placeholder="Entrez le nom du modèle" required>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-warning">
+              <i class="fas fa-edit me-2"></i>Mettre à jour
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Supprimer Modèle -->
+  <div class="modal fade" id="modalDeleteModele" tabindex="-1" aria-labelledby="modalDeleteModeleLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="deleteModeleForm" method="post" action="{% url 'modele_delete' 0 %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="modeles">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalDeleteModeleLabel">Confirmer la suppression</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer le modèle : <strong id="delete_modele_nom"></strong> ?
+            </div>
+            <p class="text-danger mb-0">
+              <i class="fas fa-info-circle me-1"></i>
+              Cette action est irréversible.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times"></i>
+                <span class="d-none d-sm-inline ms-1">Annuler</span>
+              </button>
+              <button type="submit" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i>
+                <span class="d-none d-sm-inline ms-1">Supprimer</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nouveau Type Entretien -->
+  <div class="modal fade" id="modalEntretienType" tabindex="-1" aria-labelledby="modalEntretienTypeLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" action="{% url 'entretien_type_create' %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="entretien_types">
+          <div class="modal-header bg-gradient-primary text-white">
+            <h5 class="modal-title" id="modalEntretienTypeLabel">
+              <i class="fas fa-plus-circle me-2"></i>Ajouter un Type d'Entretien
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_entretien_type_name" class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-tools"></i></span>
+                    <input type="text" id="id_entretien_type_name" name="entretien_type_name" class="form-control" placeholder="Entrez le nom du type d'entretien" required>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_entretien_type_active" class="form-label fw-semibold">Statut</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                    <div class="form-check mt-2 ms-3">
+                      <input type="checkbox" class="form-check-input" id="id_entretien_type_active" name="entretien_type_active" checked>
+                      <label class="form-check-label" for="id_entretien_type_active">Actif</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="id_entretien_type_description" class="form-label fw-semibold">Description</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                <textarea id="id_entretien_type_description" name="entretien_type_description" class="form-control" rows="3" placeholder="Entrez une description..."></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-2"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Modifier Type Entretien -->
+  <div class="modal fade" id="modalEditEntretienType" tabindex="-1" aria-labelledby="modalEditEntretienTypeLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form id="editEntretienTypeForm" method="post" action="{% url 'entretien_type_update' 0 %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="entretien_types">
+          <div class="modal-header bg-warning text-dark">
+            <h5 class="modal-title" id="modalEditEntretienTypeLabel">
+              <i class="fas fa-edit me-2"></i>Modifier Type d'Entretien
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="edit_entretien_type_name" class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-tools"></i></span>
+                    <input type="text" id="edit_entretien_type_name" name="entretien_type_name" class="form-control" placeholder="Entrez le nom du type d'entretien" required>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="edit_entretien_type_active" class="form-label fw-semibold">Statut</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-toggle-on"></i></span>
+                    <div class="form-check mt-2 ms-3">
+                      <input type="checkbox" class="form-check-input" id="edit_entretien_type_active" name="entretien_type_active">
+                      <label class="form-check-label" for="edit_entretien_type_active">Actif</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="edit_entretien_type_description" class="form-label fw-semibold">Description</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                <textarea id="edit_entretien_type_description" name="entretien_type_description" class="form-control" rows="3" placeholder="Entrez une description..."></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-warning">
+              <i class="fas fa-edit me-2"></i>Mettre à jour
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Supprimer Type Entretien -->
+  <div class="modal fade" id="modalDeleteEntretienType" tabindex="-1" aria-labelledby="modalDeleteEntretienTypeLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="deleteEntretienTypeForm" method="post" action="{% url 'entretien_type_delete' 0 %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="entretien_types">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalDeleteEntretienTypeLabel">Confirmer la suppression</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer le type d'entretien : <strong id="delete_entretien_type_nom"></strong> ?
+            </div>
+            <p class="text-danger mb-0">
+              <i class="fas fa-info-circle me-1"></i>
+              Cette action est irréversible.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times"></i>
+                <span class="d-none d-sm-inline ms-1">Annuler</span>
+              </button>
+              <button type="submit" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i>
+                <span class="d-none d-sm-inline ms-1">Supprimer</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nouveau Type de Contrat -->
+  <div class="modal fade" id="modalContractType" tabindex="-1" aria-labelledby="modalContractTypeLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" action="{% url 'contract_type_create' %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="contract_types">
+          <div class="modal-header bg-gradient-primary text-white">
+            <h5 class="modal-title" id="modalContractTypeLabel">
+              <i class="fas fa-plus-circle me-2"></i>Ajouter un Type de Contrat
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_contract_type_name" class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-file-contract"></i></span>
+                    <input type="text" id="id_contract_type_name" name="type_name" class="form-control" placeholder="Entrez le nom du type de contrat" required>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_contract_type_code" class="form-label fw-semibold">Code <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                    <input type="text" id="id_contract_type_code" name="type_code" class="form-control" placeholder="Entrez le code du type de contrat" required>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="id_contract_type_description" class="form-label fw-semibold">Description</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                <textarea id="id_contract_type_description" name="type_description" class="form-control" rows="3" placeholder="Entrez une description..."></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-2"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Modifier Type Contrat -->
+  <div class="modal fade" id="modalEditContractType" tabindex="-1" aria-labelledby="modalEditContractTypeLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form id="editContractTypeForm" method="post" action="{% url 'contract_type_update' 0 %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="contract_types">
+          <div class="modal-header bg-warning text-dark">
+            <h5 class="modal-title" id="modalEditContractTypeLabel">
+              <i class="fas fa-edit me-2"></i>Modifier le Type de Contrat
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="edit_contract_type_name" class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-file-contract"></i></span>
+                    <input type="text" id="edit_contract_type_name" name="type_name" class="form-control" required>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="edit_contract_type_code" class="form-label fw-semibold">Code <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                    <input type="text" id="edit_contract_type_code" name="type_code" class="form-control" required>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="edit_contract_type_description" class="form-label fw-semibold">Description</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                <textarea id="edit_contract_type_description" name="type_description" class="form-control" rows="3"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-warning">
+              <i class="fas fa-edit me-2"></i>Mettre à jour
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Supprimer Type Contrat -->
+  <div class="modal fade" id="modalDeleteContractType" tabindex="-1" aria-labelledby="modalDeleteContractTypeLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="deleteContractTypeForm" method="post" action="{% url 'contract_type_delete' 0 %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="contract_types">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalDeleteContractTypeLabel">Confirmer la suppression</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer le type de contrat : <strong id="delete_type_name"></strong> ?
+            </div>
+            <p class="text-danger mb-0">
+              <i class="fas fa-info-circle me-1"></i>
+              Cette action est irréversible.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times"></i>
+                <span class="d-none d-sm-inline ms-1">Annuler</span>
+              </button>
+              <button type="submit" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i>
+                <span class="d-none d-sm-inline ms-1">Supprimer</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nouveau Fournisseur -->
+  <div class="modal fade" id="modalProvider" tabindex="-1" aria-labelledby="modalProviderLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="post" action="{% url 'provider_create' %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="providers">
+          <div class="modal-header bg-gradient-primary text-white">
+            <h5 class="modal-title" id="modalProviderLabel">
+              <i class="fas fa-plus-circle me-2"></i>Ajouter un Fournisseur
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_provider_name" class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-building"></i></span>
+                    <input type="text" id="id_provider_name" name="provider_name" class="form-control" placeholder="Entrez le nom du fournisseur" required>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_provider_email" class="form-label fw-semibold">Email</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                    <input type="email" id="id_provider_email" name="provider_email" class="form-control" placeholder="Entrez l'email du fournisseur">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_provider_phone" class="form-label fw-semibold">Téléphone</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                    <input type="tel" id="id_provider_phone" name="provider_phone" class="form-control" placeholder="+33 1 23 45 67 89">
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_provider_address" class="form-label fw-semibold">Adresse</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                    <textarea id="id_provider_address" name="provider_address" class="form-control" rows="3" placeholder="Entrez l'adresse du fournisseur"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-2"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Modifier Fournisseur -->
+  <div class="modal fade" id="modalEditProvider" tabindex="-1" aria-labelledby="modalEditProviderLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form id="editProviderForm" method="post" action="{% url 'provider_update' 0 %}">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="providers">
+          <div class="modal-header bg-warning text-dark">
+            <h5 class="modal-title" id="modalEditProviderLabel">
+              <i class="fas fa-edit me-2"></i>Modifier le Fournisseur
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="edit_provider_name" class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-building"></i></span>
+                    <input type="text" id="edit_provider_name" name="provider_name" class="form-control" required>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="edit_provider_email" class="form-label fw-semibold">Email</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                    <input type="email" id="edit_provider_email" name="provider_email" class="form-control">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="edit_provider_phone" class="form-label fw-semibold">Téléphone</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                    <input type="text" id="edit_provider_phone" name="provider_phone" class="form-control">
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="edit_provider_address" class="form-label fw-semibold">Adresse</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                    <textarea id="edit_provider_address" name="provider_address" class="form-control" rows="3"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="submit" class="btn btn-warning">
+              <i class="fas fa-edit me-2"></i>Mettre à jour
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Supprimer Fournisseur -->
+  <div class="modal fade" id="modalDeleteProvider" tabindex="-1" aria-labelledby="modalDeleteProviderLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="deleteProviderForm" method="post" action="">
+          {% csrf_token %}
+          <input type="hidden" name="active_tab" value="providers">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalDeleteProviderLabel">Confirmer la suppression</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer le fournisseur : <strong id="delete_provider_name"></strong> ?
+            </div>
+            <p class="text-danger mb-0">
+              <i class="fas fa-info-circle me-1"></i>
+              Cette action est irréversible.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times"></i>
+                <span class="d-none d-sm-inline ms-1">Annuler</span>
+              </button>
+              <button type="submit" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i>
+                <span class="d-none d-sm-inline ms-1">Supprimer</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const URLS = {
+      marque: {
+        update: "{% url 'marque_update' 0 %}",
+        delete: "{% url 'marque_delete' 0 %}"
+      },
+      modele: {
+        update: "{% url 'modele_update' 0 %}",
+        delete: "{% url 'modele_delete' 0 %}"
+      },
+      entretienType: {
+        update: "{% url 'entretien_type_update' 0 %}",
+        delete: "{% url 'entretien_type_delete' 0 %}"
+      },
+      contractType: {
+        update: "{% url 'contract_type_update' 0 %}",
+        delete: "{% url 'contract_type_delete' 0 %}"
+      },
+      provider: {
+        update: "{% url 'provider_update' 0 %}",
+        delete: "{% url 'provider_delete' 0 %}"
+      }
+    };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des formulaires inline
+    // Marques
+    const toggleMarqueFormBtn = document.getElementById('toggleMarqueFormBtn');
+    const addMarqueFormCard = document.getElementById('addMarqueFormCard');
+    const cancelMarqueFormBtn = document.getElementById('cancelMarqueFormBtn');
+    const addMarqueForm = document.getElementById('addMarqueForm');
+
+    if (toggleMarqueFormBtn && addMarqueFormCard) {
+      toggleMarqueFormBtn.addEventListener('click', function() {
+        if (addMarqueFormCard.style.display === 'none') {
+          addMarqueFormCard.style.display = 'block';
+          addMarqueFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          toggleMarqueFormBtn.innerHTML = '<i class="fas fa-times"></i><span class="d-none d-lg-inline ms-1">Annuler</span>';
+          toggleMarqueFormBtn.classList.remove('btn-secondary');
+          toggleMarqueFormBtn.classList.add('btn-secondary');
+          // Hide edit when add is shown
+          const editCard = document.getElementById('editMarqueFormCard');
+          if (editCard) editCard.style.display = 'none';
+        } else {
+          addMarqueFormCard.style.display = 'none';
+          toggleMarqueFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouvelle Marque</span>';
+          toggleMarqueFormBtn.classList.remove('btn-secondary');
+          toggleMarqueFormBtn.classList.add('btn-secondary');
+          toggleMarqueFormBtn.style.backgroundColor = '#1e90ff';
+          toggleMarqueFormBtn.style.color = 'white';
+          addMarqueForm.reset();
+        }
+      });
+    }
+
+    if (cancelMarqueFormBtn && addMarqueFormCard && toggleMarqueFormBtn) {
+      cancelMarqueFormBtn.addEventListener('click', function() {
+        addMarqueFormCard.style.display = 'none';
+        toggleMarqueFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouvelle Marque</span>';
+        toggleMarqueFormBtn.classList.remove('btn-secondary');
+        toggleMarqueFormBtn.classList.add('btn-secondary');
+        toggleMarqueFormBtn.style.backgroundColor = '#1e90ff';
+        toggleMarqueFormBtn.style.color = 'white';
+        addMarqueForm.reset();
+      });
+    }
+
+    // Modèles
+    const toggleModeleFormBtn = document.getElementById('toggleModeleFormBtn');
+    const addModeleFormCard = document.getElementById('addModeleFormCard');
+    const cancelModeleFormBtn = document.getElementById('cancelModeleFormBtn');
+    const addModeleForm = document.getElementById('addModeleForm');
+
+    if (toggleModeleFormBtn && addModeleFormCard) {
+      toggleModeleFormBtn.addEventListener('click', function() {
+        if (addModeleFormCard.style.display === 'none') {
+          addModeleFormCard.style.display = 'block';
+          addModeleFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          toggleModeleFormBtn.innerHTML = '<i class="fas fa-times"></i><span class="d-none d-lg-inline ms-1">Annuler</span>';
+          toggleModeleFormBtn.classList.remove('btn-secondary');
+          toggleModeleFormBtn.classList.add('btn-secondary');
+          const editCard = document.getElementById('editModeleFormCard');
+          if (editCard) editCard.style.display = 'none';
+        } else {
+          addModeleFormCard.style.display = 'none';
+          toggleModeleFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Modèle</span>';
+          toggleModeleFormBtn.classList.remove('btn-secondary');
+          toggleModeleFormBtn.classList.add('btn-secondary');
+          toggleModeleFormBtn.style.backgroundColor = '#1e90ff';
+          toggleModeleFormBtn.style.color = 'white';
+          addModeleForm.reset();
+        }
+      });
+    }
+
+    if (cancelModeleFormBtn && addModeleFormCard && toggleModeleFormBtn) {
+      cancelModeleFormBtn.addEventListener('click', function() {
+        addModeleFormCard.style.display = 'none';
+        toggleModeleFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Modèle</span>';
+        toggleModeleFormBtn.classList.remove('btn-secondary');
+        toggleModeleFormBtn.classList.add('btn-secondary');
+        toggleModeleFormBtn.style.backgroundColor = '#1e90ff';
+        toggleModeleFormBtn.style.color = 'white';
+        addModeleForm.reset();
+      });
+    }
+
+    // Types d'Entretien
+    const toggleEntretienTypeFormBtn = document.getElementById('toggleEntretienTypeFormBtn');
+    const addEntretienTypeFormCard = document.getElementById('addEntretienTypeFormCard');
+    const cancelEntretienTypeFormBtn = document.getElementById('cancelEntretienTypeFormBtn');
+    const addEntretienTypeForm = document.getElementById('addEntretienTypeForm');
+
+    if (toggleEntretienTypeFormBtn && addEntretienTypeFormCard) {
+      toggleEntretienTypeFormBtn.addEventListener('click', function() {
+        if (addEntretienTypeFormCard.style.display === 'none') {
+          addEntretienTypeFormCard.style.display = 'block';
+          addEntretienTypeFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          toggleEntretienTypeFormBtn.innerHTML = '<i class="fas fa-times"></i><span class="d-none d-lg-inline ms-1">Annuler</span>';
+          toggleEntretienTypeFormBtn.classList.remove('btn-secondary');
+          toggleEntretienTypeFormBtn.classList.add('btn-secondary');
+          const editCard = document.getElementById('editEntretienTypeFormCard');
+          if (editCard) editCard.style.display = 'none';
+        } else {
+          addEntretienTypeFormCard.style.display = 'none';
+          toggleEntretienTypeFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Type</span>';
+          toggleEntretienTypeFormBtn.classList.remove('btn-secondary');
+          toggleEntretienTypeFormBtn.classList.add('btn-secondary');
+          toggleEntretienTypeFormBtn.style.backgroundColor = '#1e90ff';
+          toggleEntretienTypeFormBtn.style.color = 'white';
+          addEntretienTypeForm.reset();
+        }
+      });
+    }
+
+    if (cancelEntretienTypeFormBtn && addEntretienTypeFormCard && toggleEntretienTypeFormBtn) {
+      cancelEntretienTypeFormBtn.addEventListener('click', function() {
+        addEntretienTypeFormCard.style.display = 'none';
+        toggleEntretienTypeFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Type</span>';
+        toggleEntretienTypeFormBtn.classList.remove('btn-secondary');
+        toggleEntretienTypeFormBtn.classList.add('btn-secondary');
+        toggleEntretienTypeFormBtn.style.backgroundColor = '#1e90ff';
+        toggleEntretienTypeFormBtn.style.color = 'white';
+        addEntretienTypeForm.reset();
+      });
+    }
+
+    // Types de Contrat
+    const toggleContractTypeFormBtn = document.getElementById('toggleContractTypeFormBtn');
+    const addContractTypeFormCard = document.getElementById('addContractTypeFormCard');
+    const cancelContractTypeFormBtn = document.getElementById('cancelContractTypeFormBtn');
+    const addContractTypeForm = document.getElementById('addContractTypeForm');
+
+    if (toggleContractTypeFormBtn && addContractTypeFormCard) {
+      toggleContractTypeFormBtn.addEventListener('click', function() {
+        if (addContractTypeFormCard.style.display === 'none') {
+          addContractTypeFormCard.style.display = 'block';
+          addContractTypeFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          toggleContractTypeFormBtn.innerHTML = '<i class="fas fa-times"></i><span class="d-none d-lg-inline ms-1">Annuler</span>';
+          toggleContractTypeFormBtn.classList.remove('btn-secondary');
+          toggleContractTypeFormBtn.classList.add('btn-secondary');
+          const editCard = document.getElementById('editContractTypeFormCard');
+          if (editCard) editCard.style.display = 'none';
+        } else {
+          addContractTypeFormCard.style.display = 'none';
+          toggleContractTypeFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Type</span>';
+          toggleContractTypeFormBtn.classList.remove('btn-secondary');
+          toggleContractTypeFormBtn.classList.add('btn-secondary');
+          toggleContractTypeFormBtn.style.backgroundColor = '#1e90ff';
+          toggleContractTypeFormBtn.style.color = 'white';
+          addContractTypeForm.reset();
+        }
+      });
+    }
+
+    if (cancelContractTypeFormBtn && addContractTypeFormCard && toggleContractTypeFormBtn) {
+      cancelContractTypeFormBtn.addEventListener('click', function() {
+        addContractTypeFormCard.style.display = 'none';
+        toggleContractTypeFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Type</span>';
+        toggleContractTypeFormBtn.classList.remove('btn-secondary');
+        toggleContractTypeFormBtn.classList.add('btn-secondary');
+        toggleContractTypeFormBtn.style.backgroundColor = '#1e90ff';
+        toggleContractTypeFormBtn.style.color = 'white';
+        addContractTypeForm.reset();
+      });
+    }
+
+    // Fournisseurs
+    const toggleProviderFormBtn = document.getElementById('toggleProviderFormBtn');
+    const addProviderFormCard = document.getElementById('addProviderFormCard');
+    const cancelProviderFormBtn = document.getElementById('cancelProviderFormBtn');
+    const addProviderForm = document.getElementById('addProviderForm');
+
+    if (toggleProviderFormBtn && addProviderFormCard) {
+      toggleProviderFormBtn.addEventListener('click', function() {
+        if (addProviderFormCard.style.display === 'none') {
+          addProviderFormCard.style.display = 'block';
+          addProviderFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          toggleProviderFormBtn.innerHTML = '<i class="fas fa-times"></i><span class="d-none d-lg-inline ms-1">Annuler</span>';
+          toggleProviderFormBtn.classList.remove('btn-secondary');
+          toggleProviderFormBtn.classList.add('btn-secondary');
+          const editCard = document.getElementById('editProviderFormCard');
+          if (editCard) editCard.style.display = 'none';
+        } else {
+          addProviderFormCard.style.display = 'none';
+          toggleProviderFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Fournisseur</span>';
+          toggleProviderFormBtn.classList.remove('btn-secondary');
+          toggleProviderFormBtn.classList.add('btn-secondary');
+          toggleProviderFormBtn.style.backgroundColor = '#1e90ff';
+          toggleProviderFormBtn.style.color = 'white';
+          addProviderForm.reset();
+        }
+      });
+    }
+
+    if (cancelProviderFormBtn && addProviderFormCard && toggleProviderFormBtn) {
+      cancelProviderFormBtn.addEventListener('click', function() {
+        addProviderFormCard.style.display = 'none';
+        toggleProviderFormBtn.innerHTML = '<i class="fas fa-plus"></i><span class="d-none d-lg-inline ms-1">Nouveau Fournisseur</span>';
+        toggleProviderFormBtn.classList.remove('btn-secondary');
+        toggleProviderFormBtn.classList.add('btn-secondary');
+        toggleProviderFormBtn.style.backgroundColor = '#1e90ff';
+        toggleProviderFormBtn.style.color = 'white';
+        addProviderForm.reset();
+      });
+    }
+
+    // Function to get active tab from URL or localStorage
+    function getActiveTab() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlTab = urlParams.get('active_tab');
+      
+      if (urlTab) {
+        // Save to localStorage for persistence
+        localStorage.setItem('activeConfigTab', urlTab);
+        return urlTab;
+      }
+      
+      // Fallback to localStorage
+      return localStorage.getItem('activeConfigTab') || 'marques';
+    }
+
+    // Function to show specific tab
+    function showTab(tabName) {
+      const tabButton = document.querySelector(`button[data-bs-target="#${tabName}-tab"]`);
+      const tabPane = document.getElementById(`${tabName}-tab`);
+      
+      if (tabButton && tabPane) {
+        // Remove active classes from all tabs
+        document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+          pane.classList.remove('show', 'active');
+        });
+        
+        // Activate the target tab
+        tabButton.classList.add('active');
+        tabPane.classList.add('show', 'active');
+        
+        // Save to localStorage
+        localStorage.setItem('activeConfigTab', tabName);
+      }
+    }
+
+    // Helper: show only the add form matching a tab
+    function showOnlyFormForTab(tabName) {
+      const formByTab = {
+        'marques': 'addMarqueFormCard',
+        'modeles': 'addModeleFormCard',
+        'entretien_types': 'addEntretienTypeFormCard',
+        'contract_types': 'addContractTypeFormCard',
+        'providers': 'addProviderFormCard'
+      };
+      // Hide all add forms first
+      document.querySelectorAll('[id$="FormCard"]').forEach(card => { card.style.display = 'none'; });
+      // Show the one for the active tab
+      const targetId = formByTab[tabName];
+      if (targetId) {
+        const el = document.getElementById(targetId);
+        if (el) el.style.display = 'block';
+      }
+    }
+
+    // Initialize tab on page load and show its corresponding form
+    const activeTab = getActiveTab();
+    showTab(activeTab);
+    showOnlyFormForTab(activeTab);
+
+    // Add event listeners to all tab buttons
+    document.querySelectorAll('.nav-link[data-bs-target]').forEach(button => {
+      button.addEventListener('click', function() {
+        const target = this.getAttribute('data-bs-target');
+        const tabName = target.replace('#', '').replace('-tab', '');
+        localStorage.setItem('activeConfigTab', tabName);
+        
+        // Cacher tous les formulaires d'ajout puis afficher uniquement celui de l'onglet actif
+        const allFormCards = document.querySelectorAll('[id$="FormCard"]');
+        allFormCards.forEach(card => { card.style.display = 'none'; });
+        
+        // Remettre tous les boutons "Nouveau" en état initial
+        const allToggleButtons = document.querySelectorAll('[id^="toggle"][id$="FormBtn"]');
+        allToggleButtons.forEach(btn => {
+          const originalText = btn.getAttribute('data-original-text') || btn.innerHTML;
+          btn.innerHTML = originalText;
+          btn.classList.remove('btn-secondary');
+          btn.classList.add('btn-secondary');
+          btn.style.backgroundColor = '#1e90ff';
+          btn.style.color = 'white';
+        });
+        // Afficher le formulaire lié à l'onglet sélectionné
+        showOnlyFormForTab(tabName);
+      });
+    });
+
+    // Items per page selectors
+    const itemsPerPageSelects = {
+      'marques': document.getElementById('marques-items-per-page'),
+      'modeles': document.getElementById('modeles-items-per-page'),
+      'entretien_types': document.getElementById('entretien-types-items-per-page'),
+      'contract_types': document.getElementById('contract-types-items-per-page'),
+      'providers': document.getElementById('providers-items-per-page')
+    };
+
+    Object.keys(itemsPerPageSelects).forEach(tabName => {
+      const select = itemsPerPageSelects[tabName];
+      if (select) {
+        select.addEventListener('change', function() {
+          const urlParams = new URLSearchParams(window.location.search);
+          const activeTab = urlParams.get('active_tab') || 'marques';
+          
+          if (activeTab === tabName) {
+            urlParams.set(`${tabName}_per_page`, this.value);
+            urlParams.set(`${tabName}_page`, '1');
+            window.location.search = urlParams.toString();
+          }
+        });
+      }
+    });
+
+    // Update all form hidden inputs to include active tab
+    function updateActiveTabInputs() {
+      const currentTab = localStorage.getItem('activeConfigTab') || 'marques';
+      document.querySelectorAll('input[name="active_tab"]').forEach(input => {
+        input.value = currentTab;
+      });
+    }
+
+    // Call updateActiveTabInputs when modals are shown
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('show.bs.modal', updateActiveTabInputs);
+    });
+
+    // Update active tab inputs initially
+    updateActiveTabInputs();
+
+    // Helper function to get Bootstrap modal instance
+    function getModal(modalId) {
+      return bootstrap.Modal.getInstance(document.getElementById(modalId)) || new bootstrap.Modal(document.getElementById(modalId));
+    }
+
+    // Marque Modals
+    const modalEditMarque = document.getElementById('modalEditMarque');
+    if (modalEditMarque) {
+      modalEditMarque.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const marqueId = button.getAttribute('data-bs-id');
+        const marqueNom = button.getAttribute('data-bs-name');
+        const marqueLogo = button.getAttribute('data-bs-logo');
+
+        const form = document.getElementById('editMarqueForm');
+        form.action = URLS.marque.update.replace(/0(?=\/update)/, marqueId);
+        
+        document.getElementById('edit_nom_marque').value = marqueNom || '';
+        
+        const logoContainer = document.getElementById('current_logo_container');
+        if (marqueLogo) {
+          logoContainer.innerHTML = `<img src="${marqueLogo}" alt="${marqueNom}" style="max-height: 50px;">`;
+        } else {
+          logoContainer.innerHTML = '<span class="text-muted">Aucun logo</span>';
+        }
+        document.getElementById('remove_logo').checked = false;
+      });
+    }
+
+    const modalDeleteMarque = document.getElementById('modalDeleteMarque');
+    if (modalDeleteMarque) {
+      modalDeleteMarque.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const marqueId = button.getAttribute('data-marque-id');
+        const marqueNom = button.getAttribute('data-marque-nom');
+
+        const form = document.getElementById('deleteMarqueForm');
+        // Replace the ID in the URL using regex to handle all cases
+        form.action = URLS.marque.delete.replace(/0(?=\/delete)/, marqueId);
+        
+        document.getElementById('delete_marque_nom').textContent = marqueNom || '';
+      });
+    }
+
+    // Modele Modals
+    const modalEditModele = document.getElementById('modalEditModele');
+    if (modalEditModele) {
+      modalEditModele.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const modeleId = button.getAttribute('data-bs-id');
+        const modeleNom = button.getAttribute('data-bs-name');
+        const marqueId = button.getAttribute('data-bs-marque-id');
+
+        console.log('Editing Modele - ID:', modeleId, 'Nom:', modeleNom, 'Marque ID:', marqueId);
+
+        const form = document.getElementById('editModeleForm');
+        form.action = URLS.modele.update.replace(/0(?=\/update)/, modeleId);
+        
+        const nomInput = document.getElementById('edit_nom_modele');
+        const marqueSelect = document.getElementById('edit_marque_select');
+
+        console.log('Nom input field:', nomInput);
+        console.log('Marque select field:', marqueSelect);
+
+        if (nomInput) {
+          nomInput.value = modeleNom || '';
+        }
+        if (marqueSelect) {
+          marqueSelect.value = marqueId || '';
+        }
+      });
+    }
+
+    const modalDeleteModele = document.getElementById('modalDeleteModele');
+    if (modalDeleteModele) {
+      modalDeleteModele.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const modeleId = button.getAttribute('data-modele-id');
+        const modeleNom = button.getAttribute('data-modele-nom');
+
+        const form = document.getElementById('deleteModeleForm');
+        form.action = URLS.modele.delete.replace(/0(?=\/delete)/, modeleId);
+        
+        document.getElementById('delete_modele_nom').textContent = modeleNom || '';
+      });
+    }
+
+    // Entretien Type Modals
+    const modalEditEntretienType = document.getElementById('modalEditEntretienType');
+    if (modalEditEntretienType) {
+      modalEditEntretienType.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        console.log('Edit button clicked, all data attributes:', {
+          id: button.getAttribute('data-bs-type-id'),
+          nom: button.getAttribute('data-bs-type-nom'),
+          description: button.getAttribute('data-bs-type-description'),
+          isActive: button.getAttribute('data-bs-type-is-active')
+        });
+        
+        const typeId = button.getAttribute('data-bs-type-id');
+        const typeNom = button.getAttribute('data-bs-type-nom');
+        const typeDescription = button.getAttribute('data-bs-type-description');
+        const isActive = button.getAttribute('data-bs-type-is-active') === 'true';
+
+        console.log('Editing Entretien Type - ID:', typeId, 'Nom:', typeNom, 'Description:', typeDescription, 'Active:', isActive);
+
+        const form = document.getElementById('editEntretienTypeForm');
+        if (!form) {
+          console.error('Form with ID editEntretienTypeForm not found!');
+          return;
+        }
+        
+        form.action = URLS.entretienType.update.replace(/0(?=\/update)/, typeId);
+        
+        // Update form fields if they exist
+        const nameField = document.getElementById('edit_entretien_type_name');
+        const descField = document.getElementById('edit_entretien_type_description');
+        const activeField = document.getElementById('edit_entretien_type_active');
+        
+        console.log('Form fields found:', {
+          nameField: nameField ? 'Found' : 'Not found',
+          descField: descField ? 'Found' : 'Not found',
+          activeField: activeField ? 'Found' : 'Not found'
+        });
+        
+        if (nameField) nameField.value = typeNom || '';
+        if (descField) descField.value = typeDescription || '';
+        if (activeField) activeField.checked = isActive;
+      });
+    }
+
+    const modalDeleteEntretienType = document.getElementById('modalDeleteEntretienType');
+    if (modalDeleteEntretienType) {
+      modalDeleteEntretienType.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const typeId = button.getAttribute('data-bs-type-id');
+        const typeNom = button.getAttribute('data-bs-type-nom');
+
+        const form = document.getElementById('deleteEntretienTypeForm');
+        form.action = URLS.entretienType.delete.replace(/0(?=\/delete)/, typeId);
+        
+        document.getElementById('delete_entretien_type_nom').textContent = typeNom || '';
+      });
+    }
+
+    // Contract Type Modals
+    const modalEditContractType = document.getElementById('modalEditContractType');
+    if (modalEditContractType) {
+      modalEditContractType.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const typeId = button.getAttribute('data-bs-id');
+        const typeName = button.getAttribute('data-bs-name');
+        const typeCode = button.getAttribute('data-bs-code');
+        const typeDescription = button.getAttribute('data-bs-description');
+
+        const form = document.getElementById('editContractTypeForm');
+        form.action = URLS.contractType.update.replace(/0(?=\/update)/, typeId);
+        
+        document.getElementById('edit_contract_type_name').value = typeName || '';
+        document.getElementById('edit_contract_type_code').value = typeCode || '';
+        document.getElementById('edit_contract_type_description').value = typeDescription || '';
+      });
+    }
+
+    const modalDeleteContractType = document.getElementById('modalDeleteContractType');
+    if (modalDeleteContractType) {
+      modalDeleteContractType.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const typeId = button.getAttribute('data-bs-id');
+        const typeName = button.getAttribute('data-bs-name');
+
+        const form = document.getElementById('deleteContractTypeForm');
+        form.action = URLS.contractType.delete.replace(/0(?=\/delete)/, typeId);
+        
+        document.getElementById('delete_type_name').textContent = typeName || '';
+      });
+    }
+
+    // Provider Modals
+    const modalEditProvider = document.getElementById('modalEditProvider');
+    if (modalEditProvider) {
+      modalEditProvider.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const providerId = button.getAttribute('data-bs-id');
+      const providerName = button.getAttribute('data-bs-name');
+      const providerEmail = button.getAttribute('data-bs-email');
+      const providerPhone = button.getAttribute('data-bs-phone');
+      const providerAddress = button.getAttribute('data-bs-address');
+
+      const form = document.getElementById('editProviderForm');
+      form.action = URLS.provider.update.replace(/0(?=\/update)/, providerId);
+      
+      document.getElementById('edit_provider_name').value = providerName || '';
+      document.getElementById('edit_provider_email').value = providerEmail || '';
+      document.getElementById('edit_provider_phone').value = providerPhone || '';
+      document.getElementById('edit_provider_address').value = providerAddress || '';
+      });
+    }
+
+    const modalDeleteProvider = document.getElementById('modalDeleteProvider');
+    if (modalDeleteProvider) {
+      modalDeleteProvider.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const providerId = button.getAttribute('data-bs-id');
+      const providerName = button.getAttribute('data-bs-name');
+
+      const form = document.getElementById('deleteProviderForm');
+      form.action = URLS.provider.delete.replace(/0(?=\/delete)/, providerId);
+      
+      document.getElementById('delete_provider_name').textContent = providerName || '';
+      });
+    }
+
+    // Search for Types Entretien
+    const searchEntretienType = document.getElementById('searchEntretienType');
+    if (searchEntretienType) {
+      searchEntretienType.addEventListener('input', function() {
+        const searchText = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#entretienTypesTable tr');
+        
+        rows.forEach(row => {
+          const nameCell = row.querySelector('td:nth-child(1)');
+          const descCell = row.querySelector('td:nth-child(2)');
+          const statusCell = row.querySelector('td:nth-child(3)');
+          
+          if (nameCell && descCell && statusCell) {
+            const name = nameCell.textContent.toLowerCase();
+            const desc = descCell.textContent.toLowerCase();
+            const status = statusCell.textContent.toLowerCase();
+            
+            row.style.display = (name.includes(searchText) || desc.includes(searchText) || status.includes(searchText)) 
+              ? '' : 'none';
+          }
+        });
+      });
+    }
+
+    // Search for Contract Types
+    const searchContractType = document.getElementById('searchContractType');
+    if (searchContractType) {
+      searchContractType.addEventListener('input', function() {
+        const searchText = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#contractTypesTable tr');
+        
+        rows.forEach(row => {
+          const nameCell = row.querySelector('td:nth-child(1)');
+          const codeCell = row.querySelector('td:nth-child(2)');
+          const descCell = row.querySelector('td:nth-child(3)');
+          
+          if (nameCell && codeCell && descCell) {
+            const name = nameCell.textContent.toLowerCase();
+            const code = codeCell.textContent.toLowerCase();
+            const desc = descCell.textContent.toLowerCase();
+            
+            row.style.display = (name.includes(searchText) || code.includes(searchText) || desc.includes(searchText)) 
+              ? '' : 'none';
+          }
+        });
+      });
+    }
+
+    // Search functionality
+    const searchInputs = {
+      'marques': document.getElementById('searchMarque'),
+      'modeles': document.getElementById('searchModele'),
+      'entretien_types': document.getElementById('searchEntretienType'),
+      'contract_types': document.getElementById('searchContractType'),
+      'providers': document.getElementById('searchProvider')
+    };
+
+    Object.keys(searchInputs).forEach(tabName => {
+      const input = searchInputs[tabName];
+      if (input) {
+        input.addEventListener('input', function() {
+          const searchText = this.value.toLowerCase();
+          const rows = document.querySelectorAll(`#${tabName}Table tr`);
+          
+          rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            let shouldShow = false;
+            
+            for (let i = 0; i < cells.length - 1; i++) {
+              const cellText = cells[i].textContent.toLowerCase();
+              if (cellText.includes(searchText)) {
+                shouldShow = true;
+                break;
+              }
+            }
+            
+            row.style.display = shouldShow ? '' : 'none';
+          });
+        });
+      }
+    });
+
+    // Gestion des cases à cocher pour les Marques
+    const selectAllMarquesCheckbox = document.getElementById('selectAllMarques');
+    const marquesRowCheckboxes = document.querySelectorAll('.row-check-marques');
+
+    if (selectAllMarquesCheckbox) {
+      selectAllMarquesCheckbox.addEventListener('change', function() {
+        marquesRowCheckboxes.forEach(checkbox => {
+          checkbox.checked = this.checked;
+        });
+      });
+    }
+
+    // Mise à jour du select all pour les Marques quand les checkboxes individuelles changent
+    marquesRowCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const allChecked = Array.from(marquesRowCheckboxes).every(cb => cb.checked);
+        const someChecked = Array.from(marquesRowCheckboxes).some(cb => cb.checked);
+        
+        selectAllMarquesCheckbox.checked = allChecked;
+        selectAllMarquesCheckbox.indeterminate = someChecked && !allChecked;
+      });
+    });
+
+    // Gestion des cases à cocher pour les Modèles
+    const selectAllModelesCheckbox = document.getElementById('selectAllModeles');
+    const modelesRowCheckboxes = document.querySelectorAll('.row-check-modeles');
+
+    if (selectAllModelesCheckbox) {
+      selectAllModelesCheckbox.addEventListener('change', function() {
+        modelesRowCheckboxes.forEach(checkbox => {
+          checkbox.checked = this.checked;
+        });
+      });
+    }
+
+    // Mise à jour du select all pour les Modèles quand les checkboxes individuelles changent
+    modelesRowCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const allChecked = Array.from(modelesRowCheckboxes).every(cb => cb.checked);
+        const someChecked = Array.from(modelesRowCheckboxes).some(cb => cb.checked);
+        
+        selectAllModelesCheckbox.checked = allChecked;
+        selectAllModelesCheckbox.indeterminate = someChecked && !allChecked;
+      });
+    });
+
+    // Gestion des cases à cocher pour les Types Entretien
+    const selectAllEntretienTypesCheckbox = document.getElementById('selectAllEntretienTypes');
+    const entretienTypesRowCheckboxes = document.querySelectorAll('.row-check-entretien-types');
+
+    if (selectAllEntretienTypesCheckbox) {
+      selectAllEntretienTypesCheckbox.addEventListener('change', function() {
+        entretienTypesRowCheckboxes.forEach(checkbox => {
+          checkbox.checked = this.checked;
+        });
+      });
+    }
+
+    // Mise à jour du select all pour les Types Entretien quand les checkboxes individuelles changent
+    entretienTypesRowCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const allChecked = Array.from(entretienTypesRowCheckboxes).every(cb => cb.checked);
+        const someChecked = Array.from(entretienTypesRowCheckboxes).some(cb => cb.checked);
+        
+        selectAllEntretienTypesCheckbox.checked = allChecked;
+        selectAllEntretienTypesCheckbox.indeterminate = someChecked && !allChecked;
+      });
+    });
+
+    // Gestion des cases à cocher pour les Types de Contrat
+    const selectAllContractTypesCheckbox = document.getElementById('selectAllContractTypes');
+    const contractTypesRowCheckboxes = document.querySelectorAll('.row-check-contract-types');
+
+    if (selectAllContractTypesCheckbox) {
+      selectAllContractTypesCheckbox.addEventListener('change', function() {
+        contractTypesRowCheckboxes.forEach(checkbox => {
+          checkbox.checked = this.checked;
+        });
+      });
+    }
+
+    // Mise à jour du select all pour les Types de Contrat quand les checkboxes individuelles changent
+    contractTypesRowCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const allChecked = Array.from(contractTypesRowCheckboxes).every(cb => cb.checked);
+        const someChecked = Array.from(contractTypesRowCheckboxes).some(cb => cb.checked);
+        
+        selectAllContractTypesCheckbox.checked = allChecked;
+        selectAllContractTypesCheckbox.indeterminate = someChecked && !allChecked;
+      });
+    });
+
+    // Gestion des cases à cocher pour les Fournisseurs
+    const selectAllProvidersCheckbox = document.getElementById('selectAllProviders');
+    const providersRowCheckboxes = document.querySelectorAll('.row-check-providers');
+
+    if (selectAllProvidersCheckbox) {
+      selectAllProvidersCheckbox.addEventListener('change', function() {
+        providersRowCheckboxes.forEach(checkbox => {
+          checkbox.checked = this.checked;
+        });
+      });
+    }
+
+    // Mise à jour du select all pour les Fournisseurs quand les checkboxes individuelles changent
+    providersRowCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const allChecked = Array.from(providersRowCheckboxes).every(cb => cb.checked);
+        const someChecked = Array.from(providersRowCheckboxes).some(cb => cb.checked);
+        
+        selectAllProvidersCheckbox.checked = allChecked;
+        selectAllProvidersCheckbox.indeterminate = someChecked && !allChecked;
+      });
+    });
+
+    // Filtrage côté client pour les Modèles
+    const searchModeleInput = document.getElementById('searchModele');
+    const searchMarqueModelesSelect = document.getElementById('search-marque-modeles');
+    const modelesTableRows = document.querySelectorAll('#modelesTable tbody tr.main-row');
+
+    function filterModelesTable() {
+      const searchText = searchModeleInput.value.trim().toLowerCase();
+      const selectedMarque = searchMarqueModelesSelect.value;
+
+      console.log('Filtrage Modèles - Recherche:', searchText, 'Marque:', selectedMarque);
+
+      modelesTableRows.forEach(row => {
+        const nomCell = row.cells[2]?.textContent.toLowerCase() || '';
+        const marqueCell = row.cells[3]?.textContent.toLowerCase() || '';
+        const marqueId = row.querySelector('[data-marque-id]')?.getAttribute('data-marque-id') || '';
+
+        const matchesSearch = nomCell.includes(searchText) || marqueCell.includes(searchText);
+        const matchesMarque = selectedMarque === '' || marqueId === selectedMarque;
+
+        console.log('Ligne Modèle:', nomCell, 'Marque ID:', marqueId, 'Match:', matchesSearch && matchesMarque);
+
+        if (matchesSearch && matchesMarque) {
+          row.style.display = '';
+          // Afficher aussi la ligne de détails si elle existe
+          const detailsRow = row.nextElementSibling;
+          if (detailsRow && detailsRow.classList.contains('collapse')) {
+            detailsRow.style.display = '';
+          }
+        } else {
+          row.style.display = 'none';
+          // Masquer aussi la ligne de détails si elle existe
+          const detailsRow = row.nextElementSibling;
+          if (detailsRow && detailsRow.classList.contains('collapse')) {
+            detailsRow.style.display = 'none';
+          }
+        }
+      });
+    }
+
+    if (searchModeleInput) {
+      searchModeleInput.addEventListener('input', filterModelesTable);
+    }
+    if (searchMarqueModelesSelect) {
+      searchMarqueModelesSelect.addEventListener('change', filterModelesTable);
+    }
+
+    // Filtrage côté client pour les Types d'Entretien
+    const searchEntretienTypeInput = document.getElementById('searchEntretienType');
+    const searchStatutEntretienTypesSelect = document.getElementById('search-statut-entretien-types');
+    const entretienTypesTableRows = document.querySelectorAll('#entretienTypesTable tbody tr.main-row');
+
+    function filterEntretienTypesTable() {
+      const searchText = searchEntretienTypeInput.value.trim().toLowerCase();
+      const selectedStatut = searchStatutEntretienTypesSelect.value;
+
+      console.log('Filtrage Types Entretien - Recherche:', searchText, 'Statut:', selectedStatut);
+
+      entretienTypesTableRows.forEach(row => {
+        const nomCell = row.cells[1]?.textContent.toLowerCase() || '';
+        const descCell = row.cells[2]?.textContent.toLowerCase() || '';
+        const statutCell = row.cells[3]?.textContent.toLowerCase() || '';
+
+        const matchesSearch = nomCell.includes(searchText) || descCell.includes(searchText);
+        const matchesStatut = selectedStatut === '' || statutCell.trim() === selectedStatut.toLowerCase();
+
+        console.log('Ligne Type Entretien:', nomCell, 'Statut:', statutCell, 'Statut sélectionné:', selectedStatut.toLowerCase(), 'Match Statut:', matchesStatut);
+
+        if (matchesSearch && matchesStatut) {
+          row.style.display = '';
+          // Afficher aussi la ligne de détails si elle existe
+          const detailsRow = row.nextElementSibling;
+          if (detailsRow && detailsRow.classList.contains('collapse')) {
+            detailsRow.style.display = '';
+          }
+        } else {
+          row.style.display = 'none';
+          // Masquer aussi la ligne de détails si elle existe
+          const detailsRow = row.nextElementSibling;
+          if (detailsRow && detailsRow.classList.contains('collapse')) {
+            detailsRow.style.display = 'none';
+          }
+        }
+      });
+    }
+
+    if (searchEntretienTypeInput) {
+      searchEntretienTypeInput.addEventListener('input', filterEntretienTypesTable);
+    }
+    if (searchStatutEntretienTypesSelect) {
+      searchStatutEntretienTypesSelect.addEventListener('change', filterEntretienTypesTable);
+    }
+  });
+
+  // Fonctions pour gérer les formulaires de modification en bas de page
+  
+  // Fonctions pour les marques
+  function hideEditMarqueForm() {
+    document.getElementById('editMarqueFormCard').style.display = 'none';
+    const addCard = document.getElementById('addMarqueFormCard');
+    if (addCard) addCard.style.display = 'block';
+  }
+
+  function showEditMarqueForm(marqueId, marqueNom, marqueLogo) {
+    // Remplir les champs
+    document.getElementById('edit_marque_id').value = marqueId;
+    document.getElementById('edit_marque_nom').value = marqueNom;
+    
+    // Mettre à jour l'action du formulaire
+    const form = document.getElementById('editMarqueFormInline');
+    // Build correct URL using pattern /.../0/update/ → replace the 0
+    const baseUrl = URLS.marque.update; // e.g. /parcauto/configuration/marque/0/update/
+    form.action = baseUrl.replace(/0(?=\/update)/, marqueId);
+    
+    // Afficher le formulaire
+    const addCard = document.getElementById('addMarqueFormCard');
+    if (addCard) addCard.style.display = 'none';
+    document.getElementById('editMarqueFormCard').style.display = 'block';
+    document.getElementById('editMarqueFormCard').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Fonctions pour les modèles
+  function hideEditModeleForm() {
+    document.getElementById('editModeleFormCard').style.display = 'none';
+    const addCard = document.getElementById('addModeleFormCard');
+    if (addCard) addCard.style.display = 'block';
+  }
+
+  function showEditModeleForm(modeleId, modeleNom, marqueId, marqueNom) {
+    // Remplir les champs
+    document.getElementById('edit_modele_id').value = modeleId;
+    document.getElementById('edit_modele_nom').value = modeleNom;
+    document.getElementById('edit_modele_marque').value = marqueId;
+    
+    // Mettre à jour l'action du formulaire
+    const form = document.getElementById('editModeleFormInline');
+    const baseUrl = URLS.modele.update; // /.../0/update/
+    form.action = baseUrl.replace(/0(?=\/update)/, modeleId);
+    
+    // Afficher le formulaire
+    const addCard = document.getElementById('addModeleFormCard');
+    if (addCard) addCard.style.display = 'none';
+    document.getElementById('editModeleFormCard').style.display = 'block';
+    document.getElementById('editModeleFormCard').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Fonctions pour les types d'entretien
+  function hideEditEntretienTypeForm() {
+    document.getElementById('editEntretienTypeFormCard').style.display = 'none';
+    const addCard = document.getElementById('addEntretienTypeFormCard');
+    if (addCard) addCard.style.display = 'block';
+  }
+
+  function showEditEntretienTypeForm(typeId, typeNom, typeDescription, typeActive) {
+    // Remplir les champs
+    document.getElementById('edit_entretien_type_id').value = typeId;
+    document.getElementById('edit_entretien_type_nom').value = typeNom;
+    document.getElementById('edit_entretien_type_description').value = typeDescription;
+    document.getElementById('edit_entretien_type_active').checked = typeActive === 'true' || typeActive === '1';
+    
+    // Mettre à jour l'action du formulaire
+    const form = document.getElementById('editEntretienTypeFormInline');
+    const baseUrl = URLS.entretienType.update; // /.../0/update/
+    form.action = baseUrl.replace(/0(?=\/update)/, typeId);
+    
+    // Afficher le formulaire
+    const addCard = document.getElementById('addEntretienTypeFormCard');
+    if (addCard) addCard.style.display = 'none';
+    document.getElementById('editEntretienTypeFormCard').style.display = 'block';
+    document.getElementById('editEntretienTypeFormCard').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Fonctions pour les types de contrat
+  function hideEditContractTypeForm() {
+    document.getElementById('editContractTypeFormCard').style.display = 'none';
+    const addCard = document.getElementById('addContractTypeFormCard');
+    if (addCard) addCard.style.display = 'block';
+  }
+
+  function showEditContractTypeForm(typeId, typeName, typeCode, typeDescription) {
+    // Remplir les champs
+    document.getElementById('edit_contract_type_id').value = typeId;
+    document.getElementById('edit_contract_type_name').value = typeName;
+    document.getElementById('edit_contract_type_code').value = typeCode;
+    document.getElementById('edit_contract_type_description').value = typeDescription;
+    
+    // Mettre à jour l'action du formulaire
+    const form = document.getElementById('editContractTypeFormInline');
+    const baseUrl = URLS.contractType.update; // /.../0/update/
+    form.action = baseUrl.replace(/0(?=\/update)/, typeId);
+    
+    // Afficher le formulaire
+    const addCard = document.getElementById('addContractTypeFormCard');
+    if (addCard) addCard.style.display = 'none';
+    document.getElementById('editContractTypeFormCard').style.display = 'block';
+    document.getElementById('editContractTypeFormCard').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Fonctions pour les fournisseurs
+  function hideEditProviderForm() {
+    const editCard = document.getElementById('editProviderFormCard');
+    if (editCard) {
+      editCard.style.display = 'none';
+    }
+    
+    const addCard = document.getElementById('addProviderFormCard');
+    if (addCard) {
+      addCard.style.display = 'block';
+    }
+    
+    // Réinitialiser le formulaire
+    const form = document.getElementById('editProviderFormInline');
+    if (form) {
+      form.reset();
+    }
+  }
+
+  function showEditProviderForm(providerId, providerName, providerEmail, providerPhone, providerAddress) {
+    console.log('Editing provider with ID:', providerId, 'Name:', providerName);
+    
+    // Remplir les champs du formulaire
+    document.getElementById('edit_provider_id').value = providerId;
+    document.getElementById('edit_provider_name').value = providerName || '';
+    document.getElementById('edit_provider_email').value = providerEmail || '';
+    document.getElementById('edit_provider_phone').value = providerPhone || '';
+    document.getElementById('edit_provider_address').value = providerAddress || '';
+    
+    // Construire la nouvelle URL directement
+    const form = document.getElementById('editProviderFormInline');
+    const baseUrl = '{% url "provider_update" 0 %}';
+    const newUrl = baseUrl.replace(/0(?=\/update)/, providerId);
+    form.action = newUrl;
+    
+    console.log('Form action set to:', newUrl);
+    
+    // S'assurer qu'on est sur l'onglet providers
+    const providersTab = document.querySelector('button[data-bs-target="#providers-tab"]');
+    if (providersTab) {
+      providersTab.click();
+    }
+    
+    // Mettre à jour l'onglet actif dans le formulaire
+    const activeTabInput = document.getElementById('edit_provider_active_tab');
+    if (activeTabInput) {
+      activeTabInput.value = 'providers';
+    }
+    
+    // Afficher le formulaire de modification et masquer le formulaire d'ajout
+    const addCard = document.getElementById('addProviderFormCard');
+    if (addCard) {
+      addCard.style.display = 'none';
+    }
+    
+    const editCard = document.getElementById('editProviderFormCard');
+    if (editCard) {
+      editCard.style.display = 'block';
+      editCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+  </script>
+
+</div>
+
+{% endblock %}

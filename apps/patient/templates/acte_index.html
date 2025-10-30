@@ -1,0 +1,505 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Actes{% endblock %}
+{% block menu %}
+{% include "patient_menu.html" %}
+{% endblock %}
+{% block content %}
+
+<div class="content">
+  <!-- Alerts Section - Utilisation des composants standards -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Main Content Card -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-procedures me-2"></i>
+      Liste des Actes
+    </div>
+    <div class="card-body">
+      <!-- Search Bar Component - Utilisation du composant standard -->
+      <form method="get" id="search-form" class="mb-4">
+        <div class="row g-2">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+            <div class="input-group">
+              
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" 
+                     name="q" 
+                     id="search-title" 
+                     class="form-control border-primary" 
+                     placeholder="Rechercher par libellé..." 
+                     value="{{ query|default:'' }}">
+            </div>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm()">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Table Component - Utilisation du composant standard -->
+      <div class="table-responsive">
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless" style="background-color: #f8f9fa;">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>ID</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>Libellé</th>
+              <th class="d-none d-md-table-cell">Prix (DH)</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="actes-table">
+            {% for acte in actes %}
+            <tr class="main-row">
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td><span class="badge bg-primary">{{ acte.id }}</span></td>
+              <td>{{ acte.libelle }}</td>
+              <td class="d-none d-md-table-cell text-center">{{ acte.price|floatformat:2 }} DH</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ acte.id }}">
+                  Voir détails
+                </button>
+                <div class="d-none d-md-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-dark" 
+                          data-acte-id="{{ acte.id }}" 
+                          data-acte-libelle="{{ acte.libelle }}"
+                          data-acte-price="{{ acte.price }}"
+                          onclick="openEditForm(this)"
+                          title="Modifier cet acte">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#modalDeleteActe"
+                          data-acte-id="{{ acte.id }}" 
+                          data-acte-libelle="{{ acte.libelle }}"
+                          title="Supprimer cet acte">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="collapse bg-light" id="details-{{ acte.id }}">
+              <td colspan="5" class="p-3">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>ID:</strong> {{ acte.id }}</p>
+                    <p class="mb-2"><strong>Libellé:</strong> {{ acte.libelle }}</p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Prix:</strong> {{ acte.price|floatformat:2 }} DH</p>
+                  </div>
+                  <div class="col-12 mt-3">
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-dark" 
+                              data-acte-id="{{ acte.id }}" 
+                              data-acte-libelle="{{ acte.libelle }}"
+                              data-acte-price="{{ acte.price }}"
+                              onclick="openEditForm(this)"
+                              title="Modifier cet acte">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                      </button>
+                      <button class="btn btn-sm btn-danger" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#modalDeleteActe"
+                              data-acte-id="{{ acte.id }}" 
+                              data-acte-libelle="{{ acte.libelle }}"
+                              title="Supprimer cet acte">
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted">Aucun acte disponible</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if actes.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if actes.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ actes.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </span>
+            </li>
+          {% endif %}
+
+          {% for num in actes.paginator.page_range %}
+            {% if actes.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+            {% elif num > actes.number|add:'-3' and num < actes.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if actes.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ actes.next_page_number }}{% if query %}&q={{ query }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Formulaire d'ajout d'acte -->
+  <div class="card mb-4" id="add-acte">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2"></i>
+      Nouvel Acte
+    </div>
+    <div class="card-body">
+      <form id="acteForm" method="post" action="{% url 'patient:acte_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="row g-3">
+          <div class="col-md-12">
+            <label class="form-label" for="id_libelle">Libellé <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-tag"></i></span>
+              <input type="text" class="form-control" id="id_libelle" name="libelle" required maxlength="255" placeholder="Entrez le libellé de l'acte">
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="id_price">Prix (DH) <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-money-bill"></i></span>
+              <input type="number" class="form-control" id="id_price" name="price" required step="0.01" min="0" placeholder="0.00">
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification d'acte -->
+  <div class="card mb-4" id="edit-acte" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier l'Acte
+    </div>
+    <div class="card-body">
+      <form id="editActeForm" method="post" action="{% url 'patient:acte_list' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="id" id="edit_acte_id">
+        <div class="row g-3">
+          <div class="col-md-12">
+            <label class="form-label" for="edit_libelle">Libellé <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-tag"></i></span>
+              <input type="text" class="form-control" id="edit_libelle" name="libelle" required maxlength="255" placeholder="Entrez le libellé de l'acte">
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="edit_price">Prix (DH) <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-money-bill"></i></span>
+              <input type="number" class="form-control" id="edit_price" name="price" required step="0.01" min="0" placeholder="0.00">
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Modifier
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour supprimer un acte -->
+<div class="modal fade" id="modalDeleteActe" tabindex="-1" aria-labelledby="modalDeleteActeLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalDeleteActeLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Confirmer la suppression
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+          <div><strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer l'acte : <strong id="delete_acte_libelle"></strong> ?</div>
+        </div>
+        <p class="text-danger"><i class="fas fa-info-circle me-1"></i> Cette action est irréversible.</p>
+        <form id="deleteActeForm" method="post" action="{% url 'patient:acte_list' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="id" id="delete_acte_id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="deleteActeForm" class="btn btn-danger">
+          <i class="fas fa-trash-alt me-1"></i> Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript pour gérer les modals et la recherche -->
+<script>
+// Gestion de la sélection multiple
+const selectAllCheckbox = document.getElementById('selectAll');
+const rowCheckboxes = document.querySelectorAll('.row-check');
+
+if (selectAllCheckbox) {
+  selectAllCheckbox.addEventListener('change', function() {
+    rowCheckboxes.forEach(checkbox => {
+      checkbox.checked = this.checked;
+    });
+  });
+}
+
+rowCheckboxes.forEach(checkbox => {
+  checkbox.addEventListener('change', function() {
+    const checkedBoxes = document.querySelectorAll('.row-check:checked');
+    const totalBoxes = rowCheckboxes.length;
+    
+    if (checkedBoxes.length === totalBoxes) {
+      selectAllCheckbox.checked = true;
+    } else {
+      selectAllCheckbox.checked = false;
+    }
+  });
+});
+
+// Modal édition/suppression
+document.addEventListener('DOMContentLoaded', function() {
+  // Modal d'édition
+  // Pré-remplissage du formulaire d'édition lorsqu'on clique sur un bouton Modifier
+  window.openEditForm = function(button){
+    const acteId = button.getAttribute('data-acte-id');
+    const acteLibelle = button.getAttribute('data-acte-libelle');
+    const actePrice = button.getAttribute('data-acte-price');
+
+    const editSection = document.getElementById('edit-acte');
+    const addSection = document.getElementById('add-acte');
+    const currentId = document.getElementById('edit_acte_id').value || '';
+
+    // Si le formulaire d'édition est déjà ouvert pour le même acte, basculer vers l'ajout
+    if (editSection.style.display !== 'none' && currentId === acteId) {
+      editSection.style.display = 'none';
+      addSection.style.display = 'block';
+      window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+      return;
+    }
+
+    // Remplir le formulaire d'édition
+    document.getElementById('edit_acte_id').value = acteId;
+    document.getElementById('edit_libelle').value = acteLibelle;
+    document.getElementById('edit_price').value = actePrice;
+
+    // Afficher le formulaire d'édition et masquer l'ajout
+    editSection.style.display = 'block';
+    addSection.style.display = 'none';
+    window.scrollTo({ top: editSection.offsetTop - 80, behavior: 'smooth' });
+  }
+
+  // Fonction pour afficher le formulaire d'ajout
+  window.showAddForm = function(){
+    const editSection = document.getElementById('edit-acte');
+    const addSection = document.getElementById('add-acte');
+    
+    editSection.style.display = 'none';
+    addSection.style.display = 'block';
+    window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+  }
+  
+  // Modal de suppression
+  const modalDeleteActe = document.getElementById('modalDeleteActe');
+  if (modalDeleteActe) {
+    modalDeleteActe.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const acteId = button.getAttribute('data-acte-id');
+      const acteLibelle = button.getAttribute('data-acte-libelle');
+      document.getElementById('delete_acte_id').value = acteId;
+      document.getElementById('delete_acte_libelle').textContent = acteLibelle;
+    });
+  }
+});
+
+// Recherche instantanée AJAX
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('search-title');
+  const actesTable = document.getElementById('actes-table');
+  let searchTimeout = null;
+  let lastQuery = searchInput.value;
+  let controller = null;
+
+  if (searchInput && actesTable) {
+    // Fonction pour effectuer la recherche
+    function performSearch(query) {
+      // Annule la requête précédente si elle existe
+      if (controller) {
+        controller.abort();
+      }
+      
+      controller = new AbortController();
+      
+      // Afficher un indicateur de chargement
+      actesTable.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</td></tr>';
+      
+      const searchUrl = '{% url "patient:acte_list" %}?q=' + encodeURIComponent(query);
+      
+      fetch(searchUrl, {
+        headers: { 
+          'X-Requested-With': 'XMLHttpRequest',
+          'Cache-Control': 'no-cache'
+        },
+        signal: controller.signal
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Erreur réseau: ' + response.status);
+        return response.text();
+      })
+      .then(html => {
+        actesTable.innerHTML = html;
+      })
+      .catch(error => {
+        if (error.name !== 'AbortError') {
+          actesTable.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur lors de la recherche: ' + error.message + '</td></tr>';
+        }
+      });
+    }
+
+    // Écouter les changements dans le champ de recherche
+    searchInput.addEventListener('input', function() {
+      const query = searchInput.value.trim();
+      
+      // Annuler le timeout précédent
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      // Si la requête est la même, ne rien faire
+      if (query === lastQuery) return;
+      
+      lastQuery = query;
+      
+      // Attendre 300ms après que l'utilisateur arrête de taper
+      searchTimeout = setTimeout(() => {
+        performSearch(query);
+      }, 300);
+    });
+
+    // Écouter la touche Entrée pour une recherche immédiate
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+        performSearch(searchInput.value.trim());
+      }
+    });
+
+    // Validation côté client pour les formulaires
+    const forms = document.querySelectorAll('form[id$="ActeForm"]');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const requiredFields = this.querySelectorAll('[required]');
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Veuillez remplir tous les champs obligatoires.');
+            }
+        });
+    });
+  }
+});
+
+</script>
+
+{% endblock %}
+
+
+
+
+
+
+
+
+

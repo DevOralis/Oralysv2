@@ -1,0 +1,11 @@
+#editFormContainer {
+    display: none;
+}
+
+.add-btn {
+    cursor: pointer;
+}
+
+.cancel-btn {
+    cursor: pointer;
+}

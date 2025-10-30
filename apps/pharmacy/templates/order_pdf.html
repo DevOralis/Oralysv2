@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Commande Pharmacie - Pharmacie ERP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            margin: 10px auto;
+            max-width: 800px;
+            color: #000;
+            background: #fff;
+            line-height: 1.5;
+        }
+
+        .header,
+        .info-grid,
+        .order-lines-section,
+        .notes-section {
+            margin-bottom: 18px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #007BFF;
+            padding-bottom: 10px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-placeholder {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #007BFF, #28A745);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .company-info h1 {
+            font-size: 18pt;
+            color: #007BFF;
+        }
+
+        .company-info .subtitle {
+            font-size: 10pt;
+            color: #666;
+        }
+
+        .header-right {
+            background: #F2F2F2;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border-left: 4px solid #007BFF;
+            text-align: right;
+            font-size: 9pt;
+        }
+
+        .status-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+            color: black;
+        }
+
+        .status-draft { background: #FFC107; }
+        .status-waiting { background: #FFA500; }
+        .status-confirmed { background: #28A745; }
+        .status-partial { background: #17A2B8; }
+        .status-done { background: #6C757D; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .info-section {
+            background: #F8F9FA;
+            border: 1px solid #E5E5E5;
+            border-radius: 6px;
+            padding: 10px 12px;
+        }
+
+        .info-section::before {
+            content: '';
+            display: block;
+            height: 3px;
+            margin: -10px -12px 8px -12px;
+            background-color: #007BFF;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .info-section h3 {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #007BFF;
+            margin-bottom: 6px;
+        }
+
+        .info-section p {
+            font-size: 9pt;
+            margin: 3px 0;
+        }
+
+        .section-title {
+            background: #007BFF;
+            color: white;
+            padding: 10px;
+            font-size: 11pt;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 9pt;
+        }
+
+        th, td {
+            border: 1px solid #999;
+            padding: 6px 8px;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #F2F2F2;
+            color: #000;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        td {
+            text-align: center;
+        }
+
+        td:first-child {
+            text-align: left;
+        }
+
+        .product-description {
+            font-size: 8pt;
+            font-style: italic;
+            color: #555;
+        }
+
+        tfoot td {
+            border: none;
+            font-weight: bold;
+            font-size: 9pt;
+            text-align: right;
+            padding-top: 12px;
+        }
+
+        tfoot tr.total-row td {
+            border-top: 2px solid #000;
+        }
+
+        .notes-section {
+            background: #E6F4EA;
+            border-left: 4px solid #28A745;
+            border: 1px solid #A3D7A3;
+            border-radius: 5px;
+            padding: 10px 12px;
+        }
+
+        .notes-section h4 {
+            color: #28A745;
+            font-size: 10.5pt;
+            margin-bottom: 5px;
+        }
+
+        .notes-section p {
+            font-style: italic;
+            font-size: 9pt;
+            margin: 0;
+        }
+
+        @media print {
+            body { margin: 5px; }
+            .info-section, .order-lines-section, table { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="logo-placeholder">PH</div>
+            <div class="company-info">
+                <h1>Pharmacie ERP</h1>
+                <p class="subtitle">Système de Gestion des Commandes</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <h2>Commande Pharmacie</h2>
+            <p><strong>Réf. :</strong> {{ order.name }}</p>
+            {% if order.state == 'confirmed' %}
+            <p><strong>Référence Fournisseur :</strong> {{ order.supplier_ref|default:"Non spécifiée" }}</p>
+            {% endif %}
+            <p><strong>Date :</strong> {{ order.date_order }}</p>
+            <p><strong>Statut :</strong> <span class="status-badge status-{{ order.state|lower }}">{{ order.state_display|default:order.state }}</span></p>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-section">
+            <h3>Fournisseur</h3>
+            <p><strong>Nom :</strong> {{ supplier.name }}</p>
+            <p><strong>Adresse :</strong> {{ supplier.address|default:"Non spécifiée" }}</p>
+        </div>
+        <div class="info-section">
+            <h3>Informations de Commande</h3>
+            <p><strong>Devise :</strong> {{ order.currency.abreviation|default:"MAD" }}</p>
+            <p><strong>Date de création :</strong> {{ order.date_order }}</p>
+            <p><strong>Référence :</strong> {{ order.name }}</p>
+            {% if order.state == 'confirmed' %}
+            <p><strong>Mode de paiement :</strong> {{ order.payment_mode.name|default:"Non spécifié" }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="order-lines-section">
+        <div class="section-title">Lignes de Commande</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Désignation</th>
+                    <th style="width: 10%;">TVA</th>
+                    <th style="width: 15%;">P.U. HT</th>
+                    <th style="width: 10%;">Qté</th>
+                    <th style="width: 15%;">Total HT</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in order_lines %}
+                <tr>
+                    <td>
+                        {{ line.name }}
+                        {% if line.description %}
+                        <div class="product-description">{{ line.description }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ line.tax.valeur|default:"0" }}%</td>
+                    <td>{{ line.price_unit|floatformat:2 }}</td>
+                    <td>{{ line.product_qty }}</td>
+                    <td>{{ line.price_subtotal|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4">Total HT</td>
+                    <td>{{ order.amount_untaxed|floatformat:2 }} {{ order.currency.abreviation|default:"MAD" }}</td>
+                </tr>
+                <tr>
+                    <td colspan="4">Total TVA</td>
+                    <td>{{ order.amount_tax|floatformat:2 }} {{ order.currency.abreviation|default:"MAD" }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="4">Total TTC</td>
+                    <td>{{ order.amount_total|floatformat:2 }} {{ order.currency.abreviation|default:"MAD" }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    {% if order.notes %}
+    <div class="notes-section">
+        <h4>Notes et Observations</h4>
+        <p>{{ order.notes }}</p>
+    </div>
+    {% endif %}
+</body>
+</html>

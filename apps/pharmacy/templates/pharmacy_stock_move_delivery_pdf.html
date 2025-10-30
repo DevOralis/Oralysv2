@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ page_title }}</title>
+  <style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11pt; color: #2c3e50; }
+    .header { text-align: center; margin-bottom: 18px; }
+    .logo {
+      font-size: 30pt;
+      font-weight: bold;
+      color: #2c3e50;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .bon-type {
+      display: inline-block;
+      font-size: 14pt;
+      font-weight: 600;
+      padding: 6px 18px;
+      border-radius: 6px;
+      margin: 6px 0 12px 0;
+      letter-spacing: 1px;
+      border: 1.5px solid #bbb;
+    }
+    .bon-type-livraison { color: #218838; background: #f4fbf7; border-color: #b7e4c7; }
+    .bon-type-reception { color: #1565c0; background: #f0f6fc; border-color: #90caf9; }
+    .bon-type-transfert { color: #ff9800; background: #fff8ed; border-color: #ffd180; }
+    .bon-type-default   { color: #444; background: #f5f5f5; border-color: #888; }
+    .info-table { width: 100%; margin-bottom: 25px; border-collapse: collapse; }
+    .info-table td { padding: 6px 10px; border: 1px solid #ccc; font-size: 10pt; }
+    .info-table .label { background: #f2f2f2; font-weight: bold; width: 30%; }
+    .lines-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .lines-table th, .lines-table td { border: 1px solid #888; padding: 8px 6px; text-align: center; font-size: 10pt; }
+    .lines-table th { background: #e8eaf6; color: #2c3e50; font-weight: 600; }
+    .footer { margin-top: 40px; text-align: center; font-size: 9pt; color: #7f8c8d; border-top: 1px solid #bdc3c7; padding-top: 15px; }
+    .signature-section { margin-top: 50px; display: flex; justify-content: space-between; }
+    .signature-box { width: 200px; text-align: center; border-top: 1px solid #bdc3c7; padding-top: 10px; font-size: 10pt; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">ORALYS</div>
+    {% comment %} Titre dynamique selon le type d'opération + style coloré {% endcomment %}
+    {% with op=move.operation_type.label|lower %}
+      {% if 'consommation' in op %}
+        <div class="bon-type bon-type-livraison">BON DE LIVRAISON - Pharmacie</div>
+      {% elif 'réception' in op or 'reception' in op %}
+        <div class="bon-type bon-type-reception">BON DE RÉCEPTION - Pharmacie</div>
+      {% elif 'transfert' in op %}
+        <div class="bon-type bon-type-transfert">BON DE TRANSFERT - Pharmacie</div>
+      {% else %}
+        <div class="bon-type bon-type-default">BON DE MOUVEMENT DE STOCK - Pharmacie</div>
+      {% endif %}
+    {% endwith %}
+  </div>
+  <table class="info-table">
+    <tr><td class="label">Référence</td><td>{{ move.reference }}</td></tr>
+    <tr><td class="label">Type d'opération</td><td><strong>{{ move.operation_type.label }}</strong></td></tr>
+    {% if move.scheduled_date %}<tr><td class="label">Date planifiée</td><td>{{ move.scheduled_date|date:'d/m/Y' }}</td></tr>{% endif %}
+    {% if move.effective_date %}<tr><td class="label">Date effective</td><td>{{ move.effective_date|date:'d/m/Y' }}</td></tr>{% endif %}
+    {% if move.source_location %}<tr><td class="label">Source</td><td>{{ move.source_location }}</td></tr>{% endif %}
+    {% if move.dest_location %}<tr><td class="label">Destination</td><td>{{ move.dest_location }}</td></tr>{% endif %}
+    {% if move.department %}<tr><td class="label">Département</td><td>{{ move.department.name }}</td></tr>{% endif %}
+    {% if move.supplier %}<tr><td class="label">Fournisseur</td><td>{{ move.supplier.name }}</td></tr>{% endif %}
+    {% if move.notes %}<tr><td class="label">Notes</td><td>{{ move.notes }}</td></tr>{% endif %}
+  </table>
+  <h2 style="margin-top:30px; font-size:14pt;">Lignes du Bon</h2>
+  <table class="lines-table">
+    <thead>
+      <tr>
+        <th>Produit</th>
+        <th>Quantité Demandée</th>
+        <th>Unité</th>
+        <th>Quantité Reçue</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td style="text-align:left;">{{ line.product.short_label }}</td>
+        <td>{{ line.quantity_demanded|floatformat:2 }}</td>
+        <td>{{ line.uom.label }}</td>
+        <td>{{ line.quantity_arrived|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="no-data">Aucune ligne</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="signature-section">
+    <div class="signature-box">Signature magasinier</div>
+    <div class="signature-box">Signature réceptionnaire</div>
+  </div>
+  <div class="footer">
+    Bon généré par le système ORALYS | {{ date }}
+  </div>
+</body>
+</html> 

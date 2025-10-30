@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Rapport des Mouvements de Stock</title>
+  <style>
+ @page {
+  size: A4 portrait;
+  margin: 1cm;
+}
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      font-size: 9pt;
+      color: #2c3e50;
+      background-color: white;
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+
+    .container {
+      width: 100%;
+      padding: 15px;
+    }
+
+    .header {
+      text-align: center;
+      padding-bottom: 10px;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      font-size: 20pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #2c3e50;
+    }
+
+    h1 {
+      font-size: 16pt;
+      margin: 10px 0;
+      text-transform: uppercase;
+      color: #34495e;
+    }
+
+    .report-date {
+      font-size: 10pt;
+      color: #7f8c8d;
+      font-style: italic;
+    }
+
+    .operation-block {
+      border: 1px solid #dcdde1;
+      border-radius: 8px;
+      margin-bottom: 25px;
+      padding: 10px 15px;
+      background-color: #f7f9fa;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      page-break-inside: avoid;
+    }
+
+    .operation-title {
+      font-size: 11pt;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .main-info {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+      font-size: 8.5pt;
+    }
+
+    .main-info td {
+      padding: 4px 6px;
+      border: 1px solid #dee2e6;
+      background: white;
+    }
+
+    .main-info td.label {
+      font-weight: bold;
+      background-color: #ecf0f1;
+      width: 20%;
+    }
+
+    .lines-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 8pt;
+    }
+
+    .lines-table thead {
+      background-color: #3498db;
+      color: white;
+    }
+
+    .lines-table th,
+    .lines-table td {
+      border: 1px solid #dee2e6;
+      padding: 6px 5px;
+      text-align: center;
+    }
+
+    .state-label {
+      display: inline-block;
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-size: 8pt;
+      font-weight: bold;
+      color: white;
+    }
+
+    .state-draft { background-color: #f39c12; }
+    .state-confirmed { background-color: #3498db; }
+    .state-assigned { background-color: #9b59b6; }
+    .state-done { background-color: #27ae60; }
+    .state-cancel { background-color: #e74c3c; }
+
+    .no-data {
+      color: #7f8c8d;
+      text-align: center;
+      font-style: italic;
+      margin: 20px 0;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 8pt;
+      color: #7f8c8d;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
+
+    @media print {
+      .operation-block {
+        page-break-inside: avoid;
+      }
+
+      .lines-table thead,
+      .lines-table th {
+        background-color: #3498db !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .state-label {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">ORALYS</div>
+      <h1>Rapport des Mouvements de Stock - Pharmacie</h1>
+      <p class="report-date">Généré le : {{ date }}</p>
+    </div>
+
+    {% if moves %}
+      {% for m in moves %}
+      <div class="operation-block">
+        <div class="operation-title">Mouvement : {{ m.reference }}</div>
+        <table class="main-info">
+          <tr>
+            <td class="label">Date</td>
+            <td>{{ m.scheduled_date }}</td>
+            <td class="label">Type</td>
+            <td>{{ m.operation_type.label }}</td>
+          </tr>
+          <tr>
+            <td class="label">Source</td>
+            <td>{{ m.source_location|default:"—" }}</td>
+            <td class="label">Destination</td>
+            <td>{{ m.dest_location|default:"—" }}</td>
+          </tr>
+          <tr>
+            <td class="label">Département</td>
+            <td>
+              {% if "consommation" in m.operation_type.label|lower %}
+                {{ m.department.name|default:"(Non défini)" }}
+              {% else %} — {% endif %}
+            </td>
+            <td class="label">Fournisseur</td>
+            <td>
+              {% if "livraison" in m.operation_type.label|lower %}
+                {{ m.supplier.name|default:"(Non défini)" }}
+              {% else %} — {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td class="label">État</td>
+            <td colspan="3">
+              <span class="state-label state-{{ m.state }}">{{ m.get_state_display }}</span>
+            </td>
+          </tr>
+        </table>
+
+        {% if m.lines.exists %}
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>Produit</th>
+              <th>Quantité Demandée</th>
+              <th>Unité</th>
+              <th>Quantité Reçue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for line in m.lines.all %}
+            <tr>
+                <td style="text-align:left;">{{ line.product.short_label }}</td>
+                <td>{{ line.quantity_demanded|floatformat:2 }}</td>
+                <td>{{ line.uom.label }}</td>
+                <td>{{ line.quantity_arrived|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="no-data">Aucun mouvement de stock trouvé</div>
+    {% endif %}
+
+    <div class="footer">
+      Rapport généré par le système ORALYS | Gestion des stocks
+    </div>
+  </div>
+</body>
+</html>

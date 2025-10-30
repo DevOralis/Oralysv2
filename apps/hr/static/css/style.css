@@ -1,0 +1,122 @@
+/* Styles spécifiques au module HR */
+
+/* Styles pour les tableaux triables */
+.sortable {
+  cursor: pointer;
+  position: relative;
+  padding-right: 20px;
+}
+.sortable i {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.3;
+}
+.sortable.asc i,
+.sortable.desc i {
+  opacity: 1;
+}
+.sortable.asc i::before {
+  content: "\f0de"; /* FontAwesome up arrow */
+}
+.sortable.desc i::before {
+  content: "\f0dd"; /* FontAwesome down arrow */
+}
+
+/* Styles pour les tableaux avec hover */
+.table-hover tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* Styles pour la pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+.page-item.active .page-link {
+  background-color: var(--main-blue);
+  border-color: var(--main-blue);
+}
+.page-link {
+  color: var(--main-blue);
+}
+.page-link:hover {
+  color: var(--dark-blue);
+}
+
+/* Styles pour les formulaires */
+.disabled-input {
+  background-color: #e9ecef;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* Styles pour les onglets */
+.tabs .nav-link.active {
+  background: #f8f9fa;
+  border-color: var(--dark-blue) var(--dark-blue) #fff;
+}
+
+/* Styles pour le défilement fluide */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Styles pour les cartes de tableau */
+.table-card {
+  margin-bottom: 2rem;
+}
+
+/* Styles pour le menu HR */
+.sidebar {
+  height: 100%;
+  width: 250px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: #1e90ff;
+  padding-top: 20px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar a {
+  padding: 15px 25px;
+  text-decoration: none;
+  font-size: 16px;
+  color: #ffffff;
+  display: block;
+  transition: 0.3s;
+}
+
+.hr-sidebar a:hover {
+  background-color: #1c86ee;
+  color: #3498db;
+}
+
+.sidebar a i {
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+}
+
+/* Style pour le lien de déconnexion */
+.sidebar a.mt-auto {
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: var(--dark-green); /* Couleur légèrement plus foncée */
+}
+
+.sidebar a.mt-auto:hover {
+  background-color: #c0392b; /* Rouge au survol */
+  color: #ffffff;
+}
+
+/* Ajuster le contenu principal pour qu'il ne soit pas caché derrière la sidebar */
+body .main {
+  margin-left: 250px;
+}

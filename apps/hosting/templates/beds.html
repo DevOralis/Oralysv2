@@ -1,0 +1,728 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Oralys - Lits{% endblock %}
+{% block menu %}
+  {% include 'hosting_menu.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const checkboxes = document.querySelectorAll('input[name="selected_beds"]');
+  const importExportButton = document.querySelector('#import-export-button');
+
+  // Logique corrigée pour import/export
+  function updateImportExportLogic() {
+    const checkedBoxes = Array.from(checkboxes).filter(checkbox => checkbox.checked);
+    
+    if (checkedBoxes.length > 0) {
+      // Mode Export - au moins une case cochée
+      importExportButton.textContent = 'Exporter';
+      importExportButton.className = 'btn btn-light w-100 text-nowrap px-2';
+      importExportButton.innerHTML = '<i class="fas fa-file-export"></i><span class="d-none d-lg-inline ms-1">Exporter</span>';
+      importExportButton.disabled = false;
+      importExportButton.title = 'Exporter les lits sélectionnés';
+    } else {
+      // Mode Import - aucune case cochée
+      importExportButton.textContent = 'Importer';
+      importExportButton.className = 'btn btn-light border w-100 text-nowrap px-2';
+      importExportButton.innerHTML = '<i class="fas fa-file-import"></i><span class="d-none d-lg-inline ms-1">Importer</span>';
+      importExportButton.disabled = false;
+      importExportButton.title = 'Importer des lits depuis un fichier';
+    }
+  }
+
+  // Écouter les changements sur les checkboxes
+  checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateImportExportLogic);
+  });
+
+  // Écouter les changements sur "Sélectionner tout"
+  const selectAllCheckbox = document.getElementById('selectAll');
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+      updateImportExportLogic();
+    });
+  }
+
+  // Gérer le clic sur le bouton Import/Export
+  if (importExportButton) {
+    importExportButton.addEventListener('click', function() {
+      const checkedBoxes = Array.from(checkboxes).filter(checkbox => checkbox.checked);
+      
+      if (checkedBoxes.length > 0) {
+        // Mode Export
+        exportSelectedBeds(checkedBoxes);
+      } else {
+        // Mode Import
+        showImportDialog();
+      }
+    });
+  }
+
+  // Fonction d'exportation
+  function exportSelectedBeds(selectedBoxes) {
+    const selectedBedIds = selectedBoxes.map(checkbox => {
+      // Récupérer l'ID du lit depuis la ligne du tableau
+      const row = checkbox.closest('tr');
+      return row.cells[1].textContent; // ID est dans la 2ème colonne (index 1)
+    });
+
+    Swal.fire({
+      title: 'Exporter les lits',
+      text: `Exporter ${selectedBedIds.length} lit(s) sélectionné(s) ?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Exporter',
+      cancelButtonText: 'Annuler',
+      showLoaderOnConfirm: true,
+      preConfirm: () => {
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        selectedBedIds.forEach(id => {
+          formData.append('bed_ids', id);
+        });
+
+        return fetch('', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Erreur lors de l\'exportation');
+          }
+          return response.blob();
+        })
+        .then(blob => {
+          // Télécharger le fichier
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = `lits_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          
+          // Décocher tous les éléments après export
+          checkboxes.forEach(checkbox => checkbox.checked = false);
+          selectAllCheckbox.checked = false;
+          updateImportExportLogic();
+        })
+        .catch(error => {
+          Swal.showValidationMessage(`Erreur: ${error.message}`);
+        });
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Export réussi',
+          text: 'Les lits ont été exportés avec succès',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    });
+  }
+
+  // Fonction d'importation
+  function showImportDialog() {
+    Swal.fire({
+      title: 'Importer des lits',
+      html: `
+        <div class="mb-3">
+          <label for="import-file" class="form-label">Sélectionner un fichier Excel (.xlsx)</label>
+          <input type="file" id="import-file" class="form-control" accept=".xlsx,.xls" required>
+        </div>
+        <div class="alert alert-info">
+          <small>
+            <strong>Format attendu:</strong><br>
+            - Colonne A: Numéro du lit<br>
+            - Colonne B: Nom de la chambre<br>
+            - Colonne C: Statut du lit
+          </small>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Importer',
+      cancelButtonText: 'Annuler',
+      showLoaderOnConfirm: true,
+      preConfirm: () => {
+        const fileInput = document.getElementById('import-file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+          Swal.showValidationMessage('Veuillez sélectionner un fichier');
+          return false;
+        }
+
+        if (!file.name.match(/\.(xlsx|xls)$/)) {
+          Swal.showValidationMessage('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+          return false;
+        }
+
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        formData.append('import_file', file);
+
+        return fetch('', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Erreur lors de l\'importation');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.status === 'success') {
+            return data;
+          } else {
+            throw new Error(data.message || 'Erreur lors de l\'importation');
+          }
+        })
+        .catch(error => {
+          Swal.showValidationMessage(`Erreur: ${error.message}`);
+        });
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const data = result.value;
+        Swal.fire({
+          icon: 'success',
+          title: 'Import réussi',
+          html: `
+            <div class="text-start">
+              <p><strong>${data.imported_count}</strong> lit(s) importé(s) avec succès</p>
+              ${data.errors_count > 0 ? `<p class="text-warning"><strong>${data.errors_count}</strong> erreur(s) détectée(s)</p>` : ''}
+              ${data.duplicates_count > 0 ? `<p class="text-info"><strong>${data.duplicates_count}</strong> doublon(s) ignoré(s)</p>` : ''}
+            </div>
+          `,
+          confirmButtonText: 'Actualiser la page'
+        }).then(() => {
+          location.reload();
+        });
+      }
+    });
+  }
+
+  // Initialiser l'état du bouton au chargement
+  updateImportExportLogic();
+
+  // ===== GESTION DU BOUTON NOUVEAU =====
+  const addBedBtn = document.getElementById('add-bed-btn');
+  const bedFormSection = document.getElementById('bed-form-section');
+  const formTitle = document.getElementById('form-title');
+  const bedForm = document.getElementById('bed-form');
+  const cancelBtn = document.getElementById('cancel-btn');
+  const editingBedInput = document.getElementById('editing-bed');
+  const bedIdField = document.getElementById('bed-id-field');
+  const submitText = document.getElementById('submit-text');
+
+  // Afficher le formulaire pour nouveau lit
+  if (addBedBtn) {
+    addBedBtn.addEventListener('click', function() {
+      // Réinitialiser le formulaire
+      bedForm.reset();
+      editingBedInput.value = 'false';
+      bedIdField.value = '';
+      
+      // Mettre à jour le titre et le bouton
+      formTitle.textContent = 'Nouveau lit';
+      submitText.textContent = 'Sauvegarder';
+      
+      // Définir l'action pour création
+      bedForm.action = "{% url 'hosting:bed_create' %}";
+      
+      // Afficher le formulaire
+      bedFormSection.style.display = 'block';
+      
+      // Scroll vers le formulaire
+      bedFormSection.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
+  // Masquer le formulaire sur annulation
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', function() {
+      bedFormSection.style.display = 'none';
+      bedForm.reset();
+    });
+  }
+
+  // Gestion des boutons d'édition existants
+  const editBtns = document.querySelectorAll('.edit-bed-btn');
+  editBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const bedId = this.getAttribute('data-bed-id');
+      
+      // Mettre le formulaire en mode édition
+      editingBedInput.value = 'true';
+      bedIdField.value = bedId;
+      formTitle.textContent = 'Modifier le lit';
+      submitText.textContent = 'Mettre à jour';
+      
+      // Définir l'action pour modification
+      bedForm.action = `/hosting/beds/${bedId}/update/`;
+      
+      // Afficher le formulaire
+      bedFormSection.style.display = 'block';
+      
+      // Charger les données du lit via AJAX
+      fetch(`/hosting/beds/${bedId}/detail/`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            // Pré-remplir les champs avec les données
+            document.querySelector('#id_bed_number').value = data.bed.bed_number || '';
+            document.querySelector('#id_room').value = data.bed.room || '';
+            document.querySelector('#id_bed_status').value = data.bed.bed_status || '';
+          }
+        })
+        .catch(error => {
+          console.error('Erreur lors du chargement des données:', error);
+        });
+      
+      bedFormSection.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  // Gestion des boutons de visualisation
+  const viewBtns = document.querySelectorAll('.view-bed-btn');
+  viewBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const bedId = this.getAttribute('data-bed-id');
+      
+      // Afficher le modal avec les détails du lit
+      const modal = new bootstrap.Modal(document.getElementById('bedDetailsModal'));
+      const modalContent = document.getElementById('bed-details-content');
+      
+      modalContent.innerHTML = 'Chargement...';
+      modal.show();
+      
+      // Ici vous pourriez ajouter une requête AJAX pour charger les détails du lit
+      modalContent.innerHTML = `<p>Détails du lit ID: ${bedId}</p><p>Fonctionnalité à implémenter avec AJAX</p>`;
+    });
+  });
+
+  // Gestion des boutons de suppression
+  const deleteBtns = document.querySelectorAll('.delete-bed-btn');
+  deleteBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const bedId = this.getAttribute('data-bed-id');
+      
+      Swal.fire({
+        title: 'Confirmer la suppression',
+        text: `Êtes-vous sûr de vouloir supprimer ce lit ?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Envoyer requête AJAX pour supprimer le lit
+          const deleteUrl = `/hosting/beds/${bedId}/delete/`;
+          
+          fetch(deleteUrl, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+              'Content-Type': 'application/json',
+            }
+          })
+          .then(response => {
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error('Erreur lors de la suppression');
+          })
+          .then(data => {
+            if (data.status === 'success') {
+              Swal.fire('Supprimé!', data.message, 'success').then(() => {
+                // Recharger la page pour mettre à jour la liste
+                location.reload();
+              });
+            } else {
+              Swal.fire('Erreur!', data.message, 'error');
+            }
+          })
+          .catch(error => {
+            console.error('Erreur:', error);
+            Swal.fire('Erreur!', 'Une erreur est survenue lors de la suppression.', 'error');
+          });
+        }
+      });
+    });
+  });
+
+  // Gestion des boutons de libération
+  const releaseBtns = document.querySelectorAll('.release-bed-btn');
+  releaseBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const bedId = this.getAttribute('data-bed-id');
+      
+      Swal.fire({
+        title: 'Libérer le lit',
+        text: `Êtes-vous sûr de vouloir libérer ce lit ?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Oui, libérer',
+        cancelButtonText: 'Annuler'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Envoyer requête AJAX pour libérer le lit
+          const releaseUrl = `/hosting/beds/${bedId}/release/`;
+          
+          fetch(releaseUrl, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+              'Content-Type': 'application/json',
+            }
+          })
+          .then(response => {
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error('Erreur lors de la libération');
+          })
+          .then(data => {
+            if (data.status === 'success') {
+              Swal.fire('Libéré!', data.message, 'success').then(() => {
+                // Recharger la page pour mettre à jour la liste
+                location.reload();
+              });
+            } else {
+              Swal.fire('Erreur!', data.message, 'error');
+            }
+          })
+          .catch(error => {
+            console.error('Erreur:', error);
+            Swal.fire('Erreur!', 'Une erreur est survenue lors de la libération.', 'error');
+          });
+        }
+      });
+    });
+  });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid py-4">
+    <!-- Messages -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Liste des lits -->
+    <div class="card mb-4">
+      <div class="card-header card-header-primary">
+        <i class="fas fa-bed me-2"></i>
+        Gestion des Lits
+      </div>
+      <div class="card-body">
+        <!-- Search Bar Component -->
+        <form method="get" id="search-form" >
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+              <div class="input-group">
+                <span class="input-group-text input-group-text-primary">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search"  id="bed-search" class="form-control search-input-primary" placeholder="Recherche..." >
+              </div>
+            </div>
+            <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+
+            </div>
+            <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+              <div class="d-flex gap-1">
+    <button type="button" id="import-export-button" class="btn btn-light border w-100 text-nowrap px-2" title="Importer des lits depuis un fichier">
+      <i class="fas fa-file-import"></i>
+      <span class="d-none d-lg-inline ms-1">Importer</span>
+    </button>
+    {% if request.session.user.permissions.hosting.write %}
+    <button type="button" class="btn btn-primary w-100 text-nowrap px-2" id="add-bed-btn">
+      <i class="fas fa-plus"></i>
+      <span class="d-none d-lg-inline ms-1">Nouveau</span>
+    </button>
+    {% endif %}
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <!-- Table responsive -->
+        <table class="table table-responsive table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th>
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>ID</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Numéro</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Chambre</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Statut</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for bed in beds %}
+              <tr>
+                <td data-label="Sélection"><input type="checkbox"  name="selected_beds" class="row-check"></td>
+                <td data-label="ID">{{ bed.bed_id }}</td>
+                <td data-label="Numéro">{{ bed.bed_number }}</td>
+                <td data-label="Chambre">{{ bed.room.room_name }}</td>
+                <td data-label="Statut">
+                  {% if bed.bed_status.name == 'available' %}
+                    <span class="badge bg-success">Disponible</span>
+                  {% elif bed.bed_status.name == 'occupied' %}
+                    <span class="badge bg-warning">Occupé</span>
+                  {% elif bed.bed_status.name == 'reserved' %}
+                    <span class="badge bg-info">Réservé</span>
+                  {% elif bed.bed_status.name == 'maintenance' %}
+                    <span class="badge bg-danger">Maintenance</span>
+                  {% else %}
+                    <span class="badge bg-secondary">{{ bed.bed_status.name|capfirst }}</span>
+                  {% endif %}
+                </td>
+                <td data-label="Actions" class="actions-cell">
+                  <div class="d-flex gap-1 justify-content-end">
+
+                    <button class="btn btn-sm btn-light border text-info view-bed-btn" title="Voir" data-bed-id="{{ bed.bed_id }}">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    {% if request.session.user.permissions.hosting.update %}
+                    <button class="btn btn-sm btn-light border text-dark edit-bed-btn" title="Modifier" data-bed-id="{{ bed.bed_id }}">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    {% endif %}
+                    {% if request.session.user.permissions.hosting.delete %}
+                    <button class="btn btn-sm btn-light border text-danger delete-bed-btn" title="Supprimer" data-bed-id="{{ bed.bed_id }}">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                    {% endif %}
+                    {% if request.session.user.permissions.hosting.update %}
+                    {% if bed.bed_status.name != 'available' %}
+                      <button class="btn btn-sm btn-light border text-success release-bed-btn" title="Libérer" data-bed-id="{{ bed.bed_id }}">
+                        <i class="fas fa-unlock"></i>
+                      </button>
+                    {% endif %}
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="text-center">Aucun lit enregistré</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <!-- Pagination Component -->
+        {% if page_obj %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="{% url 'hosting:bed_list' %}?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.bed_status %}&bed_status={{ request.GET.bed_status }}{% endif %}" aria-label="Précédent">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">&laquo; Préc</span>
+                  </a>
+                </li>
+              {% endif %}
+              {% for num in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                  <a class="page-link" href="{% url 'hosting:bed_list' %}?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.bed_status %}&bed_status={{ request.GET.bed_status }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endfor %}
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="{% url 'hosting:bed_list' %}?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.bed_status %}&bed_status={{ request.GET.bed_status }}{% endif %}" aria-label="Suivant">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                  </a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Formulaire d'ajout/modification -->
+    <div class="card mb-4" id="bed-form-section" style="display: none;">
+      <div class="card-header card-header-primary">
+        <i class="fas fa-edit me-2"></i>
+        <span id="form-title">Nouveau lit</span>
+      </div>
+      <div class="card-body">
+        {% if error %}
+          <div class="alert alert-danger" role="alert">
+            Erreur : {{ error }}
+          </div>
+        {% endif %}
+        {% if messages %}
+          {% for message in messages %}
+            {% if message.tags != 'success' %}
+              <div class="alert alert-warning" role="alert">
+                {{ message }}
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        <form method="post" action="{% url 'hosting:bed_create' %}" enctype="multipart/form-data" id="bed-form">
+          {% csrf_token %}
+          <input type="hidden" id="editing-bed" value="false">
+          <input type="hidden" id="bed-id-field" name="bed_id" value="">
+          
+          <div class="row g-3">
+            <div class="col-12 col-sm-6 col-md-6">
+              <label class="form-label" for="id_bed_number">Numéro du lit :</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-bed"></i></span>
+                {{ form.bed_number }}
+              </div>
+              {% if form.bed_number.errors %}
+                <div class="text-danger small">{{ form.bed_number.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-sm-6 col-md-6">
+              <label class="form-label" for="id_room">Chambre :</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-home"></i></span>
+                {{ form.room }}
+              </div>
+              {% if form.room.errors %}
+                <div class="text-danger small">{{ form.room.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-sm-6 col-md-6">
+              <label class="form-label" for="id_bed_status">Statut :</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                {{ form.bed_status }}
+              </div>
+              {% if form.bed_status.errors %}
+                <div class="text-danger small">{{ form.bed_status.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+            <button type="button" class="btn btn-secondary btn-sm" id="cancel-btn">
+              <i class="fas fa-times"></i>
+              <span class="d-none d-sm-inline ms-1">Annuler</span>
+            </button>
+            <button type="submit" class="btn btn-primary btn-sm" id="submit-btn">
+              <i class="fas fa-save"></i>
+              <span class="d-none d-sm-inline ms-1" id="submit-text">Sauvegarder</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal pour détails -->
+    <div class="modal fade" id="bedDetailsModal" tabindex="-1" aria-labelledby="bedDetailsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="bedDetailsModalLabel">Détails du lit</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" id="bed-details-content">
+            Chargement...
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// Gestion de la soumission du formulaire avec SweetAlert
+document.addEventListener('DOMContentLoaded', function() {
+  const bedForm = document.getElementById('bed-form');
+  
+  if (bedForm) {
+    bedForm.addEventListener('submit', function(e) {
+      e.preventDefault(); // Empêcher la soumission normale
+      
+      const formData = new FormData(this);
+      const submitUrl = this.action;
+      
+      fetch(submitUrl, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          Swal.fire('Succès!', data.message, 'success').then(() => {
+            location.reload();
+          });
+        } else if (data.alert_type === 'capacity_error') {
+          Swal.fire('Attention!', data.message, 'warning');
+        } else {
+          Swal.fire('Erreur!', data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Erreur:', error);
+        Swal.fire('Erreur!', 'Une erreur est survenue.', 'error');
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

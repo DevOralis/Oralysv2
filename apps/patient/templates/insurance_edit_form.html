@@ -1,0 +1,67 @@
+{% load static %}
+<div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+        <i class="fas fa-edit me-2"></i>
+        Modifier Les Informations De Mutuelle
+    </div>
+    <div class="card-body">
+        <form id="mutuelle-edit-form" method="post" action="/patient/mutuelle-edit-form/{{ patient.id }}/">
+            {% csrf_token %}
+            {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong>Erreur :</strong> {{ error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">N° immatriculation</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                        <input type="text" class="form-control" name="insurance_number" value="{{ patient.insurance_number|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">N° affiliation</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+                        <input type="text" class="form-control" name="affiliation_number" value="{{ patient.affiliation_number|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Lien De Parenté</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-users"></i></span>
+                        <select class="form-select" name="relationship">
+                            <option value="">Sélectionner</option>
+                            <option value="Père" {% if patient.relationship == 'Père' %}selected{% endif %}>Père</option>
+                            <option value="Mère" {% if patient.relationship == 'Mère' %}selected{% endif %}>Mère</option>
+                            <option value="Époux" {% if patient.relationship == 'Époux' %}selected{% endif %}>Époux</option>
+                            <option value="Épouse" {% if patient.relationship == 'Épouse' %}selected{% endif %}>Épouse</option>
+                            <option value="Fils" {% if patient.relationship == 'Fils' %}selected{% endif %}>Fils</option>
+                            <option value="Fille" {% if patient.relationship == 'Fille' %}selected{% endif %}>Fille</option>
+                            <option value="Lui-même" {% if patient.relationship == 'Lui-même' %}selected{% endif %}>Lui-même</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Nom De L'Adhérent</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user-check"></i></span>
+                        <input type="text" class="form-control" name="insured_name" value="{{ patient.insured_name|default:'' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end mt-3">
+                <button type="button" class="btn btn-secondary me-2" id="cancel-mutuelle-edit">
+                    <i class="fas fa-times me-2"></i>
+                    <span class="d-none d-md-inline">Annuler</span>
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>
+                    <span class="d-none d-md-inline">Sauvegarder</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

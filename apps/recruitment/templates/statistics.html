@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Statistiques - Module Recrutement{% endblock %}
+
+{% block menu %}
+{% include "menu_recruitment.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+          <i class="fas fa-chart-line text-primary me-2"></i>
+          Statistiques du Module Recrutement
+        </h2>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+            <i class="fas fa-sync-alt"></i> Actualiser
+          </button>
+          <button class="btn btn-outline-success btn-sm" onclick="exportData()">
+            <i class="fas fa-download"></i> Exporter
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtres de période -->
+      <!-- <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-filter me-2"></i>
+            Filtres de Période
+          </h5>
+        </div>
+        <div class="card-body">
+          <form method="get" class="d-flex gap-2 align-items-center">
+            <select name="period" class="form-select" style="max-width: 200px;" onchange="this.form.submit()">
+              <option value="all" {% if period == 'all' %}selected{% endif %}>Toutes les périodes</option>
+              <option value="month" {% if period == 'month' %}selected{% endif %}>Ce mois</option>
+              <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>Ce trimestre</option>
+              <option value="year" {% if period == 'year' %}selected{% endif %}>Cette année</option>
+            </select>
+            {% if start_date and end_date %}
+              <span class="text-muted">
+                <i class="fas fa-calendar me-1"></i>
+                {{ start_date|date:"d/m/Y" }} - {{ end_date|date:"d/m/Y" }}
+              </span>
+            {% endif %}
+          </form>
+        </div>
+      </div> -->
+
+      <!-- KPI Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+          <div class="card bg-primary text-white h-100">
+            <div class="card-body text-center">
+              <i class="fas fa-users fa-2x mb-2"></i>
+              <h3 class="mb-1">{{ total_candidates|default:0 }}</h3>
+              <p class="mb-0">Total Candidats</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 mb-3">
+          <div class="card bg-success text-white h-100">
+            <div class="card-body text-center">
+              <i class="fas fa-file-alt fa-2x mb-2"></i>
+              <h3 class="mb-1">{{ total_applications|default:0 }}</h3>
+              <p class="mb-0">Total Candidatures</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 mb-3">
+          <div class="card bg-warning text-white h-100">
+            <div class="card-body text-center">
+              <i class="fas fa-handshake fa-2x mb-2"></i>
+              <h3 class="mb-1">{{ total_interviews|default:0 }}</h3>
+              <p class="mb-0">Total Entretiens</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 mb-3">
+          <div class="card bg-info text-white h-100">
+            <div class="card-body text-center">
+              <i class="fas fa-briefcase fa-2x mb-2"></i>
+              <h3 class="mb-1">{{ total_offers|default:0 }}</h3>
+              <p class="mb-0">Total Offres</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Graphiques -->
+      <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-chart-pie me-2"></i>
+                Candidatures par Statut
+              </h5>
+            </div>
+            <div class="card-body">
+              <canvas id="applicationsChart" width="400" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-chart-bar me-2"></i>
+                Évolution Mensuelle
+              </h5>
+            </div>
+            <div class="card-body">
+              <canvas id="evolutionChart" width="400" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tableaux de données -->
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>
+                Candidatures par Statut
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>Statut</th>
+                      <th>Nombre</th>
+                      <th>Pourcentage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for status in applications_by_status %}
+                    <tr>
+                      <td>
+                        <span class="badge bg-primary">{{ status.status|title }}</span>
+                      </td>
+                      <td>{{ status.count }}</td>
+                      <td>{{ status.percentage|default:0 }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="3" class="text-center text-muted">Aucune donnée disponible</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>
+                Entretiens par Étape
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>Étape</th>
+                      <th>Nombre</th>
+                      <th>Pourcentage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for stage in interviews_by_stage %}
+                    <tr>
+                      <td>
+                        <span class="badge bg-warning">{{ stage.stage|title }}</span>
+                      </td>
+                      <td>{{ stage.count }}</td>
+                      <td>{{ stage.percentage|default:0 }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="3" class="text-center text-muted">Aucune donnée disponible</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicateurs de performance -->
+      <div class="row">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-chart-line me-2"></i>
+                Indicateurs de Performance
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="form-label">Taux de Conversion Candidature → Entretien</label>
+                  <div class="progress mb-3">
+                    <div class="progress-bar bg-primary" style="width: {{ conversion_rate|default:0 }}%">
+                      {{ conversion_rate|default:0 }}%
+                    </div>
+                  </div>
+                  
+                  <label class="form-label">Taux de Réussite des Entretiens</label>
+                  <div class="progress mb-3">
+                    <div class="progress-bar bg-success" style="width: {{ success_rate|default:0 }}%">
+                      {{ success_rate|default:0 }}%
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="row">
+                    <div class="col-6">
+                      <div class="text-center p-3 bg-light rounded">
+                        <h4 class="text-primary mb-1">{{ active_candidates|default:0 }}</h4>
+                        <small class="text-muted">Candidats Actifs</small>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="text-center p-3 bg-light rounded">
+                        <h4 class="text-warning mb-1">{{ active_offers|default:0 }}</h4>
+                        <small class="text-muted">Offres Actives</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Graphique des candidatures par statut
+    const applicationsCtx = document.getElementById('applicationsChart');
+    if (applicationsCtx) {
+        new Chart(applicationsCtx, {
+            type: 'pie',
+            data: {
+                labels: [
+                    {% for status in applications_by_status %}
+                        '{{ status.status|title }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    data: [
+                        {% for status in applications_by_status %}
+                            {{ status.count }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    // Graphique d'évolution mensuelle
+    const evolutionCtx = document.getElementById('evolutionChart');
+    if (evolutionCtx) {
+        new Chart(evolutionCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
+                datasets: [{
+                    label: 'Candidatures',
+                    data: [12, 19, 15, 25, 22, 30, 28, 35, 32, 40, 38, 45],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Entretiens',
+                    data: [8, 12, 10, 18, 15, 22, 20, 25, 23, 28, 26, 30],
+                    backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+});
+
+// Fonction d'export des données
+function exportData() {
+    const data = {
+        total_candidates: {{ total_candidates|default:0 }},
+        total_applications: {{ total_applications|default:0 }},
+        total_interviews: {{ total_interviews|default:0 }},
+        total_offers: {{ total_offers|default:0 }},
+        conversion_rate: {{ conversion_rate|default:0 }},
+        success_rate: {{ success_rate|default:0 }},
+        period: '{{ period }}',
+        generated_at: new Date().toLocaleString('fr-FR')
+    };
+
+    const dataStr = JSON.stringify(data, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'statistiques_recrutement.json';
+    link.click();
+    URL.revokeObjectURL(url);
+}
+</script>
+
+<style>
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: none;
+    border-radius: 8px;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.progress {
+    height: 25px;
+    border-radius: 12px;
+}
+
+.progress-bar {
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.badge {
+    font-size: 0.8em;
+}
+
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    h3 {
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %} 

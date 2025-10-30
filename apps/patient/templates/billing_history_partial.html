@@ -1,0 +1,190 @@
+<div class="table-responsive">
+    <table class="table table-hover shadow-sm" id="billingHistoryTable" style="border-radius: 8px; overflow: hidden;">
+        <thead style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white;">
+            <tr>
+                <th class="border-0 d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAll">
+                </th>
+                <th class="border-0 sortable" data-sort="invoice_number" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>N° Facture</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0 d-none d-lg-table-cell sortable" data-sort="patient" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>Patient concerné</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0 d-none d-lg-table-cell sortable" data-sort="generated_by" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>Généré par</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0 d-none d-lg-table-cell sortable" data-sort="generated_at" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>Date génération</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0 sortable" data-sort="total" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>Total facture</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0 d-none d-lg-table-cell sortable" data-sort="status" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>État</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0 d-none d-lg-table-cell sortable" data-sort="due_date" style="cursor: pointer;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>Date d'échéance</span>
+                        <i class="fas fa-sort sort-icon text-muted"></i>
+                    </div>
+                </th>
+                <th class="border-0">
+                    Actions
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bill in billing_history %}
+            <tr class="align-middle" style="transition: all 0.2s ease;">
+                <td data-label="Sélection" class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check">
+                </td>
+                <td data-label="N° Facture">
+                    <span class="badge bg-primary">{{ bill.invoice_number }}</span>
+                </td>
+                <td data-label="Patient" class="d-none d-lg-table-cell">
+                    <strong>{{ bill.patient.last_name }} {{ bill.patient.first_name }}</strong>
+                </td>
+                <td data-label="Généré par" class="d-none d-lg-table-cell">
+                    {% if bill.generated_by %}{{ bill.generated_by.first_name }} {{ bill.generated_by.last_name }}{% else %}<em class="text-muted">—</em>{% endif %}
+                </td>
+                <td data-label="Date génération" class="d-none d-lg-table-cell">
+                    <small class="text-muted">{{ bill.generated_at|date:"d/m/Y H:i" }}</small>
+                </td>
+                <td data-label="Total">
+                    <div class="d-block d-lg-none">
+                        <strong>{{ bill.patient.last_name }} {{ bill.patient.first_name }}</strong><br>
+                        <small class="text-muted">{{ bill.generated_at|date:"d/m/Y H:i" }}</small><br>
+                        {% if bill.status == 'paid' %}
+                            <span class="badge bg-success">Payée</span>
+                        {% elif bill.status == 'overdue' %}
+                            <span class="badge bg-danger">En retard</span>
+                        {% elif bill.status == 'pending' %}
+                            <span class="badge bg-warning">En attente</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Brouillon</span>
+                        {% endif %}
+                        {% if bill.due_date %}
+                            <br><small class="text-muted">Échéance: {{ bill.due_date|date:"d/m/Y" }}</small>
+                        {% endif %}
+                    </div>
+                    <span class="badge bg-success fs-6">{{ bill.total_amount|floatformat:2 }} DH</span>
+                </td>
+                <td data-label="État" class="d-none d-lg-table-cell">
+                    {% if bill.status == 'paid' %}
+                        <span class="badge bg-success">Payée</span>
+                    {% elif bill.status == 'overdue' %}
+                        <span class="badge bg-danger">En retard</span>
+                    {% elif bill.status == 'pending' %}
+                        <span class="badge bg-warning">En attente</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Brouillon</span>
+                    {% endif %}
+                </td>
+                <td data-label="Date d'échéance" class="d-none d-lg-table-cell">
+                    {% if bill.due_date %}
+                        <small class="text-muted">{{ bill.due_date|date:"d/m/Y" }}</small>
+                    {% else %}
+                        <em class="text-muted">—</em>
+                    {% endif %}
+                </td>
+                <td data-label="Actions">
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-info view-billing-details" 
+                                data-bill-id="{{ bill.id }}"
+                                data-invoice-number="{{ bill.invoice_number }}"
+                                data-patient="{{ bill.patient.last_name }} {{ bill.patient.first_name }}"
+                                data-patient-id="{{ bill.patient.id }}"
+                                data-generated-by="{% if bill.generated_by %}{{ bill.generated_by.first_name }} {{ bill.generated_by.last_name }}{% else %}—{% endif %}"
+                                data-generated-at="{{ bill.generated_at|date:"d/m/Y H:i" }}"
+                                data-total="{{ bill.total_amount|floatformat:2 }}"
+                                data-status="{{ bill.status }}"
+                                data-due-date="{% if bill.due_date %}{{ bill.due_date|date:"d/m/Y" }}{% else %}—{% endif %}"
+                                data-notes="{{ bill.notes|default:'' }}"
+                                title="Voir les détails">
+                            <i class="fas fa-eye"></i>
+                            <span class="d-none d-sm-inline ms-1">Détails</span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr class="empty-row">
+                <td colspan="9" class="text-center text-muted py-4 d-none d-lg-table-cell">
+                    <i class="fas fa-file-invoice fa-2x mb-2 d-block"></i>
+                    Aucune facture générée pour le moment.
+                </td>
+                <td colspan="3" class="text-center text-muted py-4 d-lg-none">
+                    <i class="fas fa-file-invoice fa-2x mb-2 d-block"></i>
+                    Aucune facture générée pour le moment.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if billing_history.has_other_pages %}
+<nav aria-label="Pagination historique facturations" class="mt-3">
+    <ul class="pagination justify-content-center flex-wrap">
+        {% if billing_history.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ billing_history.previous_page_number }}&search={{ request.GET.search|default:'' }}&patient_id={{ request.GET.patient_id|default:'' }}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+            </span>
+        </li>
+        {% endif %}
+        
+        {% for num in billing_history.paginator.page_range %}
+            {% if billing_history.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% else %}
+                <li class="page-item"><a class="page-link" href="?page={{ num }}&search={{ request.GET.search|default:'' }}&patient_id={{ request.GET.patient_id|default:'' }}">{{ num }}</a></li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if billing_history.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ billing_history.next_page_number }}&search={{ request.GET.search|default:'' }}&patient_id={{ request.GET.patient_id|default:'' }}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+            </span>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}

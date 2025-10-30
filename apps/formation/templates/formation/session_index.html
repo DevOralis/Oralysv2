@@ -1,0 +1,657 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Sessions{% endblock %}
+{% block menu %}
+{% include "formation/menu_formation.html" %}
+{% endblock %}
+{% block content %}
+
+<div class="content">
+  
+  <!-- Alerts Section - Utilisation des composants standards -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Main Content Card -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-calendar-alt me-2"></i>
+      Liste des Sessions de Formation
+    </div>
+    <div class="card-body">
+      <!-- Search Bar Component - Utilisation du composant standard -->
+      <form method="get" id="search-form" class="mb-4">
+        <div class="row g-2">
+          <!-- Filtre Formation -->
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-graduation-cap"></i>
+              </span>
+              
+              <input type="text" 
+                     class="form-control border-primary" 
+                     id="filter-formation" 
+                     placeholder="Rechercher par formation..." 
+                     value="{{ formation_filter }}">
+            </div>
+          </div>
+          <!-- Filtre Statut -->
+          <div class="col-8 col-sm-8 col-md-2 col-lg-2 order-2">
+            <select class="form-select" id="filter-statut" title="Filtrer par statut">
+              <option value="">Tous les statuts</option>
+              {% for value, label in session_statuts %}
+                <option value="{{ value }}" {% if value == statut_filter %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Filtre Formateur -->
+          <div class="col-12 col-sm-12 col-md-3 col-lg-3 order-3">
+            <div class="input-group">
+              
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-user-tie"></i>
+              </span>
+              <input type="text" 
+                     class="form-control border-primary" 
+                     id="filter-formateur" 
+                     placeholder="Rechercher par formateur..." 
+                     value="{{ formateur_filter }}">
+            </div>
+          </div>
+          <!-- Filtre Date -->
+          <div class="col-8 col-sm-8 col-md-2 col-lg-2 order-4">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-calendar"></i>
+              </span>
+              <input type="date" 
+                     class="form-control border-primary" 
+                     id="filter-date-debut" 
+                     value="{{ date_debut_filter }}">
+            </div>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-4 col-sm-4 col-md-2 col-lg-2 order-5">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="clear-filters" title="Effacer les filtres">
+                <i class="fas fa-times"></i>
+              </button>
+              <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddForm()">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Table Component - Utilisation du composant standard -->
+      <div class="table-container">
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Formation</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell">Formateur</th>
+              <th class="d-none d-md-table-cell">Date de début</th>
+              <th class="d-none d-md-table-cell">Date de fin</th>
+              <th class="d-none d-md-table-cell">Lieu</th>
+              <th class="d-none d-md-table-cell">Places</th>
+              <th class="d-none d-md-table-cell">Statut</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-table">
+            {% for session in sessions %}
+            <tr class="main-row">
+              <td class="d-none d-md-table-cell">
+                <input type="checkbox" class="row-check">
+              </td>
+              <td>
+                <div>
+                  <strong>{{ session.formation.titre }}</strong><br>
+                  <small class="text-muted">{{ session.formation.code }}</small>
+                </div>
+              </td>
+              <td class="d-none d-md-table-cell">{{ session.formateur.prenom }} {{ session.formateur.nom }}</td>
+              <td class="d-none d-md-table-cell">{{ session.date_debut|date:"d/m/Y H:i" }}</td>
+              <td class="d-none d-md-table-cell">{{ session.date_fin|date:"d/m/Y H:i" }}</td>
+              <td class="d-none d-md-table-cell">{{ session.lieu|default:"-" }}</td>
+              <td class="d-none d-md-table-cell text-center">
+                <span class="badge bg-info">{{ session.inscriptions_count }}/{{ session.places_totales }}</span>
+              </td>
+              <td class="d-none d-md-table-cell text-center">
+                <span class="badge bg-{% if session.statut == 'planifiée' %}secondary{% elif session.statut == 'en_cours' %}primary{% elif session.statut == 'terminée' %}success{% else %}danger{% endif %}">
+                  {{ session.get_statut_display }}
+                </span>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ session.id }}">
+                  Voir détails
+                </button>
+                <div class="d-none d-md-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-dark" 
+                          data-session-id="{{ session.id }}"
+                          data-formation-code="{{ session.formation.code }}"
+                          data-formateur-id="{{ session.formateur.id }}"
+                          data-date-debut="{{ session.date_debut|date:'Y-m-d\TH:i' }}"
+                          data-date-fin="{{ session.date_fin|date:'Y-m-d\TH:i' }}"
+                          data-lieu="{{ session.lieu|default:'' }}"
+                          data-places-totales="{{ session.places_totales }}"
+                          data-statut="{{ session.statut }}"
+                          onclick="openEditForm(this)"
+                          title="Modifier cette session">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-info" 
+                          title="Voir les inscriptions">
+                    <i class="fas fa-users"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#modalDeleteSession"
+                          data-session-id="{{ session.id }}"
+                          data-session-titre="{{ session.formation.titre }} - {{ session.date_debut|date:'d/m/Y' }}"
+                          title="Supprimer cette session">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="collapse bg-light" id="details-{{ session.id }}">
+              <td colspan="10" class="p-3">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Formation:</strong> {{ session.formation.titre }} ({{ session.formation.code }})</p>
+                    <p class="mb-2"><strong>Formateur:</strong> {{ session.formateur.prenom }} {{ session.formateur.nom }}</p>
+                    <p class="mb-2"><strong>Date de début:</strong> {{ session.date_debut|date:"d/m/Y H:i" }}</p>
+                    <p class="mb-2"><strong>Date de fin:</strong> {{ session.date_fin|date:"d/m/Y H:i" }}</p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Lieu:</strong> {{ session.lieu|default:"-" }}</p>
+                    <p class="mb-2"><strong>Places:</strong> {{ session.inscriptions_count }}/{{ session.places_totales }}</p>
+                    <p class="mb-2"><strong>Statut:</strong> 
+                      <span class="badge bg-{% if session.statut == 'planifiée' %}secondary{% elif session.statut == 'en_cours' %}primary{% elif session.statut == 'terminée' %}success{% else %}danger{% endif %}">
+                        {{ session.get_statut_display }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="col-12 mt-3">
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-dark" 
+                              data-session-id="{{ session.id }}"
+                              data-formation-code="{{ session.formation.code }}"
+                              data-formateur-id="{{ session.formateur.id }}"
+                              data-date-debut="{{ session.date_debut|date:'Y-m-d\TH:i' }}"
+                              data-date-fin="{{ session.date_fin|date:'Y-m-d\TH:i' }}"
+                              data-lieu="{{ session.lieu|default:'' }}"
+                              data-places-totales="{{ session.places_totales }}"
+                              data-statut="{{ session.statut }}"
+                              onclick="openEditForm(this)"
+                              title="Modifier cette session">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                      </button>
+                      <button class="btn btn-sm btn-info" 
+                              title="Voir les inscriptions">
+                        <i class="fas fa-users me-1"></i> Inscriptions
+                      </button>
+                      <button class="btn btn-sm btn-danger" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#modalDeleteSession"
+                              data-session-id="{{ session.id }}"
+                              data-session-titre="{{ session.formation.titre }} - {{ session.date_debut|date:'d/m/Y' }}"
+                              title="Supprimer cette session">
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="10" class="text-center text-muted">Aucune session disponible</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if sessions.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if sessions.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ sessions.previous_page_number }}{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if formateur_filter %}&formateur={{ formateur_filter }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </span>
+            </li>
+          {% endif %}
+
+          {% for num in sessions.paginator.page_range %}
+            {% if sessions.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+            {% elif num > sessions.number|add:'-3' and num < sessions.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if formateur_filter %}&formateur={{ formateur_filter }}{% endif %}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if sessions.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ sessions.next_page_number }}{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if formateur_filter %}&formateur={{ formateur_filter }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+      
+      <!-- Total des sessions -->
+      <div class="mt-3 text-end">
+        <span class="text-muted">Total: {{ sessions|length }} session(s)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- Formulaire d'ajout de session -->
+  <div class="card mb-4 ms-3 me-3" id="add-session">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2"></i>
+      Nouvelle Session de Formation
+    </div>
+    <div class="card-body">
+      <form id="sessionForm" method="post" action="{% url 'session_home' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="id_formation">Formation <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+              <select class="form-select" id="id_formation" name="formation" required>
+                <option value="">Sélectionner une formation</option>
+                {% for formation in formations %}
+                  <option value="{{ formation.code }}" 
+                          data-type="{{ formation.get_type_display }}"
+                          data-duree="{{ formation.duree_heures }}"
+                          data-supplier="{{ formation.supplier.name }}">
+                    {{ formation.titre }} ({{ formation.code }})
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_formateur">Formateur <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+              <select class="form-select" id="id_formateur" name="formateur" required>
+                <option value="">Sélectionner un formateur</option>
+                {% for formateur in formateurs %}
+                  <option value="{{ formateur.id }}">{{ formateur.prenom }} {{ formateur.nom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_date_debut">Date de début <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="datetime-local" class="form-control" id="id_date_debut" name="date_debut" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_date_fin">Date de fin <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="datetime-local" class="form-control" id="id_date_fin" name="date_fin" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_lieu">Lieu</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+              <input type="text" class="form-control" id="id_lieu" name="lieu" maxlength="255" placeholder="Ex: Salle de formation A">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_places_totales">Nombre de places <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-users"></i></span>
+              <input type="number" class="form-control" id="id_places_totales" name="places_totales" required min="1" value="10">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_statut">Statut</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+              <select class="form-select" id="id_statut" name="statut">
+                {% for value, label in session_statuts %}
+                  <option value="{{ value }}" {% if value == 'planifiée' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Informations sur la formation sélectionnée -->
+        <div id="formation-info" class="mt-3 p-3 bg-light rounded" style="display: none;">
+          <h6>Informations sur la formation :</h6>
+          <div class="row">
+            <div class="col-md-4">
+              <strong>Type :</strong> <span id="formation-type"></span>
+            </div>
+            <div class="col-md-4">
+              <strong>Durée :</strong> <span id="formation-duree"></span>h
+            </div>
+            <div class="col-md-4">
+              <strong>Fournisseur :</strong> <span id="formation-supplier"></span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Créer la session
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de session -->
+  <div class="card mb-4 ms-3 me-3" id="edit-session" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier la Session
+    </div>
+    <div class="card-body">
+      <form id="editSessionForm" method="post" action="{% url 'session_home' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="session_id" id="edit_session_id">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="edit_formation">Formation <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+              <select class="form-select" id="edit_formation" name="formation" required>
+                <option value="">Sélectionner une formation</option>
+                {% for formation in formations %}
+                  <option value="{{ formation.code }}">{{ formation.titre }} ({{ formation.code }})</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_formateur">Formateur <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+              <select class="form-select" id="edit_formateur" name="formateur" required>
+                <option value="">Sélectionner un formateur</option>
+                {% for formateur in formateurs %}
+                  <option value="{{ formateur.id }}">{{ formateur.prenom }} {{ formateur.nom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_date_debut">Date de début <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="datetime-local" class="form-control" id="edit_date_debut" name="date_debut" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_date_fin">Date de fin <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="datetime-local" class="form-control" id="edit_date_fin" name="date_fin" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_lieu">Lieu</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+              <input type="text" class="form-control" id="edit_lieu" name="lieu" maxlength="255">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_places_totales">Nombre de places <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-users"></i></span>
+              <input type="number" class="form-control" id="edit_places_totales" name="places_totales" required min="1">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_statut">Statut</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+              <select class="form-select" id="edit_statut" name="statut">
+                {% for value, label in session_statuts %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Modifier la session
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<!-- Modal pour supprimer une session -->
+<div class="modal fade" id="modalDeleteSession" tabindex="-1" aria-labelledby="modalDeleteSessionLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalDeleteSessionLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Confirmer la suppression
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+          <div><strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer cette session ?</div>
+        </div>
+        <div class="alert alert-info">
+          <strong id="delete_session_titre"></strong><br>
+          <small>Cette action est irréversible.</small>
+        </div>
+        <form id="deleteSessionForm" method="post" action="{% url 'session_home' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="session_id" id="delete_session_id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="deleteSessionForm" class="btn btn-danger">
+          <i class="fas fa-trash-alt me-1"></i> Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript pour gérer les formulaires (add/edit), la suppression (modal) et la recherche -->
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des filtres en temps réel
+    const filterInputs = ['#filter-formation', '#filter-formateur', '#filter-date-debut'];
+    const filterSelects = ['#filter-statut'];
+    
+    function applyFilters() {
+        const formation = document.getElementById('filter-formation').value;
+        const statut = document.getElementById('filter-statut').value;
+        const formateur = document.getElementById('filter-formateur').value;
+        const dateDebut = document.getElementById('filter-date-debut').value;
+        
+        const params = new URLSearchParams();
+        if (formation) params.append('formation', formation);
+        if (statut) params.append('statut', statut);
+        if (formateur) params.append('formateur', formateur);
+        if (dateDebut) params.append('date_debut', dateDebut);
+        
+        fetch(`{% url 'session_home' %}?${params.toString()}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('sessions-table').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+        });
+    }
+    
+    // Événements sur les filtres
+    filterInputs.forEach(selector => {
+        const input = document.querySelector(selector);
+        if (input) {
+            input.addEventListener('input', debounce(applyFilters, 500));
+        }
+    });
+    
+    filterSelects.forEach(selector => {
+        const select = document.querySelector(selector);
+        if (select) {
+            select.addEventListener('change', applyFilters);
+        }
+    });
+    
+    // Effacer les filtres
+    document.getElementById('clear-filters').addEventListener('click', function() {
+        document.getElementById('filter-formation').value = '';
+        document.getElementById('filter-statut').value = '';
+        document.getElementById('filter-formateur').value = '';
+        document.getElementById('filter-date-debut').value = '';
+        applyFilters();
+    });
+    
+    // Ouverture du formulaire d'édition en section
+    window.openEditForm = function(button) {
+        const sessionId = button.getAttribute('data-session-id');
+        const formationCode = button.getAttribute('data-formation-code');
+        const formateurId = button.getAttribute('data-formateur-id');
+        const dateDebut = button.getAttribute('data-date-debut');
+        const dateFin = button.getAttribute('data-date-fin');
+        const lieu = button.getAttribute('data-lieu') || '';
+        const placesTotales = button.getAttribute('data-places-totales');
+        const statut = button.getAttribute('data-statut');
+
+        const editSection = document.getElementById('edit-session');
+        const addSection = document.getElementById('add-session');
+
+        document.getElementById('edit_session_id').value = sessionId;
+        document.getElementById('edit_formation').value = formationCode;
+        document.getElementById('edit_formateur').value = formateurId;
+        document.getElementById('edit_date_debut').value = dateDebut;
+        document.getElementById('edit_date_fin').value = dateFin;
+        document.getElementById('edit_lieu').value = lieu;
+        document.getElementById('edit_places_totales').value = placesTotales;
+        document.getElementById('edit_statut').value = statut;
+
+        editSection.style.display = 'block';
+        addSection.style.display = 'none';
+        window.scrollTo({ top: editSection.offsetTop - 80, behavior: 'smooth' });
+    };
+
+    // Afficher la section d'ajout
+    window.showAddForm = function(){
+        const editSection = document.getElementById('edit-session');
+        const addSection = document.getElementById('add-session');
+        editSection.style.display = 'none';
+        addSection.style.display = 'block';
+        window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+    };
+    
+    // Modal de suppression
+    document.getElementById('modalDeleteSession').addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const sessionId = button.getAttribute('data-session-id');
+        const sessionTitre = button.getAttribute('data-session-titre');
+        
+        document.getElementById('delete_session_id').value = sessionId;
+        document.getElementById('delete_session_titre').textContent = sessionTitre;
+    });
+    
+    // Affichage des informations de formation
+    document.getElementById('id_formation').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const infoDiv = document.getElementById('formation-info');
+        
+        if (selectedOption.value) {
+            document.getElementById('formation-type').textContent = selectedOption.getAttribute('data-type') || '-';
+            document.getElementById('formation-duree').textContent = selectedOption.getAttribute('data-duree') || '-';
+            document.getElementById('formation-supplier').textContent = selectedOption.getAttribute('data-supplier') || '-';
+            infoDiv.style.display = 'block';
+        } else {
+            infoDiv.style.display = 'none';
+        }
+    });
+    
+    // Fonction debounce pour limiter les appels
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Fournisseurs{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}">
+  <script src="{% static 'purchases/js/scroll-to-form.js' %}"></script>
+{% endblock %}
+
+{% block menu %}
+  {% include 'purchases_menu.html' %}
+{% endblock %}
+
+{% block content %}
+  {% include 'list_supplier.html' %}
+  {% include 'new_supplier.html' %}
+{% endblock %}

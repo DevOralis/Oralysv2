@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Configuration{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'purchases/css/supplier.css' %}">
+  <script src="{% static 'vendor/js/chart.js' %}"></script>
+  <script src="{% static 'purchases/js/scroll-to-form.js' %}"></script>
+{% endblock %}
+
+{% block menu %}
+  {% include 'purchases_menu.html' %}
+{% endblock %}
+
+{% block content %}
+  <div class="content">
+    {% include 'configuration_args.html' %}
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+{% endblock %}

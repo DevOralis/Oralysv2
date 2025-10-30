@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Détails de la chambre {{ room.room_id }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            margin: 10px auto;
+            max-width: 800px;
+            color: #000;
+            background: #fff;
+            line-height: 1.5;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #4472C4;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .header-left h1 {
+            font-size: 16pt;
+            color: #4472C4;
+            margin: 0;
+        }
+
+        .header-left p {
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .header-right {
+            background: #F2F2F2;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border-left: 4px solid #4472C4;
+            text-align: right;
+            font-size: 9pt;
+        }
+
+        .info-section {
+            background: #F8F9FA;
+            border: 1px solid #E5E5E5;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 18px;
+        }
+
+        .info-section::before {
+            content: '';
+            display: block;
+            height: 3px;
+            margin: -10px -12px 8px -12px;
+            background-color: #4472C4;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .info-section h3 {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #4472C4;
+            margin-bottom: 6px;
+        }
+
+        .info-section table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+        }
+
+        .info-section th, 
+        .info-section td {
+            border: 1px solid #999;
+            padding: 6px 8px;
+            vertical-align: middle;
+        }
+
+        .info-section th {
+            background-color: #F2F2F2;
+            text-align: left;
+            width: 30%;
+        }
+
+        .section-title {
+            background: #4472C4;
+            color: white;
+            padding: 8px;
+            font-size: 11pt;
+            font-weight: bold;
+            border-radius: 5px;
+            margin-bottom: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            margin-top: 8px;
+        }
+
+        th, td {
+            border: 1px solid #999;
+            padding: 6px 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #F2F2F2;
+            font-weight: bold;
+        }
+
+        td:first-child {
+            text-align: left;
+        }
+
+        .no-reservations {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+            padding: 12px;
+            border: 1px dashed #ccc;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1>Chambre {{ room.room_id }}</h1>
+            <p>Détails et réservations associées</p>
+        </div>
+        <div class="header-right">
+            <p><strong>Type :</strong> {{ room.room_type.name }}</p>
+            <p><strong>Capacité :</strong> {{ room.capacity }}</p>
+            <p><strong>Statut :</strong> {{ room.get_status_display }}</p>
+        </div>
+    </div>
+
+    <div class="info-section">
+        <h3>Informations sur la chambre</h3>
+        <table>
+            <tr><th>ID</th><td>{{ room.room_id }}</td></tr>
+            <tr><th>Nom</th><td>{{ room.room_name }}</td></tr>
+            <tr><th>Type</th><td>{{ room.room_type.name }}</td></tr>
+            <tr><th>Capacité</th><td>{{ room.capacity }}</td></tr>
+            <tr><th>Statut</th><td>{{ room.get_status_display }}</td></tr>
+            <tr><th>Description</th><td>{{ room.description|default:"Aucune description" }}</td></tr>
+        </table>
+    </div>
+
+    <div class="reservations-section">
+        <div class="section-title">Réservations associées</div>
+        {% if reservations %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID Réservation</th>
+                        <th>Patient</th>
+                        <th>Lit</th>
+                        <th>Date de début</th>
+                        <th>Date de fin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reservation in reservations %}
+                        <tr>
+                            <td>{{ reservation.reservation_id }}</td>
+                            <td>{{ reservation.patient }}</td>
+                            <td>{{ reservation.bed.bed_id|default:"Aucun lit" }}</td>
+                            <td>{{ reservation.start_date }}</td>
+                            <td>{{ reservation.end_date }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="no-reservations">Aucune réservation associée à cette chambre.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

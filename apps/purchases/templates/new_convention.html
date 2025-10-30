@@ -1,0 +1,385 @@
+{% if request.session.user.permissions.purchases.write %}
+<!DOCTYPE html>
+<html lang="fr">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="{% static 'vendor/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome-free-6.4.0-web/css/all.min.css' %}">
+    <script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+    <div class="container py-4">
+        <div id="alert-container"></div>
+
+        {% if messages %}
+            <script>
+                const djangoMessages = [
+                    {% for message in messages %}
+                        {
+                            level: "{{ message.tags }}",
+                            message: "{{ message|escapejs }}"
+                        }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ];
+            </script>
+        {% endif %}
+
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header text-white" style="background-color: #1e90ff;">
+                <i class="fas fa-edit me-2"></i>
+                Nouvelle Convention
+            </div>
+            <div class="card-body">
+                <form id="convention-form" method="post" action="{% url 'convention_create' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="partner" class="form-label">Partenaire</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <select id="partner" name="partner" class="form-select">
+                                    <option value="">Sélectionner un partenaire</option>
+                                    {% for supplier in suppliers %}
+                                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="convention_type" class="form-label">Type de convention</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-file-contract"></i></span>
+                                <select id="convention_type" name="convention_type" class="form-select">
+                                    <option value="">Sélectionner un type</option>
+                                    {% for type in convention_types %}
+                                    <option value="{{ type.id }}">{{ type.libelle }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="currency" class="form-label">Devise</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                <select id="currency" name="currency" class="form-select">
+                                    <option value="">Sélectionner une devise</option>
+                                    {% for currency in currencies %}
+                                    <option value="{{ currency.id }}" {% if currency.abreviation == 'MAD' %}selected{% endif %}>
+                                        {{ currency.libelle }} ({{ currency.abreviation }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="date_start" class="form-label">Date début</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                <input type="date" id="date_start" name="date_start" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="date_end" class="form-label">Date fin</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                <input type="date" id="date_end" name="date_end" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h6>Lignes de convention</h6>
+                    <table class="table" id="convention-lines-table">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Taxe</th>
+                                <th>Sous-total HT</th>
+                                <th>Taxe</th>
+                                <th>Total TTC</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="position-relative">
+                                    <select name="product[]" class="form-select product-select">
+                                        <option value="">Sélectionner un produit</option>
+                                        {% for product in products %}
+                                        <option value="{{ product.product_id }}">{{ product.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+
+                                <td><input type="number" name="quantity[]" class="form-control" value="1" min="0" step="0.01"></td>
+                                <td><input type="number" name="unit_price[]" class="form-control" value="0.00" step="0.01"></td>
+                                <td>
+                                    <select name="tax[]" class="form-select">
+                                        <option value="">Aucune</option>
+                                        {% for tax in taxes %}
+                                        <option value="{{ tax.id }}" data-rate="{{ tax.valeur }}">{{ tax.libelle }} ({{ tax.valeur }}%)</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="line-subtotal">0.00</td>
+                                <td class="line-tax">0.00</td>
+                                <td class="line-total">0.00</td>
+                                <td>
+                                    <button class="btn btn-sm btn-light border text-danger btn-remove-line" title="Supprimer">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="5" class="text-end">Totaux :</td>
+                                <td id="convention-subtotal">0.00</td>
+                                <td id="convention-tax">0.00</td>
+                                <td id="convention-total">0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <button type="button" class="btn btn-outline-primary btn-sm me-2" id="add-line">
+                        <i class="fas fa-plus"></i> Ajouter une ligne
+                    </button>
+
+                    <div class="mb-3" style="margin-top: 20px;">
+                        <label for="general_conditions" class="form-label">Conditions générales</label>
+                        <textarea id="general_conditions" name="general_conditions" class="form-control" rows="3" placeholder="Conditions générales..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="attachments" class="form-label">Fichier joint</label>
+                        <input type="file" name="attachments" id="attachments" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Remarques..."></textarea>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+                        <a href="{% url 'convention_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i>
+                            <span class="d-none d-sm-inline ms-1">Annuler</span>
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            <span class="d-none d-sm-inline ms-1">Sauvegarder</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Flag to track if a form submission has occurred
+    let formSubmitted = false;
+
+    // Fonction pour afficher l'alerte de succès
+    function showSuccessAlert(message, autoHide = true, delay = 5000) {
+        Swal.fire({
+            icon: 'success',
+            title: 'Succès',
+            text: message,
+            timer: autoHide ? delay : null,
+            timerProgressBar: autoHide,
+            showConfirmButton: !autoHide,
+            didOpen: () => window.scrollTo({ top: 0, behavior: 'smooth' })
+        });
+    }
+
+    // Fonction pour afficher l'alerte d'erreur
+    function showErrorAlert(message, autoHide = true, delay = 8000) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: message,
+            timer: autoHide ? delay : null,
+            timerProgressBar: autoHide,
+            showConfirmButton: !autoHide,
+            didOpen: () => window.scrollTo({ top: 0, behavior: 'smooth' })
+        });
+    }
+
+    // Afficher les messages Django seulement si aucune soumission n'a eu lieu
+    if (typeof djangoMessages !== 'undefined' && !formSubmitted) {
+        djangoMessages.forEach(msg => {
+            if (msg.level === 'success') {
+                showSuccessAlert(msg.message);
+            } else if (msg.level === 'error') {
+                showErrorAlert(msg.message);
+            }
+        });
+    }
+
+    // Fonction pour mettre à jour les totaux d'une ligne
+    function updateLineTotals(row) {
+        const qty = parseFloat(row.querySelector('input[name="quantity[]"]').value || 0);
+        const price = parseFloat(row.querySelector('input[name="unit_price[]"]').value || 0);
+        const taxSelect = row.querySelector('select[name="tax[]"]');
+        const taxRate = taxSelect ? parseFloat(taxSelect.selectedOptions[0]?.dataset.rate || 0) : 0;
+        const subtotal = qty * price;
+        const taxAmount = subtotal * (taxRate / 100);
+        const total = subtotal + taxAmount;
+
+        row.querySelector('.line-subtotal').textContent = subtotal.toFixed(2);
+        row.querySelector('.line-tax').textContent = taxAmount.toFixed(2);
+        row.querySelector('.line-total').textContent = total.toFixed(2);
+
+        updateConventionTotals();
+    }
+
+    // Fonction pour mettre à jour les totaux généraux
+    function updateConventionTotals() {
+        let subtotal = 0, tax = 0;
+        document.querySelectorAll('#convention-lines-table tbody tr').forEach(row => {
+            subtotal += parseFloat(row.querySelector('.line-subtotal').textContent) || 0;
+            tax += parseFloat(row.querySelector('.line-tax').textContent) || 0;
+        });
+        document.getElementById('convention-subtotal').textContent = subtotal.toFixed(2);
+        document.getElementById('convention-tax').textContent = tax.toFixed(2);
+        document.getElementById('convention-total').textContent = (subtotal + tax).toFixed(2);
+    }
+
+    // Fonction pour configurer les événements d'une ligne
+    function setupRowEvents(row) {
+        row.querySelectorAll('input, select').forEach(input => {
+            input.addEventListener('input', () => updateLineTotals(row));
+        });
+
+        const removeBtn = row.querySelector('.btn-remove-line');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                row.remove();
+                updateConventionTotals();
+            });
+        }
+    }
+
+    // Initialisation des lignes existantes
+    document.querySelectorAll('#convention-lines-table tbody tr').forEach(setupRowEvents);
+
+    // Gestion de l'ajout d'une nouvelle ligne
+    document.getElementById('add-line').addEventListener('click', function(e) {
+        e.preventDefault();
+        const tbody = document.querySelector('#convention-lines-table tbody');
+        if (!tbody || tbody.rows.length === 0) return;
+
+        const newRow = tbody.rows[0].cloneNode(true);
+        newRow.querySelectorAll('input').forEach(input => {
+            if (input.type === 'number') {
+                input.value = input.name.includes('quantity') ? '1' : '0.00';
+            }
+        });
+        newRow.querySelectorAll('select').forEach(select => {
+            select.selectedIndex = 0;
+        });
+        newRow.querySelectorAll('.line-subtotal, .line-tax, .line-total').forEach(cell => {
+            cell.textContent = '0.00';
+        });
+        tbody.appendChild(newRow);
+        setupRowEvents(newRow);
+    });
+
+    // Gestion de la soumission du formulaire
+    document.getElementById('convention-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validation de base
+        let isValid = true;
+        const requiredFields = ['partner', 'convention_type', 'currency', 'date_start', 'date_end'];
+        
+        requiredFields.forEach(fieldName => {
+            const field = this.querySelector(`[name="${fieldName}"]`);
+            if (field && !field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+                console.log(`Champ requis manquant: ${fieldName}`);
+            } else if (field) {
+                field.classList.remove('is-invalid');
+            }
+        });
+
+        if (!isValid) {
+            showErrorAlert('Veuillez remplir tous les champs obligatoires (Partenaire, Type, Devise, Dates).', false);
+            return;
+        }
+
+        Swal.fire({
+            icon: 'question',
+            title: 'Confirmer la création',
+            text: 'Voulez-vous vraiment créer cette convention ?',
+            showCancelButton: true,
+            confirmButtonText: 'Oui, créer',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = this;
+                const formData = new FormData(form);
+                Swal.fire({
+                    title: 'Création en cours...',
+                    text: 'Veuillez patienter',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        Swal.close();
+                        formSubmitted = true; // Set flag to prevent djangoMessages from showing
+                        if (data.success) {
+                            showSuccessAlert(data.message || 'Convention créée avec succès !');
+                            setTimeout(() => {
+                                window.location.href = "{% url 'convention_list' %}";
+                            }, 2000);
+                        } else {
+                            showErrorAlert(data.message || 'Erreur lors de la création de la convention.', false);
+                            console.error('Erreur serveur:', data);
+                        }
+                    })
+                    .catch(error => {
+                        Swal.close();
+                        console.error('Erreur:', error);
+                        showErrorAlert('Une erreur réseau est survenue. Veuillez réessayer.', false);
+                    });
+            }
+        });
+    });
+
+    // Initialiser les totaux au chargement
+    updateConventionTotals();
+});
+</script>
+
+</body>
+</html>
+{% endif %}

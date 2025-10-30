@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Formateurs{% endblock %}
+{% block menu %}
+{% include "formation/menu_formation.html" %}
+{% endblock %}
+{% block content %}
+
+<div class="content">
+  <!-- Alerts Section - Utilisation des composants standards -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Main Content Card -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-user-tie me-2"></i>
+      Liste des Formateurs
+    </div>
+    <div class="card-body">
+      <!-- Search Bar Component - Utilisation du composant standard -->
+      <form method="get" id="search-form" class="mb-4">
+        <div class="row g-2">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-8 col-lg-8 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" 
+                     class="form-control border-primary" 
+                     name="nom" 
+                     id="search-nom" 
+                     placeholder="Rechercher par nom ou prénom..." 
+                     value="{{ nom_filter|default:'' }}">
+            </div>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-12 col-sm-12 col-md-4 col-lg-4 order-2">
+            <div class="d-flex gap-1">
+              <button type="button" class="btn w-100 text-nowrap px-2 text-white" style="background-color: #1e90ff;" onclick="showAddForm()">
+                <i class="fas fa-plus"></i>
+                <span class="d-none d-lg-inline ms-1">Nouveau</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Table Component - Utilisation du composant standard -->
+      <div class="table-container">
+        <table class="table table-striped table-hover" id="searchableTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Nom</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th>Prénom</th>
+              <th>Service</th>
+              <th class="text-center">Sessions</th>
+              <th class="text-center">Sessions Actives</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="formateurs-table">
+            {% for formateur in formateurs %}
+            <tr class="main-row">
+              <td>
+                <strong>{{ formateur.nom }}</strong>
+              </td>
+              <td>{{ formateur.prenom }}</td>
+              <td>
+                <span class="badge bg-secondary">{{ formateur.service }}</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-info">{{ formateur.sessions_count|default:0 }}</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-{% if formateur.sessions_actives_count > 0 %}success{% else %}secondary{% endif %}">
+                  {{ formateur.sessions_actives_count|default:0 }}
+                </span>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ formateur.id }}">
+                  Voir détails
+                </button>
+                <div class="d-none d-md-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-dark" 
+                          data-formateur-id="{{ formateur.id }}"
+                          data-formateur-nom="{{ formateur.nom }}"
+                          data-formateur-prenom="{{ formateur.prenom }}"
+                          data-formateur-service="{{ formateur.service }}"
+                          onclick="openEditForm(this)"
+                          title="Modifier ce formateur">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#modalDeleteFormateur"
+                          data-formateur-id="{{ formateur.id }}" 
+                          data-formateur-nom="{{ formateur.prenom }} {{ formateur.nom }}"
+                          title="Supprimer ce formateur">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="collapse bg-light" id="details-{{ formateur.id }}">
+              <td colspan="6" class="p-3">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Nom:</strong> {{ formateur.nom }}</p>
+                    <p class="mb-2"><strong>Prénom:</strong> {{ formateur.prenom }}</p>
+                    <p class="mb-2"><strong>Service:</strong> <span class="badge bg-secondary">{{ formateur.service }}</span></p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Total Sessions:</strong> <span class="badge bg-info">{{ formateur.sessions_count|default:0 }}</span></p>
+                    <p class="mb-2"><strong>Sessions Actives:</strong> 
+                      <span class="badge bg-{% if formateur.sessions_actives_count > 0 %}success{% else %}secondary{% endif %}">
+                        {{ formateur.sessions_actives_count|default:0 }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="col-12 mt-3">
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-dark" 
+                              data-formateur-id="{{ formateur.id }}"
+                              data-formateur-nom="{{ formateur.nom }}"
+                              data-formateur-prenom="{{ formateur.prenom }}"
+                              data-formateur-service="{{ formateur.service }}"
+                              onclick="openEditForm(this)"
+                              title="Modifier ce formateur">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                      </button>
+                      <button class="btn btn-sm btn-danger" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#modalDeleteFormateur"
+                              data-formateur-id="{{ formateur.id }}" 
+                              data-formateur-nom="{{ formateur.prenom }} {{ formateur.nom }}"
+                              title="Supprimer ce formateur">
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted">Aucun formateur disponible</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if formateurs.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if formateurs.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ formateurs.previous_page_number }}{% if nom_filter %}&nom={{ nom_filter }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </span>
+            </li>
+          {% endif %}
+
+          {% for num in formateurs.paginator.page_range %}
+            {% if formateurs.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+            {% elif num > formateurs.number|add:'-3' and num < formateurs.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if nom_filter %}&nom={{ nom_filter }}{% endif %}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if formateurs.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ formateurs.next_page_number }}{% if nom_filter %}&nom={{ nom_filter }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+      
+      <!-- Total des formateurs -->
+      <div class="mt-3 text-end">
+        <span class="text-muted">Total: {{ formateurs|length }} formateur(s)</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Formulaire d'ajout de formateur -->
+  <div class="card mb-4" id="add-formateur">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2"></i>
+      Nouveau Formateur
+    </div>
+    <div class="card-body">
+      <form id="formateurForm" method="post" action="{% url 'formateur_home' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="id_nom">Nom <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user"></i></span>
+              <input type="text" class="form-control" id="id_nom" name="nom" required maxlength="100" placeholder="Nom du formateur">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="id_prenom">Prénom <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user"></i></span>
+              <input type="text" class="form-control" id="id_prenom" name="prenom" required maxlength="100" placeholder="Prénom du formateur">
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="id_service">Service <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
+              <input type="text" class="form-control" id="id_service" name="service" required maxlength="100" placeholder="Service du formateur">
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i> Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de formateur -->
+  <div class="card mb-4" id="edit-formateur" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier le Formateur
+    </div>
+    <div class="card-body">
+      <form id="editFormateurForm" method="post" action="{% url 'formateur_home' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="formateur_id" id="edit_formateur_id">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="edit_nom">Nom <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user"></i></span>
+              <input type="text" class="form-control" id="edit_nom" name="nom" required maxlength="100">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="edit_prenom">Prénom <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user"></i></span>
+              <input type="text" class="form-control" id="edit_prenom" name="prenom" required maxlength="100">
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="edit_service">Service <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-briefcase"></i></span>
+              <input type="text" class="form-control" id="edit_service" name="service" required maxlength="100">
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn text-white" style="background-color: #1e90ff;">
+            <i class="fas fa-save me-1"></i> Modifier
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal pour supprimer un formateur -->
+<div class="modal fade" id="modalDeleteFormateur" tabindex="-1" aria-labelledby="modalDeleteFormateurLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalDeleteFormateurLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Confirmer la suppression
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+          <div><strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer ce formateur ?</div>
+        </div>
+        <div class="alert alert-info">
+          <strong id="delete_formateur_nom"></strong><br>
+          <small>Cette action est irréversible.</small>
+        </div>
+        <form id="deleteFormateurForm" method="post" action="{% url 'formateur_home' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="formateur_id" id="delete_formateur_id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="deleteFormateurForm" class="btn btn-danger">
+          <i class="fas fa-trash-alt me-1"></i> Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript pour gérer les formulaires et la recherche -->
+<script>
+// Gestion des formulaires intégrés
+document.addEventListener('DOMContentLoaded', function() {
+  // Fonction pour afficher le formulaire d'ajout
+  window.showAddForm = function(){
+    const editSection = document.getElementById('edit-formateur');
+    const addSection = document.getElementById('add-formateur');
+    
+    editSection.style.display = 'none';
+    addSection.style.display = 'block';
+    window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+  }
+
+  // Fonction pour ouvrir le formulaire d'édition
+  window.openEditForm = function(button){
+    const formateurId = button.getAttribute('data-formateur-id');
+    const formateurNom = button.getAttribute('data-formateur-nom');
+    const formateurPrenom = button.getAttribute('data-formateur-prenom');
+    const formateurService = button.getAttribute('data-formateur-service');
+
+    const editSection = document.getElementById('edit-formateur');
+    const addSection = document.getElementById('add-formateur');
+    const currentId = document.getElementById('edit_formateur_id').value || '';
+
+    // Si le formulaire d'édition est déjà ouvert pour le même formateur, basculer vers l'ajout
+    if (editSection.style.display !== 'none' && currentId === formateurId) {
+      editSection.style.display = 'none';
+      addSection.style.display = 'block';
+      window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+      return;
+    }
+
+    // Remplir le formulaire d'édition
+    document.getElementById('edit_formateur_id').value = formateurId;
+    document.getElementById('edit_nom').value = formateurNom;
+    document.getElementById('edit_prenom').value = formateurPrenom;
+    document.getElementById('edit_service').value = formateurService;
+
+    // Afficher le formulaire d'édition et masquer l'ajout
+    editSection.style.display = 'block';
+    addSection.style.display = 'none';
+    window.scrollTo({ top: editSection.offsetTop - 80, behavior: 'smooth' });
+  }
+  
+  // Modal de suppression
+  const modalDeleteFormateur = document.getElementById('modalDeleteFormateur');
+  if (modalDeleteFormateur) {
+    modalDeleteFormateur.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const formateurId = button.getAttribute('data-formateur-id');
+      const formateurNom = button.getAttribute('data-formateur-nom');
+      
+      document.getElementById('delete_formateur_id').value = formateurId;
+      document.getElementById('delete_formateur_nom').textContent = formateurNom;
+    });
+  }
+});
+
+// Recherche instantanée AJAX - CORRIGÉE
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('search-nom');
+  const formateursTable = document.getElementById('formateurs-table');
+  let searchTimeout = null;
+  let lastQuery = searchInput.value;
+  let controller = null;
+
+  if (searchInput && formateursTable) {
+    // Fonction pour effectuer la recherche
+    function performSearch(query) {
+      // Annule la requête précédente si elle existe
+      if (controller) {
+        controller.abort();
+      }
+      
+      controller = new AbortController();
+      
+      // Afficher un indicateur de chargement
+      formateursTable.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</td></tr>';
+      
+      // Utiliser l'URL actuelle avec le paramètre de recherche
+      const currentUrl = new URL(window.location);
+      currentUrl.searchParams.set('nom', query);
+      
+      fetch(currentUrl.toString(), {
+        headers: { 
+          'X-Requested-With': 'XMLHttpRequest',
+          'Cache-Control': 'no-cache'
+        },
+        signal: controller.signal
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Erreur réseau: ' + response.status);
+        return response.text();
+      })
+      .then(html => {
+        formateursTable.innerHTML = html;
+      })
+      .catch(error => {
+        if (error.name !== 'AbortError') {
+          console.error('Erreur lors de la recherche:', error);
+          formateursTable.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erreur lors de la recherche</td></tr>';
+        }
+      });
+    }
+
+    // Écouter les changements dans le champ de recherche
+    searchInput.addEventListener('input', function() {
+      const query = searchInput.value.trim();
+      
+      // Annuler le timeout précédent
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      // Si la requête est la même, ne rien faire
+      if (query === lastQuery) return;
+      
+      lastQuery = query;
+      
+      // Attendre 300ms après que l'utilisateur arrête de taper
+      searchTimeout = setTimeout(() => {
+        performSearch(query);
+      }, 300);
+    });
+
+    // Validation côté client pour les formulaires
+    const forms = document.querySelectorAll('form[id$="FormateurForm"]');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const requiredFields = this.querySelectorAll('[required]');
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Veuillez remplir tous les champs obligatoires.');
+            }
+        });
+    });
+  }
+});
+</script>
+
+{% endblock %}

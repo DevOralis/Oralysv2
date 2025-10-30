@@ -1,0 +1,79 @@
+{% for acte in actes %}
+<tr class="main-row">
+  <td class="d-none d-md-table-cell">
+    <input type="checkbox" class="row-check">
+  </td>
+  <td><span class="badge bg-primary">{{ acte.id }}</span></td>
+  <td>{{ acte.libelle }}</td>
+  <td class="d-none d-md-table-cell text-center">{{ acte.price|floatformat:2 }} DH</td>
+  <td class="text-end">
+    <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ acte.id }}">
+      Voir détails
+    </button>
+    <div class="d-none d-md-flex gap-1 justify-content-end">
+      <button class="btn btn-sm btn-light border text-dark" 
+              data-acte-id="{{ acte.id }}" 
+              data-acte-libelle="{{ acte.libelle }}"
+              data-acte-price="{{ acte.price }}"
+              onclick="openEditForm(this)"
+              title="Modifier cet acte">
+        <i class="fas fa-edit"></i>
+      </button>
+      <button class="btn btn-sm btn-light border text-danger" 
+              data-bs-toggle="modal" 
+              data-bs-target="#modalDeleteActe"
+              data-acte-id="{{ acte.id }}" 
+              data-acte-libelle="{{ acte.libelle }}"
+              title="Supprimer cet acte">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+    </div>
+  </td>
+</tr>
+<tr class="collapse bg-light" id="details-{{ acte.id }}">
+  <td colspan="5" class="p-3">
+    <div class="row">
+      <div class="col-md-6">
+        <p class="mb-2"><strong>ID:</strong> {{ acte.id }}</p>
+        <p class="mb-2"><strong>Libellé:</strong> {{ acte.libelle }}</p>
+      </div>
+      <div class="col-md-6">
+        <p class="mb-2"><strong>Prix:</strong> {{ acte.price|floatformat:2 }} DH</p>
+      </div>
+      <div class="col-12 mt-3">
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-dark" 
+                  data-acte-id="{{ acte.id }}" 
+                  data-acte-libelle="{{ acte.libelle }}"
+                  data-acte-price="{{ acte.price }}"
+                  onclick="openEditForm(this)"
+                  title="Modifier cet acte">
+            <i class="fas fa-edit me-1"></i> Modifier
+          </button>
+          <button class="btn btn-sm btn-danger" 
+                  data-bs-toggle="modal" 
+                  data-bs-target="#modalDeleteActe"
+                  data-acte-id="{{ acte.id }}" 
+                  data-acte-libelle="{{ acte.libelle }}"
+                  title="Supprimer cet acte">
+            <i class="fas fa-trash-alt me-1"></i> Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="5" class="text-center text-muted">Aucun acte trouvé</td>
+</tr>
+{% endfor %}
+
+
+
+
+
+
+
+
+

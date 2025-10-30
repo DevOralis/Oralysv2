@@ -1,0 +1,1059 @@
+{% extends "base.html" %}
+
+{% block title %}Cours & Programme{% endblock %}
+{% block menu %}
+{% include "formation/menu_formation.html" %}
+{% endblock %}
+
+{% block extra_css %}
+<!-- FullCalendar CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.8/index.global.min.css" rel="stylesheet">
+<style>
+  .table-card, .calendar-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 20px;
+  }
+  
+  .progress {
+    background-color: #e9ecef;
+  }
+  
+  .progress-bar {
+    transition: width 0.3s ease;
+  }
+  
+  #calendar {
+    height: 700px;
+  }
+  
+  .fc-event {
+    cursor: pointer;
+  }
+  
+  .badge {
+    font-size: 0.75em;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="content">
+
+  {# Affichage des messages #}
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+        <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+        <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Info :{% endif %}</strong> {{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Main Content Card -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-calendar-alt me-2"></i>
+      Gestion des Sessions de Formation
+    </div>
+    <div class="card-body">
+      <!-- Onglets de navigation -->
+      <ul class="nav nav-tabs flex-column flex-sm-row mb-3" role="tablist">
+        <li class="nav-item flex-sm-fill text-sm-center">
+          <button class="nav-link {% if view_type == 'list' %}active{% endif %} border-bottom-0" 
+                  data-bs-toggle="tab" 
+                  data-bs-target="#list-pane">Sessions</button>
+        </li>
+        <li class="nav-item flex-sm-fill text-sm-center">
+          <button class="nav-link {% if view_type == 'calendar' %}active{% endif %} border-bottom-0" 
+                  data-bs-toggle="tab" 
+                  data-bs-target="#calendar-pane">Calendrier</button>
+        </li>
+      </ul>
+
+      <!-- Contenu des onglets -->
+      <div class="tab-content" id="programmeTabContent">
+        <!-- Onglet Liste des sessions -->
+        <div class="tab-pane fade {% if view_type == 'list' %}show active{% endif %}" id="list-pane" role="tabpanel">
+          <!-- Search Bar Component -->
+          <form method="get" id="search-form" class="mb-4">
+            <div class="row g-2 mb-3">
+              <!-- Barre de recherche -->
+              <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+                <div class="input-group">
+                  <span class="input-group-text text-white border-primary" style="background-color: #1e90ff;">
+                    <i class="fas fa-search"></i>
+                  </span>
+                  <input type="search" name="q" id="search-sessions" class="form-control border-primary" placeholder="Rechercher formations, formateurs..." value="{{ query|default:'' }}">
+                </div>
+              </div>
+              <!-- Filtre Statut -->
+              <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+                <select class="form-select" id="statut-filter" title="Filtrer par statut">
+                  <option value="">Tous les statuts</option>
+                  {% for value, label in session_statuts %}
+                    <option value="{{ value }}" {% if statut_filter == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <!-- Boutons d'action -->
+              <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+                <div class="d-flex gap-1">
+                  <button type="button" class="btn btn-light border w-100 text-nowrap px-2" id="clear-filters" title="Effacer les filtres">
+                    <i class="fas fa-times"></i>
+                  </button>
+                  <button type="button" class="btn btn-primary w-100 text-nowrap px-2" onclick="showAddProgrammeSession()">
+                    <i class="fas fa-plus"></i>
+                    <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <!-- Table Component -->
+          <div class="table-responsive">
+            <table class="table table-striped table-hover" id="searchableTable">
+              <thead class="table-light borderless" style="background-color: #f8f9fa;">
+                <tr class="main-row">
+                  <th class="d-none d-md-table-cell">
+                    <input type="checkbox" id="selectAll">
+                  </th>
+                  <th>
+                    <div class="d-flex align-items-center">
+                      <span>Formation</span>
+                      <i class="fas fa-sort ms-1 text-muted"></i>
+                    </div>
+                  </th>
+                  <th class="d-none d-md-table-cell">Formateur</th>
+                  <th class="d-none d-md-table-cell">Date & Heure</th>
+                  <th class="d-none d-md-table-cell">Lieu</th>
+                  <th class="d-none d-md-table-cell">Places</th>
+                  <th class="d-none d-md-table-cell">Statut</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sessions-table">
+                {% for session in sessions %}
+                <tr class="main-row">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check">
+                  </td>
+                  <td>
+                    <div>
+                      <span class="badge bg-primary">{{ session.formation.code }}</span>
+                      <br><strong>{{ session.formation.titre }}</strong>
+                    </div>
+                  </td>
+                  <td class="d-none d-md-table-cell">{{ session.formateur.prenom }} {{ session.formateur.nom }}</td>
+                  <td class="d-none d-md-table-cell">
+                    <div>
+                      <small class="text-muted">Du:</small> {{ session.date_debut|date:"d/m/Y H:i" }}<br>
+                      <small class="text-muted">Au:</small> {{ session.date_fin|date:"d/m/Y H:i" }}
+                    </div>
+                  </td>
+                  <td class="d-none d-md-table-cell">{{ session.lieu|default:"-" }}</td>
+                  <td class="d-none d-md-table-cell">
+                    <div class="progress position-relative" style="height: 20px;">
+                      {% widthratio session.inscriptions_count session.places_totales 100 as progress_percent %}
+                      <div class="progress-bar {% if progress_percent >= 90 %}bg-danger{% elif progress_percent >= 70 %}bg-warning{% else %}bg-success{% endif %}" 
+                           style="width: {{ progress_percent }}%;"></div>
+                      <span class="position-absolute w-100 text-center small fw-bold text-dark">
+                        {{ session.inscriptions_count }}/{{ session.places_totales }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="d-none d-md-table-cell text-center">
+                    <span class="badge bg-{% if session.statut == 'planifiée' %}primary{% elif session.statut == 'en_cours' %}warning{% elif session.statut == 'terminée' %}success{% else %}danger{% endif %}">
+                      {{ session.get_statut_display }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <button class="btn btn-sm btn-primary d-md-none" data-bs-toggle="collapse" data-bs-target="#details-{{ session.id }}">
+                      Voir détails
+                    </button>
+                    <div class="d-none d-md-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-info" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#modalInscriptions"
+                              data-session-id="{{ session.id }}"
+                              data-session-titre="{{ session.formation.titre }}"
+                              data-session-places="{{ session.places_totales }}"
+                              data-session-inscriptions="{{ session.inscriptions_count }}"
+                              title="Gérer les inscriptions">
+                        <i class="fas fa-users"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-dark" 
+                              data-session-id="{{ session.id }}"
+                              data-session-formation="{{ session.formation.code }}"
+                              data-session-formateur="{{ session.formateur.id }}"
+                              data-session-debut="{{ session.date_debut|date:'Y-m-d\\TH:i' }}"
+                              data-session-fin="{{ session.date_fin|date:'Y-m-d\\TH:i' }}"
+                              data-session-lieu="{{ session.lieu|default:'' }}"
+                              data-session-places="{{ session.places_totales }}"
+                              data-session-statut="{{ session.statut }}"
+                              onclick="openEditProgrammeSession(this)"
+                              title="Modifier cette session">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#modalDeleteSession"
+                              data-session-id="{{ session.id }}" 
+                              data-session-titre="{{ session.formation.titre }} - {{ session.date_debut|date:'d/m/Y' }}"
+                              title="Supprimer cette session">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="collapse bg-light" id="details-{{ session.id }}">
+                  <td colspan="8" class="p-3">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <p class="mb-2"><strong>Formation:</strong> {{ session.formation.titre }} ({{ session.formation.code }})</p>
+                        <p class="mb-2"><strong>Formateur:</strong> {{ session.formateur.prenom }} {{ session.formateur.nom }}</p>
+                        <p class="mb-2"><strong>Date de début:</strong> {{ session.date_debut|date:"d/m/Y H:i" }}</p>
+                        <p class="mb-2"><strong>Date de fin:</strong> {{ session.date_fin|date:"d/m/Y H:i" }}</p>
+                      </div>
+                      <div class="col-md-6">
+                        <p class="mb-2"><strong>Lieu:</strong> {{ session.lieu|default:"-" }}</p>
+                        <p class="mb-2"><strong>Places:</strong> {{ session.inscriptions_count }}/{{ session.places_totales }}</p>
+                        <p class="mb-2"><strong>Statut:</strong> 
+                          <span class="badge bg-{% if session.statut == 'planifiée' %}primary{% elif session.statut == 'en_cours' %}warning{% elif session.statut == 'terminée' %}success{% else %}danger{% endif %}">
+                            {{ session.get_statut_display }}
+                          </span>
+                        </p>
+                      </div>
+                      <div class="col-12 mt-3">
+                        <div class="d-flex gap-2">
+                          <button class="btn btn-sm btn-info" 
+                                  data-bs-toggle="modal" 
+                                  data-bs-target="#modalInscriptions"
+                                  data-session-id="{{ session.id }}"
+                                  data-session-titre="{{ session.formation.titre }}"
+                                  data-session-places="{{ session.places_totales }}"
+                                  data-session-inscriptions="{{ session.inscriptions_count }}"
+                                  title="Gérer les inscriptions">
+                            <i class="fas fa-users me-1"></i> Inscriptions
+                          </button>
+                          <button class="btn btn-sm btn-dark" 
+                                  data-bs-toggle="modal" 
+                                  data-bs-target="#modalEditSession"
+                                  data-session-id="{{ session.id }}"
+                                  data-session-formation="{{ session.formation.code }}"
+                                  data-session-formateur="{{ session.formateur.id }}"
+                                  data-session-debut="{{ session.date_debut|date:'Y-m-d\TH:i' }}"
+                                  data-session-fin="{{ session.date_fin|date:'Y-m-d\TH:i' }}"
+                                  data-session-lieu="{{ session.lieu|default:'' }}"
+                                  data-session-places="{{ session.places_totales }}"
+                                  data-session-statut="{{ session.statut }}"
+                                  title="Modifier cette session">
+                            <i class="fas fa-edit me-1"></i> Modifier
+                          </button>
+                          <button class="btn btn-sm btn-danger" 
+                                  data-bs-toggle="modal" 
+                                  data-bs-target="#modalDeleteSession"
+                                  data-session-id="{{ session.id }}"
+                                  data-session-titre="{{ session.formation.titre }} - {{ session.date_debut|date:'d/m/Y' }}"
+                                  title="Supprimer cette session">
+                            <i class="fas fa-trash-alt me-1"></i> Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted">Aucune session programmée</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          {% if sessions.has_other_pages %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap">
+              {% if sessions.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ sessions.previous_page_number }}{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}" aria-label="Précédent">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">&laquo; Préc</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">&laquo; Préc</span>
+                  </span>
+                </li>
+              {% endif %}
+
+              {% for num in sessions.paginator.page_range %}
+                {% if sessions.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > sessions.number|add:'-3' and num < sessions.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if sessions.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ sessions.next_page_number }}{% if formation_filter %}&formation={{ formation_filter }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}" aria-label="Suivant">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                    <span class="d-none d-sm-block">Suiv &raquo;</span>
+                  </span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+          
+          <!-- Total des sessions -->
+          <div class="mt-3 text-end">
+            <span class="text-muted">Total: {{ sessions|length }} session(s)</span>
+          </div>
+
+        </div>
+
+        <!-- Onglet Calendrier -->
+        <div class="tab-pane fade {% if view_type == 'calendar' %}show active{% endif %}" id="calendar-pane" role="tabpanel">
+          <div class="calendar-card">
+            <div id="calendar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Formulaire d'ajout de session programme - Visible par défaut dans l'onglet Sessions -->
+  <div class="card mb-4" id="add-programme-session">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-plus me-2"></i>
+      Programmer une nouvelle session
+    </div>
+    <div class="card-body">
+      <form id="programmeSessionForm" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_session">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="pg_formation">Formation <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+              <select class="form-select" id="pg_formation" name="formation" required>
+                <option value="">Sélectionner une formation</option>
+                {% for formation in formations %}
+                  <option value="{{ formation.code }}">{{ formation.code }} - {{ formation.titre }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pg_formateur">Formateur <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+              <select class="form-select" id="pg_formateur" name="formateur" required>
+                <option value="">Sélectionner un formateur</option>
+                {% for formateur in formateurs %}
+                  <option value="{{ formateur.id }}">{{ formateur.prenom }} {{ formateur.nom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pg_date_debut">Date & Heure de début <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="datetime-local" class="form-control" id="pg_date_debut" name="date_debut" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pg_date_fin">Date & Heure de fin <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="datetime-local" class="form-control" id="pg_date_fin" name="date_fin" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pg_lieu">Lieu</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+              <input type="text" class="form-control" id="pg_lieu" name="lieu" placeholder="Salle de formation, Visio...">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pg_places">Nombre de places <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-users"></i></span>
+              <input type="number" class="form-control" id="pg_places" name="places_totales" min="1" required value="10">
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="pg_statut">Statut</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+              <select class="form-select" id="pg_statut" name="statut">
+                <option value="planifiée">Planifiée</option>
+                <option value="en_cours">En cours</option>
+                <option value="terminée">Terminée</option>
+                <option value="annulée">Annulée</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Programmer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire de modification de session programme - Visible uniquement dans l'onglet Sessions -->
+  <div class="card mb-4" id="edit-programme-session" style="display: none;">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      <i class="fas fa-edit me-2"></i>
+      Modifier la Session
+    </div>
+    <div class="card-body">
+      <form id="programmeEditForm" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit_session">
+        <input type="hidden" name="session_id" id="pg_edit_id">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="pg_edit_formation">Formation <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+              <select class="form-select" id="pg_edit_formation" name="formation" required>
+                <option value="">Sélectionner une formation</option>
+                {% for formation in formations %}
+                  <option value="{{ formation.code }}">{{ formation.code }} - {{ formation.titre }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pg_edit_formateur">Formateur <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+              <select class="form-select" id="pg_edit_formateur" name="formateur" required>
+                <option value="">Sélectionner un formateur</option>
+                {% for formateur in formateurs %}
+                  <option value="{{ formateur.id }}">{{ formateur.prenom }} {{ formateur.nom }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pg_edit_debut">Date & Heure de début <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="datetime-local" class="form-control" id="pg_edit_debut" name="date_debut" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pg_edit_fin">Date & Heure de fin <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              <input type="datetime-local" class="form-control" id="pg_edit_fin" name="date_fin" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pg_edit_lieu">Lieu</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+              <input type="text" class="form-control" id="pg_edit_lieu" name="lieu">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="pg_edit_places">Nombre de places <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-users"></i></span>
+              <input type="number" class="form-control" id="pg_edit_places" name="places_totales" min="1" required>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label" for="pg_edit_statut">Statut</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+              <select class="form-select" id="pg_edit_statut" name="statut">
+                <option value="planifiée">Planifiée</option>
+                <option value="en_cours">En cours</option>
+                <option value="terminée">Terminée</option>
+                <option value="annulée">Annulée</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Modifier
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour ajouter une nouvelle session -->
+<div class="modal fade" id="modalSession" tabindex="-1" aria-labelledby="modalSessionLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalSessionLabel">
+          <i class="fas fa-plus me-2"></i>
+          Nouvelle Session de Formation
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="sessionForm" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add_session">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="id_formation">Formation <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+                <select class="form-select" id="id_formation" name="formation" required>
+                  <option value="">Sélectionner une formation</option>
+                  {% for formation in formations %}
+                    <option value="{{ formation.code }}">{{ formation.code }} - {{ formation.titre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_formateur">Formateur <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                <select class="form-select" id="id_formateur" name="formateur" required>
+                  <option value="">Sélectionner un formateur</option>
+                  {% for formateur in formateurs %}
+                    <option value="{{ formateur.id }}">{{ formateur.prenom }} {{ formateur.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_date_debut">Date & Heure de début <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="datetime-local" class="form-control" id="id_date_debut" name="date_debut" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_date_fin">Date & Heure de fin <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="datetime-local" class="form-control" id="id_date_fin" name="date_fin" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_lieu">Lieu</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                <input type="text" class="form-control" id="id_lieu" name="lieu" placeholder="Salle de formation, Visio...">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_places_totales">Nombre de places <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-users"></i></span>
+                <input type="number" class="form-control" id="id_places_totales" name="places_totales" min="1" required value="10">
+              </div>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label" for="id_statut">Statut</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                <select class="form-select" id="id_statut" name="statut">
+                  <option value="planifiée">Planifiée</option>
+                  <option value="en_cours">En cours</option>
+                  <option value="terminée">Terminée</option>
+                  <option value="annulée">Annulée</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="sessionForm" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Programmer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour modifier une session -->
+<div class="modal fade" id="modalEditSession" tabindex="-1" aria-labelledby="modalEditSessionLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title" id="modalEditSessionLabel">
+          <i class="fas fa-edit me-2"></i>
+          Modifier la Session
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editSessionForm" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="edit_session">
+          <input type="hidden" name="session_id" id="edit_session_id">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="edit_formation">Formation <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+                <select class="form-select" id="edit_formation" name="formation" required>
+                  <option value="">Sélectionner une formation</option>
+                  {% for formation in formations %}
+                    <option value="{{ formation.code }}">{{ formation.code }} - {{ formation.titre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_formateur">Formateur <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                <select class="form-select" id="edit_formateur" name="formateur" required>
+                  <option value="">Sélectionner un formateur</option>
+                  {% for formateur in formateurs %}
+                    <option value="{{ formateur.id }}">{{ formateur.prenom }} {{ formateur.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_date_debut">Date & Heure de début <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="datetime-local" class="form-control" id="edit_date_debut" name="date_debut" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_date_fin">Date & Heure de fin <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                <input type="datetime-local" class="form-control" id="edit_date_fin" name="date_fin" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_lieu">Lieu</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                <input type="text" class="form-control" id="edit_lieu" name="lieu" placeholder="Salle de formation, Visio...">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_places_totales">Nombre de places <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-users"></i></span>
+                <input type="number" class="form-control" id="edit_places_totales" name="places_totales" min="1" required>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label" for="edit_statut">Statut</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                <select class="form-select" id="edit_statut" name="statut">
+                  <option value="planifiée">Planifiée</option>
+                  <option value="en_cours">En cours</option>
+                  <option value="terminée">Terminée</option>
+                  <option value="annulée">Annulée</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="editSessionForm" class="btn btn-warning">
+          <i class="fas fa-save me-1"></i> Modifier
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour supprimer une session -->
+<div class="modal fade" id="modalDeleteSession" tabindex="-1" aria-labelledby="modalDeleteSessionLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalDeleteSessionLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Confirmer la suppression
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle me-2 fw-bold"></i>
+          <div><strong>Attention :</strong> Êtes-vous sûr de vouloir supprimer cette session ?</div>
+        </div>
+        <div class="alert alert-info">
+          <strong id="delete_session_titre"></strong><br>
+          <small>Cette action est irréversible et supprimera également toutes les inscriptions associées.</small>
+        </div>
+        <form id="deleteSessionForm" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_session">
+          <input type="hidden" name="session_id" id="delete_session_id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="deleteSessionForm" class="btn btn-danger">
+          <i class="fas fa-trash-alt me-1"></i> Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour gérer les inscriptions -->
+<div class="modal fade" id="modalInscriptions" tabindex="-1" aria-labelledby="modalInscriptionsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="modalInscriptionsLabel">
+          <i class="fas fa-users me-2"></i>
+          Gérer les inscriptions
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <h6 id="inscriptions_session_titre"></h6>
+          <p class="text-muted" id="inscriptions_session_info"></p>
+        </div>
+        
+        <form id="inscriptionsForm" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="inscriptions">
+          <input type="hidden" name="session_id" id="inscriptions_session_id">
+          
+          <div class="mb-3">
+            <label class="form-label" for="search_employees">Rechercher un employé</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-search"></i></span>
+              <input type="search" class="form-control" id="search_employees" placeholder="Rechercher par nom...">
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Sélectionner les employés à inscrire</label>
+            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+              {% for employee in employees %}
+              <div class="form-check employee-item" data-name="{{ employee.full_name|lower }}">
+                <input class="form-check-input" type="checkbox" name="employees" value="{{ employee.id }}" id="emp_{{ employee.id }}">
+                <label class="form-check-label" for="emp_{{ employee.id }}">
+                  <strong>{{ employee.full_name }}</strong>
+                  {% if employee.department %}
+                    <small class="text-muted">- {{ employee.department.name }}</small>
+                  {% endif %}
+                </label>
+              </div>
+              {% empty %}
+              <p class="text-muted">Aucun employé disponible</p>
+              {% endfor %}
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <button type="submit" form="inscriptionsForm" class="btn btn-info">
+          <i class="fas fa-save me-1"></i> Inscrire
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- FullCalendar JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.8/index.global.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let calendar;
+    const calendarEl = document.getElementById('calendar');
+    const calendarTab = document.querySelector('button[data-bs-target="#calendar-pane"]');
+    const listTab = document.querySelector('button[data-bs-target="#list-pane"]');
+    
+    // Gestion de l'affichage des formulaires selon l'onglet actif
+    function toggleFormsVisibility(activeTab) {
+        const addForm = document.getElementById('add-programme-session');
+        const editForm = document.getElementById('edit-programme-session');
+        
+        if (activeTab === 'list') {
+            // Dans l'onglet Sessions, afficher le formulaire d'ajout par défaut
+            if (addForm) addForm.style.display = 'block';
+            // Le formulaire d'édition reste masqué jusqu'à ce qu'on clique sur "Modifier"
+            if (editForm) editForm.style.display = 'none';
+        } else if (activeTab === 'calendar') {
+            // Dans l'onglet Calendrier, masquer tous les formulaires
+            if (addForm) addForm.style.display = 'none';
+            if (editForm) editForm.style.display = 'none';
+        }
+    }
+    
+    // Écouter les changements d'onglets
+    if (listTab) {
+        listTab.addEventListener('shown.bs.tab', function() {
+            toggleFormsVisibility('list');
+        });
+    }
+    
+    if (calendarTab) {
+        calendarTab.addEventListener('shown.bs.tab', function() {
+            toggleFormsVisibility('calendar');
+            
+            // Initialiser le calendrier si ce n'est pas déjà fait
+            if (!calendar && calendarEl) {
+                calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    locale: 'fr',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    },
+                    buttonText: {
+                        today: 'Aujourd\'hui',
+                        month: 'Mois',
+                        week: 'Semaine',
+                        day: 'Jour'
+                    },
+                    height: 'auto',
+                    events: '?view=calendar', // Let FullCalendar handle the fetch
+                    eventClick: function(info) {
+                        const props = info.event.extendedProps;
+                        alert(`Formation: ${info.event.title}\nFormateur: ${props.formateur}\nLieu: ${props.lieu}\nPlaces: ${props.places}\nStatut: ${props.statut}`);
+                    }
+                });
+                calendar.render();
+            }
+        });
+    }
+    
+    // Initialiser l'état selon l'onglet actif au chargement
+    const activeTab = document.querySelector('.nav-link.active');
+    if (activeTab) {
+        if (activeTab.getAttribute('data-bs-target') === '#list-pane') {
+            toggleFormsVisibility('list');
+        } else if (activeTab.getAttribute('data-bs-target') === '#calendar-pane') {
+            toggleFormsVisibility('calendar');
+        }
+    }
+    
+    // Recherche en temps réel
+    const searchInput = document.getElementById('search-sessions');
+    const statutFilter = document.getElementById('statut-filter');
+    const dateFilter = document.getElementById('date-filter');
+    
+    function performSearch() {
+        const query = searchInput.value;
+        const statut = statutFilter.value;
+        const date = dateFilter.value;
+        
+        const params = new URLSearchParams();
+        if (query) params.append('q', query);
+        if (statut) params.append('statut', statut);
+        if (date) params.append('date', date);
+        params.append('view', 'list');
+        
+        fetch(`?${params.toString()}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('sessions-table').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erreur lors de la recherche:', error);
+        });
+    }
+    
+    // Événements de recherche
+    let searchTimeout;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(performSearch, 300);
+    });
+    
+    statutFilter.addEventListener('change', performSearch);
+    if (dateFilter) {
+        dateFilter.addEventListener('change', performSearch);
+    }
+    
+    document.getElementById('clear-filters').addEventListener('click', function() {
+        searchInput.value = '';
+        statutFilter.value = '';
+        if (dateFilter) dateFilter.value = '';
+        performSearch();
+    });
+    
+    // Modal de suppression
+    document.getElementById('modalDeleteSession').addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        
+        document.getElementById('delete_session_id').value = button.getAttribute('data-session-id');
+        document.getElementById('delete_session_titre').textContent = button.getAttribute('data-session-titre');
+    });
+    
+    // Modal des inscriptions
+    document.getElementById('modalInscriptions').addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        
+        document.getElementById('inscriptions_session_id').value = button.getAttribute('data-session-id');
+        document.getElementById('inscriptions_session_titre').textContent = button.getAttribute('data-session-titre');
+        
+        const places = button.getAttribute('data-session-places');
+        const inscriptions = button.getAttribute('data-session-inscriptions');
+        document.getElementById('inscriptions_session_info').textContent = 
+            `Places disponibles: ${places - inscriptions}/${places}`;
+        
+        // Réinitialiser les checkboxes
+        document.querySelectorAll('input[name="employees"]').forEach(cb => cb.checked = false);
+    });
+    
+    // Recherche d'employés dans le modal
+    const searchEmployees = document.getElementById('search_employees');
+    if (searchEmployees) {
+        searchEmployees.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            document.querySelectorAll('.employee-item').forEach(item => {
+                const name = item.getAttribute('data-name');
+                if (name.includes(query)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Validation des dates
+    const dateDebutInputs = document.querySelectorAll('input[name="date_debut"]');
+    const dateFinInputs = document.querySelectorAll('input[name="date_fin"]');
+    
+    dateDebutInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const form = this.closest('form');
+            const dateFinInput = form.querySelector('input[name="date_fin"]');
+            if (dateFinInput && this.value) {
+                dateFinInput.min = this.value;
+            }
+        });
+    });
+    
+    dateFinInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const form = this.closest('form');
+            const dateDebutInput = form.querySelector('input[name="date_debut"]');
+            if (dateDebutInput && this.value && dateDebutInput.value) {
+                if (this.value <= dateDebutInput.value) {
+                    alert('La date de fin doit être postérieure à la date de début');
+                    this.value = '';
+                }
+            }
+        });
+    });
+});
+
+// Fonctions pour les formulaires dans des cartes séparées
+window.showAddProgrammeSession = function() {
+  const editSection = document.getElementById('edit-programme-session');
+  const addSection = document.getElementById('add-programme-session');
+  
+  // Masquer le formulaire d'édition et afficher le formulaire d'ajout
+  if (editSection) editSection.style.display = 'none';
+  if (addSection) addSection.style.display = 'block';
+  
+  // Faire défiler vers le formulaire d'ajout
+  if (addSection) {
+    window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+  }
+}
+
+window.openEditProgrammeSession = function(button) {
+  const sessionId = button.getAttribute('data-session-id');
+  const formationCode = button.getAttribute('data-session-formation');
+  const formateurId = button.getAttribute('data-session-formateur');
+  const dateDebut = button.getAttribute('data-session-debut');
+  const dateFin = button.getAttribute('data-session-fin');
+  const lieu = button.getAttribute('data-session-lieu');
+  const placesTotales = button.getAttribute('data-session-places');
+  const statut = button.getAttribute('data-session-statut');
+
+  const editSection = document.getElementById('edit-programme-session');
+  const addSection = document.getElementById('add-programme-session');
+  const currentId = document.getElementById('pg_edit_id').value || '';
+
+  // Si le formulaire d'édition est déjà ouvert pour la même session, basculer vers l'ajout
+  if (editSection.style.display !== 'none' && currentId === sessionId) {
+    editSection.style.display = 'none';
+    addSection.style.display = 'block';
+    window.scrollTo({ top: addSection.offsetTop - 80, behavior: 'smooth' });
+    return;
+  }
+
+  // Remplir le formulaire d'édition
+  document.getElementById('pg_edit_id').value = sessionId;
+  document.getElementById('pg_edit_formation').value = formationCode;
+  document.getElementById('pg_edit_formateur').value = formateurId;
+  document.getElementById('pg_edit_debut').value = dateDebut;
+  document.getElementById('pg_edit_fin').value = dateFin;
+  document.getElementById('pg_edit_lieu').value = lieu;
+  document.getElementById('pg_edit_places').value = placesTotales;
+  document.getElementById('pg_edit_statut').value = statut;
+
+  // Afficher le formulaire d'édition et masquer l'ajout
+  editSection.style.display = 'block';
+  addSection.style.display = 'none';
+  window.scrollTo({ top: editSection.offsetTop - 80, behavior: 'smooth' });
+}
+</script>
+{% endblock %}

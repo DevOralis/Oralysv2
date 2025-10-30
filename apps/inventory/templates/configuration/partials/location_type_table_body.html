@@ -1,0 +1,14 @@
+{% for location_type in location_types_paginated %}
+<tr data-id="{{ location_type.pk }}" data-name="{{ location_type.label }}" data-label="{{ location_type.label }}" data-description="{{ location_type.description|default:'' }}">
+  <td>{{ location_type.label }}</td>
+  <td>{{ location_type.description|default:"-" }}</td>
+  {% if request.session.user.permissions.inventory.update and request.session.user.permissions.inventory.delete %}
+  <td>
+    <button type="button" class="btn btn-sm btn-light btn-edit-config" data-entity="location-type" title="Modifier"><i class="fas fa-edit"></i></button>
+    <button type="button" class="btn btn-sm btn-light text-danger btn-location-type-delete" title="Supprimer"><i class="fas fas fa-trash-alt"></i></button>
+  </td>
+  {% endif %}
+</tr>
+{% empty %}
+<tr><td colspan="3" class="text-center text-muted">Aucun type d'emplacement trouvé</td></tr>
+{% endfor %} 

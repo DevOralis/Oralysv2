@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% load math_filters %}
+
+{% block menu %}
+  {% include 'patient_menu.html' %}
+{% endblock %}
+
+{% block title %}Facturation Simple{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-file-invoice-dollar"></i> Génération de Facture
+                    </h3>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Formulaire de sélection patient -->
+                    <form method="get" id="patientForm">
+                        <div class="mb-4">
+                            <label for="patient_id" class="form-label">
+                                <i class="fas fa-user"></i> Sélectionner un patient
+                            </label>
+                            <select name="patient_id" id="patient_id" class="form-select" onchange="this.form.submit()">
+                                <option value="">-- Choisir un patient --</option>
+                                {% for patient in patients %}
+                                    <option value="{{ patient.id }}" {% if patient.id == selected_patient.id %}selected{% endif %}>
+                                        {{ patient.last_name|upper }} {{ patient.first_name }}
+                                        {% if patient.cin %} - CIN: {{ patient.cin }}{% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+
+                    <!-- Détails du patient sélectionné -->
+                    {% if selected_patient %}
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-user-circle"></i> Informations Patient
+                                    </h6>
+                                    <p class="mb-1"><strong>Nom:</strong> {{ selected_patient.last_name|upper }} {{ selected_patient.first_name }}</p>
+                                    {% if selected_patient.cin %}
+                                        <p class="mb-1"><strong>CIN:</strong> {{ selected_patient.cin }}</p>
+                                    {% endif %}
+                                    {% if selected_patient.phone %}
+                                        <p class="mb-1"><strong>Téléphone:</strong> {{ selected_patient.phone }}</p>
+                                    {% endif %}
+                                    {% if selected_patient.email %}
+                                        <p class="mb-1"><strong>Email:</strong> {{ selected_patient.email }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-info-circle"></i> Statistiques
+                                    </h6>
+                                    <p class="mb-1"><strong>Consultations non facturées:</strong> {{ consultations_non_facturees.count }}</p>
+                                    <p class="mb-1"><strong>Hébergements non facturés:</strong> {{ admissions_non_facturees.count }}</p>
+                                    <p class="mb-1"><strong>Total consultations:</strong> 
+                                        <span class="text-info">{{ total_consultations|floatformat:2 }} DH</span>
+                                    </p>
+                                    <p class="mb-1"><strong>Total hébergement:</strong> 
+                                        <span class="text-warning">{{ total_hebergement|floatformat:2 }} DH</span>
+                                    </p>
+                                    <p class="mb-1"><strong>Total à facturer:</strong> 
+                                        <span class="text-success">{{ total_amount|floatformat:2 }} DH</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Consultations non facturées pour ce patient -->
+                    {% if consultations_non_facturees %}
+                        <div class="mb-4">
+                            <h5><i class="fas fa-clipboard-list"></i> Consultations à facturer</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Médecin</th>
+                                            <th>Actes réalisés</th>
+                                            <th>Montant</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for consultation in consultations_non_facturees %}
+                                        <tr>
+                                            <td>{{ consultation.date|date:"d/m/Y H:i" }}</td>
+                                            <td>
+                                                {% if consultation.medecin %}
+                                                    Dr. {{ consultation.medecin.full_name }}
+                                                {% else %}
+                                                    <em class="text-muted">Non assigné</em>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% for acte in consultation.actes.all %}
+                                                    <span class="badge bg-info me-1">{{ acte.libelle }}</span>
+                                                {% empty %}
+                                                    <em class="text-muted">Aucun acte</em>
+                                                {% endfor %}
+                                            </td>
+                                            <td>
+                                                <strong class="text-info">{{ consultation.get_total_cost|floatformat:2 }} DH</strong>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-info">
+                                            <th colspan="3">SOUS-TOTAL CONSULTATIONS:</th>
+                                            <th class="text-info">{{ total_consultations|floatformat:2 }} DH</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Hébergements non facturés pour ce patient -->
+                    {% if admissions_non_facturees %}
+                        <div class="mb-4">
+                            <h5><i class="fas fa-bed"></i> Hébergements à facturer</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-warning">
+                                        <tr>
+                                            <th>Admission</th>
+                                            <th>Chambre</th>
+                                            <th>Durée</th>
+                                            <th>Accompagnant</th>
+                                            <th>Montant</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for admission in admissions_non_facturees %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ admission.admission_date|date:"d/m/Y" }}</strong>
+                                                {% if admission.discharge_date %}
+                                                    - {{ admission.discharge_date|date:"d/m/Y" }}
+                                                {% else %}
+                                                    - <em class="text-success">En cours</em>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <strong>{{ admission.room.room_name|default:"Non assignée" }}</strong>
+                                                {% if admission.room.room_type %}
+                                                    <br><small class="text-info">({{ admission.room.room_type }})</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ admission.calculate_stay_duration }} jour(s)</span>
+                                                {% with room_cost=admission.calculate_room_cost duration=admission.calculate_stay_duration %}
+                                                    {% if room_cost > 0 and duration > 0 %}
+                                                        <br><small class="text-muted">
+                                                            Tarif: {{ room_cost|div:duration|floatformat:2 }} DH/jour
+                                                        </small>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </td>
+                                            <td>
+                                                {% with companion_cost=admission.calculate_companion_cost duration=admission.calculate_stay_duration %}
+                                                    {% if companion_cost > 0 %}
+                                                        <span class="badge bg-info"><i class="fas fa-user"></i> Oui</span>
+                                                        <br><small class="text-success">{{ companion_cost|floatformat:2 }} DH</small>
+                                                        {% if duration > 0 %}
+                                                            <br><small class="text-muted">{{ companion_cost|div:duration|floatformat:2 }} DH/jour</small>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="badge bg-secondary"><i class="fas fa-user-times"></i> Non</span>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </td>
+                                            <td>
+                                                <strong class="text-warning fs-5">{{ admission.calculate_total_cost|floatformat:2 }} DH</strong>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-warning">
+                                            <th colspan="4">SOUS-TOTAL HÉBERGEMENT:</th>
+                                            <th class="text-warning">{{ total_hebergement|floatformat:2 }} DH</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Bouton de génération de facture globale -->
+                    {% if consultations_non_facturees or admissions_non_facturees %}
+                        <div class="mb-4">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-calculator me-2"></i>TOTAL FACTURE GLOBALE
+                                    </h5>
+                                    <h3 class="mb-0">{{ total_amount|floatformat:2 }} DH</h3>
+                                    <small>
+                                        {% if total_consultations > 0 %}Consultations: {{ total_consultations|floatformat:2 }} DH{% endif %}
+                                        {% if total_consultations > 0 and total_hebergement > 0 %} + {% endif %}
+                                        {% if total_hebergement > 0 %}Hébergement: {{ total_hebergement|floatformat:2 }} DH{% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <form method="post" action="{% url 'patient:generate_patient_invoice' selected_patient.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-lg" 
+                                        onclick="return confirm('Générer une facture globale pour toutes les consultations et hébergements de ce patient ?')">
+                                    <i class="fas fa-file-invoice-dollar me-2"></i>
+                                    Générer Facture Globale ({{ total_amount|floatformat:2 }} DH)
+                                </button>
+                            </form>
+                        </div>
+
+                    {% else %}
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Aucune consultation ou hébergement non facturé</strong> pour ce patient.
+                            <br>
+                            Toutes les consultations et hébergements ont déjà été facturés.
+                        </div>
+                    {% endif %}
+
+                    {% endif %}
+
+                    {% if not selected_patient %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-arrow-up fa-3x mb-3"></i>
+                        <p>Sélectionnez un patient pour voir ses consultations à facturer</p>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

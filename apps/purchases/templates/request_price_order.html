@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Demande de Prix - ERP Clinique</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            margin: 10px auto;
+            max-width: 800px;
+            color: #000;
+            background: #fff;
+            line-height: 1.5;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        p {
+            margin: 0;
+            padding: 0;
+        }
+
+        .header,
+        .info-grid,
+        .order-lines-section,
+        .notes-section {
+            margin-bottom: 18px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #008080;
+            padding-bottom: 10px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-placeholder {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #008080, #20B2AA);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .company-info h1 {
+            font-size: 18pt;
+            color: #008080;
+        }
+
+        .company-info .subtitle {
+            font-size: 10pt;
+            color: #666;
+        }
+
+        .header-right {
+            background: #F0F6F6;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border-left: 4px solid #008080;
+            text-align: right;
+            font-size: 9pt;
+        }
+
+        .status-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+            color: black;
+        }
+
+        .status-draft {
+            background: #FF6347;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .info-section {
+            background: #F5FAFA;
+            border: 1px solid #D3E5E5;
+            border-radius: 6px;
+            padding: 10px 12px;
+        }
+
+        .info-section::before {
+            content: '';
+            display: block;
+            height: 3px;
+            margin: -10px -12px 8px -12px;
+            background-color: #008080;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .info-section h3 {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #008080;
+            margin-bottom: 6px;
+            white-space: nowrap;
+        }
+
+        .info-section p {
+            font-size: 9pt;
+            margin: 3px 0;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .section-title {
+            background: #008080;
+            color: white;
+            padding: 10px;
+            font-size: 11pt;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 9pt;
+        }
+
+        th,
+        td {
+            border: 1px solid #999;
+            padding: 6px 8px;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #F2F2F2;
+            color: #000;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        td {
+            text-align: center;
+            font-size: 8.5pt;
+        }
+
+        td:first-child {
+            text-align: left;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #F5FAFA;
+        }
+
+        .notes-section {
+            background: #FFF5E6;
+            border-left: 4px solid #FF8C00;
+            border: 1px solid #FFDAB9;
+            border-radius: 5px;
+            padding: 10px 12px;
+        }
+
+        .notes-section h4 {
+            color: #CC7000;
+            font-size: 10.5pt;
+            margin-bottom: 5px;
+        }
+
+        .notes-section p {
+            font-style: italic;
+            font-size: 9pt;
+            margin: 0;
+        }
+
+        @media print {
+            body {
+                margin: 5px;
+            }
+
+            .info-section,
+            .order-lines-section,
+            table {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="logo-placeholder">CLV</div>
+            <div class="company-info">
+                <h1>Oralys</h1>
+                <p class="subtitle">Système de Gestion des devis</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <h2>Demande de Prix</h2>
+            <p><strong>Réf. :</strong> {{ order.name }}</p>
+            <p><strong>Date :</strong> {{ order.date_order }}</p>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-section">
+            <h3>Fournisseur</h3>
+            <p><strong>Nom :</strong> {{ supplier.name }}</p>
+            <p><strong>Adresse :</strong> {{ supplier.address }}</p>
+        </div>
+        <div class="info-section">
+            <h3>Informations de la Demande</h3>
+            <p><strong>Devise :</strong> {{ order.currency }}</p>
+            <p><strong>Date de création :</strong> {{ order.date_order }}</p>
+            <p><strong>Référence :</strong> {{ order.name }}</p>
+        </div>
+    </div>
+
+    <div class="order-lines-section">
+        <div class="section-title">Produits Demandés</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 60%;">Désignation</th>
+                    <th style="width: 40%;">Quantité</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in order_lines %}
+                <tr>
+                    <td>
+                        {{ line.name }}
+                        {% if line.description %}
+                        <div style="font-size: 8pt; font-style: italic; color: #555;">
+                            {{ line.description }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>{{ line.product_qty }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if order.notes %}
+    <div class="notes-section">
+        <h4>Notes et Observations</h4>
+        <p>{{ order.notes }}</p>
+    </div>
+    {% endif %}
+</body>
+
+</html>

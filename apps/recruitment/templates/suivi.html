@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block title %}Suivi{% endblock %}
+{% block menu %}
+{% include "menu_recruitment.html" %}
+{% endblock %}
+{% block content %}
+<div class="content">
+
+  <!-- Bloc d'affichage des messages de feedback utilisateur (succès, erreur, etc.) -->
+  {% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+      <i class="fas fa-{% if message.tags == 'error' %}times-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'info' %}info-circle{% else %}bell{% endif %} me-2 fw-bold"></i>
+      <div><strong>{% if message.tags == 'error' %}Erreur :{% elif message.tags == 'success' %}Succès :{% elif message.tags == 'warning' %}Attention :{% elif message.tags == 'info' %}Information :{% else %}Message :{% endif %}</strong> {{ message }}</div>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Table Header Component -->
+  <div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #1e90ff;">
+      Suivi des Pointages
+    </div>
+    <div class="card-body">
+      <!-- Search Bar Component -->
+      <form method="get" id="search-form">
+        <div class="row g-2 mb-3">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+            <div class="input-group">
+              <span class="input-group-text text-white" style="background-color: #1e90ff; border-color: #1e90ff;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" 
+                    name="q" 
+                    id="search-title" 
+                    class="form-control" 
+                    placeholder="Nom ou code" 
+                    value="{{ query|default:'' }}"
+                    style="border-color: #1e90ff;">
+            </div>
+          </div>
+          <!-- Date début -->
+          <div class="col-8 col-sm-8 col-md-3 col-lg-3 order-2">
+            <input type="date" 
+                  class="form-control" 
+                  id="dateDebut" 
+                  name="dateDebut" 
+                  value="{{ date_debut|default:'' }}">
+          </div>
+          <!-- Date fin -->
+          <div class="col-4 col-sm-4 col-md-2 col-lg-2 order-3">
+            <input type="date" 
+                  class="form-control" 
+                  id="dateFin" 
+                  name="dateFin" 
+                  value="{{ date_fin|default:'' }}">
+          </div>
+          <!-- Statut -->
+          <div class="col-8 col-sm-8 col-md-2 col-lg-2 order-4">
+            <select class="form-select" id="statusFilter" name="statusFilter">
+              <option value="">Tous</option>
+              <option value="present" {% if status_filter == 'present' %}selected{% endif %}>Présent</option>
+              <option value="retard" {% if status_filter == 'retard' %}selected{% endif %}>Retard</option>
+              <option value="insuffisant" {% if status_filter == 'insuffisant' %}selected{% endif %}>Heures insuffisantes</option>
+              <option value="absent" {% if status_filter == 'absent' %}selected{% endif %}>Absent</option>
+            </select>
+          </div>
+          <!-- Boutons d'action -->
+          <div class=" d-flex justify-content-end order-5 ">
+            <div class="d-flex gap-1">
+              <a href="{% url 'recruitment_suivi' %}" class="btn btn-light border w-100 text-nowrap px-2" title="Réinitialiser les filtres">
+                <i class="fas fa-sync-alt"></i>
+                <span class="d-none d-lg-inline ms-1">Reset</span>
+              </a>
+              <a href="{% url 'recruitment_pointage' %}" class="btn w-100 text-nowrap px-2 text-white" title="Importer des données" style="background-color: #1e90ff; border-color: #1e90ff;">
+                <i class="fas fa-file-import"></i>
+                <span class="d-none d-lg-inline ms-1">Import</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Table Component -->
+      <div class="table-container">
+        <table class="table table-striped table-hover" id="suiviTable">
+          <thead class="table-light borderless">
+            <tr class="main-row">
+              <th class="d-none d-md-table-cell">
+                <input type="checkbox" id="selectAll">
+              </th>
+              <th>
+                <div class="d-flex align-items-center">
+                  <span>Code Employé</span>
+                  <i class="fas fa-sort ms-1 text-muted"></i>
+                </div>
+              </th>
+              <th class="d-none d-md-table-cell">Nom complet</th>
+              <th class="d-none d-md-table-cell">Date</th>
+              <th class="d-none d-md-table-cell">Jour</th>
+              <th class="d-none d-md-table-cell">Heure d'arrivée</th>
+              <th class="d-none d-md-table-cell">Heure départ</th>
+              <th class="d-none d-md-table-cell">Heure travaillée</th>
+              <th class="d-none d-md-table-cell">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if page_obj %}
+                {% for pointage in page_obj %}
+                <tr class="main-row clickable-row" data-employee-id="{{ pointage.employee.id }}" style="cursor: pointer;">
+                  <td class="d-none d-md-table-cell">
+                    <input type="checkbox" class="row-check">
+                  </td>
+                  <td>{{ pointage.employee.employee_id }}</td>
+                  <td class="d-none d-md-table-cell">{{ pointage.employee.full_name }}</td>
+                  <td class="d-none d-md-table-cell">{{ pointage.date|date:"d/m/Y" }}</td>
+                  <td class="d-none d-md-table-cell">{{ pointage.jour }}</td>
+                  <td class="d-none d-md-table-cell">{{ pointage.heure_arrivee|time:"H:i" }}</td>
+                  <td class="d-none d-md-table-cell">{{ pointage.heure_depart|time:"H:i" }}</td>
+                  <td class="d-none d-md-table-cell">
+                    {% if pointage.heure_travaillee %}
+                        {{ pointage.heure_travaillee }}
+                    {% else %}
+                        -
+                    {% endif %}
+                    {% if pointage.heure_travaillee_secondes < 28800 %}
+                        <span class="badge bg-danger ms-1">
+                            <i class="fas fa-exclamation-triangle"></i> Insuffisant
+                        </span>
+                    {% endif %}
+                  </td>
+                  <td class="d-none d-md-table-cell">
+                    {% if pointage.heure_arrivee_minutes > 550 and pointage.heure_travaillee_secondes < 28800 %}
+                        <span class="badge bg-danger">Retard + Insuffisant</span>
+                    {% elif pointage.heure_arrivee_minutes > 550 %}
+                        <span class="badge bg-warning text-dark">Retard</span>
+                    {% elif pointage.heure_travaillee_secondes < 28800 %}
+                        <span class="badge bg-danger">Heures insuffisantes</span>
+                    {% else %}
+                        <span class="badge bg-success">Présent</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                <tr class="collapse bg-light" id="details-{{ pointage.id }}">
+                  <td colspan="10" class="p-3">
+                    <div class="row">
+                      <div class="col-6">
+                        <p class="mb-2"><strong>Nom complet:</strong> {{ pointage.employee.full_name }}</p>
+                        <p class="mb-2"><strong>Date:</strong> {{ pointage.date|date:"d/m/Y" }}</p>
+                        <p class="mb-2"><strong>Jour:</strong> {{ pointage.jour }}</p>
+                        <p class="mb-2"><strong>Statut:</strong> 
+                          {% if pointage.heure_arrivee_minutes > 550 and pointage.heure_travaillee_secondes < 28800 %}
+                              <span class="badge bg-danger">Retard + Insuffisant</span>
+                          {% elif pointage.heure_arrivee_minutes > 550 %}
+                              <span class="badge bg-warning text-dark">Retard</span>
+                          {% elif pointage.heure_travaillee_secondes < 28800 %}
+                              <span class="badge bg-danger">Heures insuffisantes</span>
+                          {% else %}
+                              <span class="badge bg-success">Présent</span>
+                          {% endif %}
+                        </p>
+                      </div>
+                      <div class="col-6">
+                        <p class="mb-2"><strong>Heure d'arrivée:</strong> {{ pointage.heure_arrivee|time:"H:i" }}</p>
+                        <p class="mb-2"><strong>Heure départ:</strong> {{ pointage.heure_depart|time:"H:i" }}</p>
+                        <p class="mb-2"><strong>Heure travaillée:</strong> 
+                          {% if pointage.heure_travaillee %}
+                              {{ pointage.heure_travaillee }}
+                          {% else %}
+                              -
+                          {% endif %}
+                        </p>
+                      </div>
+                      <div class="col-12 mt-3">
+                        <div class="d-flex gap-2">
+                          <button class="btn btn-sm text-white" title="Imprimer" style="background-color: #1e90ff; border-color: #1e90ff;">
+                            <i class="fas fa-print me-1"></i> Imprimer
+                          </button>
+                          <button class="btn btn-sm btn-info text-white" title="Voir">
+                            <i class="fas fa-eye me-1"></i> Voir
+                          </button>
+                          <button class="btn btn-sm btn-dark" title="Modifier">
+                            <i class="fas fa-edit me-1"></i> Modifier
+                          </button>
+                          <button class="btn btn-sm btn-danger" title="Supprimer">
+                            <i class="fas fa-trash-alt me-1"></i> Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                  <td colspan="10" class="text-center">Aucun pointage trouvé.</td>
+                </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination Component -->
+      {% if page_obj.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% if date_debut %}&dateDebut={{ date_debut }}{% endif %}{% if date_fin %}&dateFin={{ date_fin }}{% endif %}{% if status_filter %}&statusFilter={{ status_filter }}{% endif %}" aria-label="Première page">
+                <i class="fas fa-angle-double-left"></i>
+              </a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if date_debut %}&dateDebut={{ date_debut }}{% endif %}{% if date_fin %}&dateFin={{ date_fin }}{% endif %}{% if status_filter %}&statusFilter={{ status_filter }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-chevron-left d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">&laquo; Préc</span>
+              </a>
+            </li>
+          {% endif %}
+          
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if date_debut %}&dateDebut={{ date_debut }}{% endif %}{% if date_fin %}&dateFin={{ date_fin }}{% endif %}{% if status_filter %}&statusFilter={{ status_filter }}{% endif %}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+          
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if date_debut %}&dateDebut={{ date_debut }}{% endif %}{% if date_fin %}&dateFin={{ date_fin }}{% endif %}{% if status_filter %}&statusFilter={{ status_filter }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-chevron-right d-block d-sm-none"></i>
+                <span class="d-none d-sm-block">Suiv &raquo;</span>
+              </a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if date_debut %}&dateDebut={{ date_debut }}{% endif %}{% if date_fin %}&dateFin={{ date_fin }}{% endif %}{% if status_filter %}&statusFilter={{ status_filter }}{% endif %}" aria-label="Dernière page">
+                <i class="fas fa-angle-double-right"></i>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+      
+  <!-- Statistiques - KPI Cards Section -->
+  {% if page_obj %}
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Statistiques</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-3">
+          <div class="kpi-card text-white h-100" style="background-color: #1e90ff;">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-clock fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ total_pointages }}</h3>
+                <p class="mb-0">Total pointages</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card text-white h-100" style="background-color: #1e90ff;">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-check-circle fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ present_count }}</h3>
+                <p class="mb-0">Présent</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card bg-warning text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-exclamation-triangle fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ retards_count }}</h3>
+                <p class="mb-0">Retards</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card bg-danger text-white h-100">
+            <div class="kpi-content d-flex align-items-center">
+              <div class="kpi-icon me-3">
+                <i class="fas fa-times-circle fa-xl"></i>
+              </div>
+              <div class="kpi-text">
+                <h3 class="mb-0">{{ heures_insuffisantes_count }}</h3>
+                <p class="mb-0">Heures insuffisantes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+// Auto-submit form when filters change
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const inputs = form.querySelectorAll('input, select');
+    let searchTimeout;
+    
+    inputs.forEach(input => {
+        if (input.type === 'search') {
+            // Pour la recherche, utiliser un délai pour éviter trop de requêtes
+            input.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function() {
+                    form.submit();
+                }, 500); // Délai de 500ms après la fin de la frappe
+            });
+        } else if (input.type !== 'submit') {
+            // Pour les autres champs (dates, statut), soumission immédiate
+            input.addEventListener('change', function() {
+                form.submit();
+            });
+        }
+    });
+
+    // Gestion du clic sur les lignes du tableau
+    const clickableRows = document.querySelectorAll('.clickable-row');
+    clickableRows.forEach(row => {
+        row.addEventListener('click', function() {
+            const employeeId = this.getAttribute('data-employee-id');
+            if (employeeId) {
+                window.location.href = `/rc/employee/${employeeId}/pointages/`;
+            }
+        });
+
+        // Ajouter un effet hover
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+
+    // Fonctionnalité de sélection multiple
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.row-check');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+});
+</script>
+
+{% endblock %}

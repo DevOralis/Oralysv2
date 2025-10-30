@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: DejaVu Sans, sans-serif; font-size: 12px; }
+        .header, .sub-header { text-align: center; }
+        .company-block, .employee-block { display: inline-block; vertical-align: top; width: 48%; }
+        .company-block { text-align: left; }
+        .employee-block { text-align: right; }
+        .section { margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td {
+            border-left: 1px solid #888;
+            border-right: 1px solid #888;
+            border-top: none;
+            border-bottom: none;
+            padding: 8px 6px;
+            text-align: right;
+        }
+        th {
+            background: #f0f0f0;
+            text-align: center;
+            border-top: 1px solid #888;
+            border-bottom: 1px solid #888;
+        }
+        tr.total-row td {
+            border-top: 1px solid #888;
+        }
+        tr:last-child td {
+            border-bottom: 1px solid #888;
+        }
+        .rubrique { text-align: left; }
+        .total-row { font-weight: bold; background: #e0e0e0; }
+        .net-block { font-size: 16px; font-weight: bold; text-align: right; margin-top: 20px; }
+        .small { font-size: 10px; color: #666; }
+        .prime-indent { padding-left: 24px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Fiche de paie</h2>
+    </div>
+    <div class="section">
+        <div class="company-block">
+            <strong>ORALYS CLV</strong><br>
+            35 HAY RIAD<br>
+            44300 RABAT<br>
+            ICE : 99999999900099<br>
+        </div>
+        <div class="employee-block">
+            <strong>SALARIÉ :</strong><br>
+            {{ employee.full_name }}<br>
+            Adresse : {% if employee.personal_address %}{{ employee.personal_address }}{% else %}N/A{% endif %}<br>
+        </div>
+    </div>
+    <div class="section">
+        <div class="period-block">
+            <strong>Période :</strong> {{ start_date }} au {{ end_date }}<br>
+            <strong>Contrat :</strong>
+            {% if employee.contract and employee.contract.contract_type %}
+                {{ employee.contract.contract_type.name }}
+            {% else %}
+                N/A
+            {% endif %}<br>
+        </div>
+        <div class="employee-info-block">
+            <strong>Identifiant :</strong>
+            {% if employee.employee_id %}
+                {{ employee.employee_id }}
+            {% else %}
+                N/A
+            {% endif %}<br>
+            <strong>Poste :</strong>
+            {% if employee.position %}
+                {{ employee.position.name }}
+            {% else %}
+                N/A
+            {% endif %}<br>
+        </div>
+    </div>
+    <div class="section">
+        <table>
+            <tr>
+                <th class="rubrique">Rubriques</th>
+                <th>Taux</th>
+                <th>Montant</th>
+            </tr>
+            <tr>
+                <td class="rubrique"><strong>Salaire de base</strong></td>
+                <td>-</td>
+                <td>{{ base_salary }} DH</td>
+            </tr>
+            {% if primes %}
+            <tr>
+                <td class="rubrique" colspan="1"><strong>Primes :</strong></td>
+                <td></td>
+                <td></td>
+            </tr>
+            {% for prime in primes %}
+            <tr>
+                <td class="rubrique prime-indent">Prime : {{ prime.libelle }}</td>
+                <td>
+                    {% if prime.rate and prime.rate != "" and prime.rate|floatformat:2 != '0.00' %}
+                        {{ prime.rate|floatformat:2 }}%
+                    {% endif %}
+                </td>
+                <td>{{ prime.amount }} DH</td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+            {% if cotisations %}
+            <tr>
+                <td class="rubrique" colspan="1"><strong>Cotisations sociales :</strong></td>
+                <td></td>
+                <td></td>
+            </tr>
+            {% for cotisation in cotisations %}
+            <tr>
+                <td class="rubrique prime-indent">Cotisation : {{ cotisation.libelle }}</td>
+                <td>
+                    {% if cotisation.rate and cotisation.rate != "" and cotisation.rate|floatformat:2 != '0.00' %}
+                        {{ cotisation.rate|floatformat:2 }}%
+                    {% endif %}
+                </td>
+                <td>-{{ cotisation.amount }} DH</td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+            <tr class="total-row">
+                <td class="rubrique">Salaire net imposable</td>
+                <td></td>
+                <td>{{ net_imposable }} DH</td>
+            </tr>
+            <tr>
+                <td class="rubrique">Impôt brut</td>
+                <td></td>
+                <td>-{{ impot_brut }} DH</td>
+            </tr>
+            <tr>
+                <td class="rubrique">Déduction fiscale</td>
+                <td></td>
+                <td>+{{ deduction_fiscale }} DH</td>
+            </tr>
+            <tr>
+                <td class="rubrique">Impôt sur le revenu</td>
+                <td></td>
+                <td>-{{ impot_revenu }} DH</td>
+            </tr>
+            <tr class="total-row">
+                <td class="rubrique">Salaire net à payer</td>
+                <td></td>
+                <td>{{ net_a_payer }} DH</td>
+            </tr>
+        </table>
+    </div>
+    <div class="section">
+        {% if mois_details and mois_details|length > 1 %}
+        <h4>Détail par mois</h4>
+        <table>
+            <tr>
+                <th>Mois</th>
+                <th>Salaire de base</th>
+                <th>Total Primes</th>
+                <th>Total Cotisations</th>
+                <th>Impôt sur le revenu</th>
+                <th>Net à payer</th>
+            </tr>
+            {% for mois in mois_details %}
+            <tr>
+                <td>{{ mois.mois }}</td>
+                <td>{{ mois.base_salary|floatformat:2 }} DH</td>
+                <td>
+                    {{ mois.total_primes|floatformat:2 }} DH
+                </td>
+                <td>
+                    -{{ mois.total_cotisations|floatformat:2 }} DH
+                </td>
+                <td>-{{ mois.impot_revenu|floatformat:2 }} DH</td>
+                <td>{{ mois.net_a_payer|floatformat:2 }} DH</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+    </div>
+    <div class="net-block">
+        Net à payer au salarié : {{ net_a_payer }} DH
+    </div>
+</body>
+</html>

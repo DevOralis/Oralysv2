@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration{% endblock %}
+{% block menu %}
+{% include "menu_recruitment.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+
+  <h2 class="mb-4">
+    Configuration
+  </h2>
+
+  <ul class="nav nav-tabs flex-column flex-sm-row mb-3" id="configTabs">
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'departments' %}active{% endif %}" href="?tab=departments">Départements</a>
+    </li>
+    <li class="nav-item flex-sm-fill text-sm-center">
+      <a class="nav-link {% if tab == 'employees' %}active{% endif %}" href="?tab=employees">Employés</a>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- Bloc de gestion des départements -->
+    <div class="tab-pane fade {% if tab == 'departments' %}show active{% endif %}" id="departements">
+      {% if messages %}
+        {% for message in messages %}
+          {% with tag=message.tags %}
+          <div class="alert alert-{% if tag == 'error' %}danger{% elif tag %}{{ tag }}{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas {% if tag == 'success' %}fa-check-circle{% elif tag == 'error' or tag == 'danger' %}fa-times-circle{% elif tag == 'warning' %}fa-exclamation-triangle{% elif tag == 'info' %}fa-info-circle{% else %}fa-bell{% endif %} me-2 fw-bold"></i>
+            <div>{{ message }}</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endwith %}
+        {% endfor %}
+      {% endif %}
+      <!-- Actions et recherche pour les départements -->
+      <div class="card mb-4">
+        <div class="card-header bg-gradient-primary text-white">
+          <i class="fas fa-building me-2"></i>
+          Départements
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-6">
+              <div class="input-group">
+                <span class="input-group-text bg-primary text-white border-primary">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control border-primary" id="search-department" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="d-flex gap-1 justify-content-end">
+                <button type="button" class="btn btn-primary text-nowrap px-2" data-bs-toggle="modal" data-bs-target="#modalDepartement">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead class="table-light borderless">
+                <tr>
+                  <th>Nom</th>
+                  <th>Description</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="departments-table">
+                {% for dep in departments %}
+                <tr>
+                  <td>{{ dep.name }}</td>
+                  <td>{{ dep.description|default:'-' }}</td>
+                  <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <button class="btn btn-sm btn-light border text-dark" data-bs-toggle="modal" data-bs-target="#modalEditDepartement{{ dep.id }}" title="Modifier">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteDepartement{{ dep.id }}" title="Supprimer">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- Modals département déplacés sous le tableau pour conserver le contenu -->
+      {% for dep in departments %}
+      <div class="modal fade" id="modalEditDepartement{{ dep.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="edit_department">
+              <input type="hidden" name="department_id" value="{{ dep.id }}">
+              <div class="modal-header"><h5 class="modal-title">Modifier Département</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+              <div class="modal-body">
+                <div class="mb-3"><label class="form-label">Nom</label><input type="text" class="form-control" name="name" value="{{ dep.name }}" required></div>
+                <div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" name="description">{{ dep.description }}</textarea></div>
+              </div>
+              <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn btn-custom-save" type="submit">Enregistrer</button></div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="modal fade" id="modalDeleteDepartement{{ dep.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="delete_department">
+              <input type="hidden" name="department_id" value="{{ dep.id }}">
+              <div class="modal-header"><h5 class="modal-title">Supprimer Département</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+              <div class="modal-body">Confirmer la suppression du département <strong>{{ dep.name }}</strong> ?</div>
+              <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn btn-danger" type="submit">Supprimer</button></div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <!-- Bloc de gestion des employés -->
+    <div class="tab-pane fade {% if tab == 'employees' %}show active{% endif %}" id="employes">
+      {% if messages %}
+        {% for message in messages %}
+          {% with tag=message.tags %}
+          <div class="alert alert-{% if tag == 'error' %}danger{% elif tag %}{{ tag }}{% else %}primary{% endif %} alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="fas {% if tag == 'success' %}fa-check-circle{% elif tag == 'error' or tag == 'danger' %}fa-times-circle{% elif tag == 'warning' %}fa-exclamation-triangle{% elif tag == 'info' %}fa-info-circle{% else %}fa-bell{% endif %} me-2 fw-bold"></i>
+            <div>{{ message }}</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endwith %}
+        {% endfor %}
+      {% endif %}
+      <div class="card mb-4">
+        <div class="card-header bg-gradient-primary text-white">
+          <i class="fas fa-user me-2"></i>
+          Employés
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-6">
+              <div class="input-group">
+                <span class="input-group-text bg-primary text-white border-primary">
+                  <i class="fas fa-search"></i>
+                </span>
+                <input type="search" class="form-control border-primary" id="search-employee" placeholder="Rechercher...">
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="d-flex gap-1 justify-content-end">
+                <button type="button" class="btn btn-primary text-nowrap px-2" data-bs-toggle="modal" data-bs-target="#modalEmploye">
+                  <i class="fas fa-plus"></i>
+                  <span class="d-none d-lg-inline ms-1">Nouveau</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead class="table-light borderless">
+            <tr>
+              <th>Matricule</th><th>Nom complet</th><th>Date naissance</th><th>Sexe</th><th>Email</th><th>Tél. Perso</th><th>Département</th><th>Statut</th><th class="text-end">Actions</th>
+            </tr>
+              </thead>
+              <tbody id="employees-table">
+            {% for emp in employees %}
+            <tr>
+              <td>{{ emp.employee_id }}</td>
+              <td>{{ emp.full_name }}</td>
+              <td>{{ emp.birth_date }}</td>
+              <td>{{ emp.get_gender_display }}</td>
+              <td>{{ emp.email }}</td>
+              <td>{{ emp.personal_phone }}</td>
+              <td>{% if emp.department %}{{ emp.department.name }}{% else %}-{% endif %}</td>
+              <td>
+                {% if emp.status == 'A' %}
+                  <span class="badge bg-success">Active</span>
+                {% elif emp.status == 'I' %}
+                  <span class="badge bg-danger">Inactive</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ emp.get_status_display }}</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="d-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-light border text-dark" data-bs-toggle="modal" data-bs-target="#modalEditEmploye{{ emp.id }}" title="Modifier">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteEmploye{{ emp.id }}" title="Supprimer">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <!-- Modal d'édition d'employé -->
+            <div class="modal fade" id="modalEditEmploye{{ emp.id }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_employee">
+                    <input type="hidden" name="emp_id" value="{{ emp.id }}">
+                    <div class="modal-header"><h5 class="modal-title">Modifier Employé</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                      <div class="mb-3"><label class="form-label">Matricule</label><input type="text" class="form-control" name="employee_id" value="{{ emp.employee_id }}" required></div>
+                      <div class="mb-3"><label class="form-label">Nom complet</label><input type="text" class="form-control" name="full_name" value="{{ emp.full_name }}" required></div>
+                      <div class="mb-3"><label class="form-label">Date naissance</label><input type="date" class="form-control" name="birth_date" value="{{ emp.birth_date|date:'Y-m-d' }}"></div>
+                      <div class="mb-3"><label class="form-label">État civil</label><select class="form-select" name="marital_status">{% for val, label in marital_status_choices %}<option value="{{ val }}" {% if emp.marital_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                      <div class="mb-3"><label class="form-label">Sexe</label><select class="form-select" name="gender">{% for val, label in gender_choices %}<option value="{{ val }}" {% if emp.gender == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                      <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" name="email" value="{{ emp.email }}"></div>
+                      <div class="mb-3"><label class="form-label">Tél. Perso</label><input type="text" class="form-control" name="personal_phone" value="{{ emp.personal_phone }}"></div>
+                      <div class="mb-3"><label class="form-label">Tél. Pro</label><input type="text" class="form-control" name="work_phone" value="{{ emp.work_phone }}" required></div>
+                      <div class="mb-3"><label class="form-label">Salaire de base</label><input type="number" step="0.01" class="form-control" name="base_salary" value="{{ emp.base_salary }}" required></div>
+                      <div class="mb-3"><label class="form-label">Département</label><select class="form-select" name="department"><option value="">-</option>{% for dep in departments %}<option value="{{ dep.id }}" {% if emp.department and emp.department.id == dep.id %}selected{% endif %}>{{ dep.name }}</option>{% endfor %}</select></div>
+                      <div class="mb-3"><label class="form-label">Statut</label><select class="form-select" name="status">{% for val, label in status_choices %}<option value="{{ val }}" {% if emp.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                    </div>
+                    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn btn-custom-save" type="submit">Enregistrer</button></div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            <!-- Modal de suppression d'employé -->
+            <div class="modal fade" id="modalDeleteEmploye{{ emp.id }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_employee">
+                    <input type="hidden" name="emp_id" value="{{ emp.id }}">
+                    <div class="modal-header"><h5 class="modal-title">Supprimer Employé</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">Confirmer la suppression de l'employé <strong>{{ emp.full_name }}</strong> ?</div>
+                    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn btn-danger" type="submit">Supprimer</button></div>
+                  </form>
+      </div>
+    </div>
+      </div>
+            {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'ajout de département -->
+  <div class="modal fade" id="modalDepartement" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add_department">
+        <div class="modal-header"><h5 class="modal-title">Nouveau Département</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <div class="mb-3"><label class="form-label">Nom</label><input type="text" class="form-control" name="name" required></div>
+            <div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" name="description"></textarea></div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn btn-custom-save" type="submit">Enregistrer</button></div>
+          </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'ajout d'employé -->
+  <div class="modal fade" id="modalEmploye" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add_employee">
+          <div class="modal-header"><h5 class="modal-title">Nouvel Employé</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <div class="mb-3"><label class="form-label">Matricule</label><input type="text" class="form-control" name="employee_id" required></div>
+            <div class="mb-3"><label class="form-label">Nom complet</label><input type="text" class="form-control" name="full_name" required></div>
+            <div class="mb-3"><label class="form-label">Date naissance</label><input type="date" class="form-control" name="birth_date"></div>
+            <div class="mb-3"><label class="form-label">État civil</label><select class="form-select" name="marital_status">{% for val, label in marital_status_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select></div>
+            <div class="mb-3"><label class="form-label">Sexe</label><select class="form-select" name="gender">{% for val, label in gender_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select></div>
+            <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" name="email"></div>
+            <div class="mb-3"><label class="form-label">Tél. Perso</label><input type="text" class="form-control" name="personal_phone"></div>
+            <div class="mb-3"><label class="form-label">Tél. Pro</label><input type="text" class="form-control" name="work_phone" required></div>
+            <div class="mb-3"><label class="form-label">Salaire de base</label><input type="number" step="0.01" class="form-control" name="base_salary" required></div>
+            <div class="mb-3"><label class="form-label">Département</label><select class="form-select" name="department"><option value="">-</option>{% for dep in departments %}<option value="{{ dep.id }}">{{ dep.name }}</option>{% endfor %}</select></div>
+            <div class="mb-3"><label class="form-label">Statut</label><select class="form-select" name="status">{% for val, label in status_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select></div>
+        </div>
+          <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn btn-custom-save" type="submit">Enregistrer</button></div>
+          </form>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    // Recherche instantanée AJAX pour Départements
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchDepartmentInput = document.getElementById('search-department');
+      const departmentsTable = document.getElementById('departments-table');
+      let searchTimeoutDep = null;
+      let lastQueryDep = searchDepartmentInput ? searchDepartmentInput.value : '';
+      let controllerDep = null;
+      if (searchDepartmentInput && departmentsTable) {
+        function performSearchDepartment(query) {
+          if (controllerDep) controllerDep.abort();
+          controllerDep = new AbortController();
+          departmentsTable.innerHTML = '<tr><td colspan="3" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche...</td></tr>';
+          const url = window.location.pathname + '?q=' + encodeURIComponent(query) + '&tab=departments';
+          console.log('Recherche département URL:', url);
+          fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-cache' },
+            signal: controllerDep.signal
+          })
+          .then(response => { if (!response.ok) throw new Error('Erreur réseau: ' + response.status); return response.text(); })
+          .then(html => { departmentsTable.innerHTML = html; })
+          .catch(error => { if (error.name !== 'AbortError') departmentsTable.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erreur: ' + error.message + '</td></tr>'; });
+        }
+        searchDepartmentInput.addEventListener('input', function() {
+          const query = searchDepartmentInput.value.trim();
+          if (searchTimeoutDep) clearTimeout(searchTimeoutDep);
+          if (query === lastQueryDep) return;
+          lastQueryDep = query;
+          searchTimeoutDep = setTimeout(() => { performSearchDepartment(query); }, 300);
+        });
+        searchDepartmentInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') { e.preventDefault(); if (searchTimeoutDep) clearTimeout(searchTimeoutDep); performSearchDepartment(searchDepartmentInput.value.trim()); }
+        });
+      }
+    
+      // Recherche instantanée AJAX pour Employés
+      const searchEmployeeInput = document.getElementById('search-employee');
+      const employeesTable = document.getElementById('employees-table');
+      let searchTimeoutEmp = null;
+      let lastQueryEmp = searchEmployeeInput ? searchEmployeeInput.value : '';
+      let controllerEmp = null;
+      if (searchEmployeeInput && employeesTable) {
+        function performSearchEmployee(query) {
+          if (controllerEmp) controllerEmp.abort();
+          controllerEmp = new AbortController();
+          employeesTable.innerHTML = '<tr><td colspan="9" class="text-center"><i class="fas fa-spinner fa-spin"></i> Recherche...</td></tr>';
+          const url = window.location.pathname + '?q=' + encodeURIComponent(query) + '&tab=employees';
+          console.log('Recherche employé URL:', url);
+          fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-cache' },
+            signal: controllerEmp.signal
+          })
+          .then(response => { if (!response.ok) throw new Error('Erreur réseau: ' + response.status); return response.text(); })
+          .then(html => { employeesTable.innerHTML = html; })
+          .catch(error => { if (error.name !== 'AbortError') employeesTable.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erreur: ' + error.message + '</td></tr>'; });
+        }
+        searchEmployeeInput.addEventListener('input', function() {
+          const query = searchEmployeeInput.value.trim();
+          if (searchTimeoutEmp) clearTimeout(searchTimeoutEmp);
+          if (query === lastQueryEmp) return;
+          lastQueryEmp = query;
+          searchTimeoutEmp = setTimeout(() => { performSearchEmployee(query); }, 300);
+        });
+        searchEmployeeInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') { e.preventDefault(); if (searchTimeoutEmp) clearTimeout(searchTimeoutEmp); performSearchEmployee(searchEmployeeInput.value.trim()); }
+        });
+      }
+    });
+  </script>
+
+</div>
+    
+{% endblock %}
+

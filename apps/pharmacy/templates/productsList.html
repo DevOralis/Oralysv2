@@ -1,0 +1,458 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'vendor\css\sweetalert2.min.css' %}">
+{% endblock %}
+
+{% block menu %}
+  {% include 'pharmacy_menu.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+  <h3 class="border-bottom pb-2">
+    <i class="fas fa-box text-primary me-2"></i>
+    Gestion des produits - Pharmacie
+  </h3>
+  <!-- Liste des produits -->
+  <div class="card mb-4">
+    <div class="card-header card-header-primary">
+      <i class="fas fa-pills me-2"></i>
+      Liste des produits pharmaceutiques
+    </div>
+    <div class="card-body">
+      <form id="search-form" method="get">
+        <div class="row g-2 mb-3">
+          <!-- Barre de recherche -->
+          <div class="col-12 col-sm-12 col-md-5 col-lg-5 order-1">
+            <div class="input-group">
+              <span class="input-group-text input-group-text-primary">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="search" name="q" id="product-search" class="form-control search-input-primary" placeholder="Recherche par code, libellé, marque, prix unitaire, DCI, dosage, forme, quantité..." value="{{ search|default:'' }}">
+            </div>
+          </div>
+          <!-- Filtre formes pharmaceutiques -->
+          <div class="col-8 col-sm-8  col-md-3 col-lg-3 order-2">
+            <select name="pharmaceutical_form" class="form-select" title="Filtrer par forme pharmaceutique" onchange="this.form.submit()">
+              <option value="">Toutes les formes</option>
+              {% for form in pharmaceutical_forms %}
+                <option value="{{ form.name }}" {% if current_pharmaceutical_form == form.name %}selected{% endif %}>
+                  {{ form.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Boutons d'action -->
+          <div class="col-4 col-sm-4 col-md-4 col-lg-4 order-3">
+            <div class="d-flex gap-1">
+              <!-- Bouton Importer (visible par défaut) -->
+              <button type="button" id="importBtn" class="btn btn-light border w-100 text-nowrap px-2" title="Importer">
+                <i class="fas fa-file-import"></i><span class="d-none d-lg-inline ms-1">Importer</span></button>
+              
+              <!-- Lien Exporter (caché par défaut, visible avec sélection) -->
+              <a id="exportLink" class="btn btn-light border w-100 text-nowrap px-2" title="Exporter" href="{% url 'pharmacy_product_export' %}{% if search or current_pharmaceutical_form %}?{% if search %}q={{ search }}{% endif %}{% if search and current_pharmaceutical_form %}&{% endif %}{% if current_pharmaceutical_form %}pharmaceutical_form={{ current_pharmaceutical_form }}{% endif %}{% endif %}" style="display: none;">
+                <i class="fas fa-file-export"></i><span class="d-none d-lg-inline ms-1">Exporter</span></a>
+              {% if request.session.user.permissions.pharmacy.write %}
+              <a class="btn btn-primary w-100 text-nowrap px-2" title="Nouveau Produit" href="{% url 'pharmacy_product_add' %}#product-form-card">
+                <i class="fas fa-plus"></i>  <span class="d-none d-lg-inline ms-1">Nouveau Produit</span></a>
+                {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+      <table class="table table-responsive table-striped table-hover" id="searchableTable">
+        <thead class="table-light borderless">
+          <tr class="main-row">
+            <th>
+              <input type="checkbox" id="selectAll">
+            </th>
+            <th class="sortable" data-sort-field="code" data-label="Code">
+              <div class="d-flex align-items-center">
+                <span>Code</span>
+                <i class="fas fa-sort ms-1 text-muted"></i>
+              </div>
+            </th>
+            <th class="sortable" data-sort-field="short_label" data-label="Libellé">
+              <div class="d-flex align-items-center">
+                <span>Libellé</span>
+                <i class="fas fa-sort ms-1 text-muted"></i>
+              </div>
+            </th>
+            <th class="d-none d-lg-table-cell sortable" data-sort-field="brand" data-label="Marque">
+              <div class="d-flex align-items-center">
+                <span>Marque</span>
+                <i class="fas fa-sort ms-1 text-muted"></i>
+              </div>
+            </th>
+            <th class="d-none d-lg-table-cell sortable" data-sort-field="dci" data-label="DCI">
+              <div class="d-flex align-items-center">
+                <span>DCI</span>
+                <i class="fas fa-sort ms-1 text-muted"></i>
+              </div>
+            </th>
+            <th class="d-none d-lg-table-cell sortable" data-sort-field="pharmaceutical_form" data-label="Forme">
+              <div class="d-flex align-items-center">
+                <span>Forme</span>
+                <i class="fas fa-sort ms-1 text-muted"></i>
+              </div>
+            </th>
+            <th class="d-none d-lg-table-cell sortable" data-sort-field="unit_price" data-label="Prix.U">
+              <div class="d-flex align-items-center">
+                <span>Prix.U</span>
+                <i class="fas fa-sort ms-1 text-muted"></i>
+              </div>
+            </th>
+            <th class="d-none d-lg-table-cell sortable" data-sort-field="total_quantity_cached" data-label="Q.Totale">
+              <div class="d-flex align-items-center">
+                <span>Q.Totale</span>
+                <i class="fas fa-sort ms-1 text-muted"></i>
+              </div>
+            </th>
+            {% if request.session.user.permissions.pharmacy.update or request.session.user.permissions.pharmacy.delete %}
+            <th data-label="Actions" class="text-center">Actions</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% include 'pharmacy_product_table_body.html' %}
+        </tbody>
+      </table>
+      <!-- Pagination Component -->
+      {% if page_obj.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center flex-wrap">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&q={{ search }}{% endif %}{% if current_pharmaceutical_form %}{% if search %}&{% else %}&{% endif %}pharmaceutical_form={{ current_pharmaceutical_form }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}" aria-label="Précédent">
+              <i class="fas fa-chevron-left d-lg-none"></i>
+              <span class="d-none d-lg-inline">Préc</span>
+            </a>
+          </li>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+          <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}{% if search %}&q={{ search }}{% endif %}{% if current_pharmaceutical_form %}{% if search %}&{% else %}&{% endif %}pharmaceutical_form={{ current_pharmaceutical_form }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}" aria-label="Page {{ num }}">{{ num }}</a>
+          </li>
+          {% endfor %}
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&q={{ search }}{% endif %}{% if current_pharmaceutical_form %}{% if search %}&{% else %}&{% endif %}pharmaceutical_form={{ current_pharmaceutical_form }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}" aria-label="Suivant">
+              <span class="d-none d-lg-inline">Suiv</span>
+              <i class="fas fa-chevron-right d-lg-none"></i>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if request.session.user.permissions.pharmacy.write or request.session.user.permissions.pharmacy.update %}
+  <!-- Formulaire produit + postes -->
+  <div class="card mb-4" id="product-form-card">
+    <div class="card-header card-header-primary">
+      <i class="fas fa-edit me-2"></i>
+      {% if product %}Modifier un {% else %}Ajouter un nouveau{% endif %} produit pharmaceutique
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" id="product-form" action="{% if product %}{% url 'pharmacy_product_edit' product.pk %}{% else %}{% url 'pharmacy_product_add' %}{% endif %}">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <input type="hidden" id="product_id" name="id" value="{% if product %}{{ product.pk }}{% endif %}">
+        <div class="row g-3">
+          <div class="col-12 form-label">{{ form.full_label.label_tag }}{{ form.full_label }}</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6 form-label">{{ form.short_label.label_tag }}{{ form.short_label }}</div>
+          <div class="col-md-6 form-label">{{ form.brand.label_tag }}{{ form.brand }}</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6 form-label">{{ form.dci.label_tag }}{{ form.dci }}</div>
+          <div class="col-md-6 form-label">{{ form.pharmaceutical_form.label_tag }}{{ form.pharmaceutical_form }}</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6 form-label">{{ form.uom.label_tag }}{{ form.uom }}</div>
+          <div class="col-md-6 form-label">{{ form.categ.label_tag }}{{ form.categ }}</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6 form-label">{{ form.dosage.label_tag }}{{ form.dosage }}</div>
+          <div class="col-md-6 form-label">{{ form.barcode.label_tag }}{{ form.barcode }}</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4 form-label">{{ form.ppm_price.label_tag }}{{ form.ppm_price }}</div>
+          <div class="col-md-4 form-label">{{ form.unit_price.label_tag }}{{ form.unit_price }}</div>
+          <div class="col-md-4 form-label">{{ form.supplier_price.label_tag }}{{ form.supplier_price }}</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4 form-label">{{ form.internal_purchase_price.label_tag }}{{ form.internal_purchase_price }}</div>
+          <div class="col-md-4 form-label">{{ form.refund_price.label_tag }}{{ form.refund_price }}</div>
+          <div class="col-md-4 form-label">{{ form.refund_rate.label_tag }}{{ form.refund_rate }}</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4 form-label nombrepiece-field">
+            {{ form.nombrepiece.label_tag }}{{ form.nombrepiece }}
+          </div>
+        </div>
+
+        <!-- Bloc 3 : Stock par emplacement -->
+        <hr>
+          <table class="table table-sm table-hover table-responsive" id="pl-table">
+            <thead class="table-light">
+              <tr>
+                <th class="d-none d-lg-table-cell">
+                  <div class="d-flex align-items-center">
+                    <span>Emplacement</span>
+                  </div>
+                </th>
+                <th class="d-none d-lg-table-cell">
+                  <div class="d-flex align-items-center">
+                    <span>Quantité</span>
+                  </div>
+                </th>
+                <th class="actions-column text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pl-table-body">
+              <!-- Les lignes seront générées par JS -->
+            </tbody>
+          </table>
+        <input type="hidden" name="locations_json" id="locations-json">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3">
+          <button type="button" class="btn btn-sm btn-outline-primary" id="add-pl-line">
+            <i class="fas fa-plus text-center"></i> 
+            <span class="d-none d-sm-inline ms-1">Ajouter un poste de stockage</span>
+            <span class="d-inline d-sm-none ms-1"></span>
+          </button>
+          <div class="fw-bold">
+            <span>Quantité totale :</span> 
+            <span id="total-qty" class="total-qty text-primary">0</span>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+          <a href="{% url 'pharmacy_product_list' %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-up"></i><span class="d-none d-sm-inline ms-1">Retour</span></a>
+           <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i><span class="d-none d-sm-inline ms-1">Sauvegarder</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endif %}
+
+  <div class="modal fade" id="pharmacyProductOrderHistoryModal" tabindex="-1" aria-labelledby="pharmacyProductOrderHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pharmacyProductOrderHistoryModalLabel">Historique des commandes</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="order-history-card">
+            <h5 id="pharmacyTotalOrders">0</h5>
+            <p>Commandes totales</p>
+          </div>
+          <div class="revenue-card">
+            <h5 id="pharmacyTotalRevenue">0.00</h5>
+            <p>Chiffre d'affaires total</p>
+          </div>
+          <div class="chart-container">
+            <canvas id="pharmacyPriceProgressionChart"></canvas>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered order-history-table">
+              <thead>
+                <tr>
+                  <th>Commande</th>
+                  <th>Date</th>
+                  <th>Prix Unitaire</th>
+                  <th>Quantité</th>
+                  <th>Montant Total</th>
+                  <th>Devise</th>
+                  <th>État</th>
+                </tr>
+              </thead>
+              <tbody id="pharmacyOrderHistoryTable"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+          <a href="#" id="pharmacyDownloadPdfLink" class="btn btn-primary"><i class="fas fa-file-pdf"></i> Télécharger PDF</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="application/json" id="locations-data">
+    [
+      {% for location in locations %}
+        {"id": {{ location.pk }}, "name": "{{ location.name|escapejs }}"} {% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]
+  </script>
+
+  {% if product_locations %}
+  <script type="application/json" id="product-locations-data">{{ product_locations|safe }}</script>
+  {% endif %}
+
+  <script>
+    {% if product %}window.isEditMode = true;{% else %}window.isEditMode = false;{% endif %}
+    {% if swal_success %}window.swalSuccess = '{{ swal_success|escapejs }}';{% endif %}
+    {% if swal_error %}window.swalError = '{{ swal_error|escapejs }}';{% endif %}
+  </script>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/js/sweetalert2@11.js' %}"></script>
+<script src="{% static 'js/pharmacy_products_data.js' %}"></script>
+<script src="{% static 'js/pharmacy_products.js' %}"></script>
+<script src="{% static 'vendor/js/bootstrap.bundle.min.js' %}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const uomSelect = document.querySelector('#id_uom');
+    const nombrepieceField = document.querySelector('.nombrepiece-field');
+    const nombrepieceInput = document.querySelector('#id_nombrepiece');
+
+    console.log('uomSelect:', uomSelect);
+    console.log('nombrepieceField:', nombrepieceField);
+    console.log('nombrepieceInput:', nombrepieceInput);
+
+    if (!uomSelect || !nombrepieceField) {
+      console.error('Erreur : uomSelect ou nombrepieceField non trouvé');
+      return;
+    }
+
+    function toggleNombrepieceField() {
+      const selectedUomValue = uomSelect.value;
+      const selectedUomText = uomSelect.options[uomSelect.selectedIndex]?.text || '';
+      console.log('Unité de mesure sélectionnée (valeur) :', selectedUomValue, 'texte :', selectedUomText);
+      if (selectedUomText.toLowerCase().includes('boîtes') || selectedUomText.toLowerCase().includes('boites')) {
+        console.log('Affichage du champ nombrepiece');
+        nombrepieceField.classList.add('visible');
+        nombrepieceField.style.display = 'block';
+        if (nombrepieceInput) {
+          console.log('Input nombrepiece trouvé, valeur actuelle :', nombrepieceInput.value);
+        } else {
+          console.error('Input nombrepiece non trouvé');
+        }
+      } else {
+        console.log('Masquage du champ nombrepiece');
+        nombrepieceField.classList.remove('visible');
+        nombrepieceField.style.display = 'none';
+        if (nombrepieceInput) {
+          nombrepieceInput.value = '';
+          console.log('Input nombrepiece réinitialisé');
+        }
+      }
+    }
+
+    toggleNombrepieceField();
+    uomSelect.addEventListener('change', toggleNombrepieceField);
+
+    document.querySelectorAll('.btn-details-pharmacy-product').forEach(button => {
+      button.addEventListener('click', function() {
+        const productId = this.getAttribute('data-id');
+        const pdfLink = document.getElementById('pharmacyDownloadPdfLink');
+        pdfLink.href = `/pharmacy/products/${productId}/order-history/pdf/`;
+
+        fetch(`/pharmacy/products/${productId}/order-history/`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              document.getElementById('pharmacyTotalOrders').textContent = data.total_orders;
+              document.getElementById('pharmacyTotalRevenue').textContent = data.turnover.toFixed(2);
+
+              const ctx = document.getElementById('pharmacyPriceProgressionChart').getContext('2d');
+              if (window.pharmacyPriceChart) {
+                window.pharmacyPriceChart.destroy();
+              }
+              window.pharmacyPriceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: data.chart_data.labels,
+                  datasets: [
+                    {
+                      label: 'Prix unitaire (MAD)',
+                      data: data.chart_data.prices,
+                      borderColor: 'rgba(54, 162, 235, 1)',
+                      backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                      fill: true,
+                      tension: 0.4
+                    },
+                    {
+                      label: 'Chiffre d\'affaires (MAD)',
+                      data: data.chart_data.turnover,
+                      borderColor: 'rgba(255, 99, 132, 1)',
+                      backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                      fill: true,
+                      tension: 0.4
+                    }
+                  ]
+                },
+                options: {
+                  scales: {
+                    y: {
+                      beginAtZero: false,
+                      title: {
+                        display: true,
+                        text: 'Montant'
+                      }
+                    },
+                    x: {
+                      title: {
+                        display: true,
+                        text: 'Mois'
+                      }
+                    }
+                  },
+                  plugins: {
+                    legend: {
+                      display: true
+                    }
+                  }
+                }
+              });
+
+              const tableBody = document.getElementById('pharmacyOrderHistoryTable');
+              tableBody.innerHTML = '';
+              data.orders.forEach(line => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                  <td>${line.order_name}</td>
+                  <td>${line.date_order}</td>
+                  <td>${line.unit_price.toFixed(2)}</td>
+                  <td>${line.quantity.toFixed(2)}</td>
+                  <td>${line.subtotal.toFixed(2)}</td>
+                  <td>${line.currency}</td>
+                  <td>${line.state}</td>
+                `;
+                tableBody.appendChild(row);
+              });
+
+              document.getElementById('pharmacyProductOrderHistoryModalLabel').textContent = 
+                `Historique des commandes pour ${data.product_name}`;
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: data.error || 'Impossible de charger l\'historique des commandes.',
+              });
+            }
+          })
+          .catch(error => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Erreur',
+              text: 'Une erreur s\'est produite lors du chargement des données.',
+            });
+            console.error('Error:', error);
+          });
+      });
+    });
+  });
+</script>
+{% endblock %}
