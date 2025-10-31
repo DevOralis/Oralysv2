@@ -90,3 +90,4 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"{len(to_create)} jours fériés insérés pour {target_year}."))
 
 
+

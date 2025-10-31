@@ -167,9 +167,9 @@
                                     </td>
                                     <td data-label="Avis Chef" class="d-none d-xl-table-cell text-center">
                                         {% if request.manager_decision == 'approved' %}
-                                            <span class="badge bg-success">Favorable</span>
+                                            <span class="badge bg-success">Demande acceptée</span>
                                         {% elif request.manager_decision == 'refused' %}
-                                            <span class="badge bg-danger">Défavorable</span>
+                                            <span class="badge bg-danger">Demande rejetée</span>
                                         {% else %}
                                             <span class="badge bg-secondary">En attente</span>
                                         {% endif %}
